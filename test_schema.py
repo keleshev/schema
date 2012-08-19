@@ -81,5 +81,5 @@ def test_dict_keys():
 
 
 def test_dict_optional_keys():
-    #with SE: Schema({'a': 1, 'b': 2}).validate({'a': 1})
+    with SE: Schema({'a': 1, 'b': 2}).validate({'a': 1})
     assert Schema({'a': 1, optional('b'): 2}).validate({'a': 1}) == {'a': 1}

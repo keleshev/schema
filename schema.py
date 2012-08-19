@@ -50,7 +50,7 @@ class optional(object):
         self._key = key
 
     def validate(self, data):
-        raise ValueError('`optional` is expected only as key of a dictionary')
+        return Schema(self._key).validate(data)
 
 
 class Schema(object):
@@ -65,13 +65,27 @@ class Schema(object):
         if type(self._s) is dict:
             data = Schema(dict).validate(data)
             new = {}
-            for skey, svalue in self._s.items():
-                for key, value in data.items():
+            coverage = set()  # how many non-optional schema keys were matched
+            for key, value in data.items():
+                valid = False
+                for skey, svalue in self._s.items():
                     try:
-                        new[Schema(skey).validate(key)] = \
-                                Schema(svalue).validate(value)
+                        nkey = Schema(skey).validate(key)
+                        nvalue = Schema(svalue).validate(value)
                     except:
                         pass
+                    else:
+                        coverage.add(skey)
+                        valid = True
+                        break
+                if valid:
+                    new[nkey] = nvalue
+                elif type(skey) is not optional:
+                    raise SchemaExit('key %r is required' % key)
+            coverage = set(k for k in coverage if type(k) is not optional)
+            required = set(k for k in self._s if type(k) is not optional)
+            if coverage != required:
+                raise SchemaExit('missed keys %r' % (required - coverage))
             if len(new) != len(data):
                 raise SchemaExit('wrong keys %r in %r' % (new, data))
             return new
