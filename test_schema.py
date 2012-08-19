@@ -1,6 +1,6 @@
 from pytest import raises
 
-from schema import Schema, is_a, either, SchemaExit
+from schema import Schema, is_a, either, strictly, SchemaExit
 
 
 def test_schema():
@@ -49,7 +49,6 @@ def test_is_a():
 
 
 def test_either():
-
     assert Schema(either(int, dict)).validate(5) == 5
     assert Schema(either(int, dict)).validate({}) == {}
     with raises(SchemaExit):
@@ -57,10 +56,15 @@ def test_either():
 
 
 def test_validate_list():
-
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
     assert Schema([1, 0]).validate([]) == []
     with raises(SchemaExit):
         Schema([1, 0]).validate(0)
     with raises(SchemaExit):
         Schema([1, 0]).validate([2])
+
+SE = raises(SchemaExit)
+
+def test_strictly():
+    assert strictly(int).validate(1) == 1
+    with SE: strictly(int).validate('1')

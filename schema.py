@@ -32,6 +32,18 @@ class either(object):
         raise SchemaExit('did not validate %r %r' % (self, data))
 
 
+class strictly(object):
+
+    def __init__(self, type_):
+        assert type(type_) is type
+        self._type = type_
+
+    def validate(self, data):
+        if type(data) is self._type:
+            return data
+        raise SchemaExit('did not validate %r %r' % (self, data))
+
+
 class Schema(object):
 
     def __init__(self, schema):
