@@ -38,20 +38,20 @@ class Schema(object):
         self._s = schema
 
     def validate(self, data):
+        if type(self._s) is list:
+            data = Schema(list).validate(data)
+            return [either(*self._s).validate(d) for d in data]
+        if type(self._s) is type:
+            try:
+                return self._s(data)
+            except:
+                raise SchemaExit('did not validate %r %r' % (self._s, data))
         if hasattr(self._s, 'validate'):
             return self._s.validate(data)
         if hasattr(self._s, '__call__'):
             if self._s(data):
                 return data
             else:
-                raise SchemaExit('did not validate %r %r' % (self._s, data))
-        if type(self._s) is list:
-            data = Schema(list).validate(data)
-            return [Schema(either(*self._s)).validate(d) for d in data]
-        if type(self._s) is type:
-            try:
-                return self._s(data)
-            except:
                 raise SchemaExit('did not validate %r %r' % (self._s, data))
         if self._s == data:
             return data
