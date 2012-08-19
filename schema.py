@@ -53,6 +53,13 @@ class Schema(object):
         if type(self._s) is list:
             data = Schema(list).validate(data)
             return [either(*self._s).validate(d) for d in data]
+        if type(self._s) is dict:
+            data = Schema(dict).validate(data)
+            for key, value in data.items():
+                if key not in self._s:
+                    raise SchemaExit('missing key %r in %r' % (key, data))
+                data[key] = Schema(self._s[key]).validate(value)
+            return data
         if type(self._s) is type:
             try:
                 return self._s(data)
