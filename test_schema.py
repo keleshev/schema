@@ -37,16 +37,15 @@ def test_validate_file():
 
 
 def test_is_a():
-
-    assert Schema(is_a(int, lambda n: 0 < n < 5)).validate(3) == 3
-    assert Schema(is_a(int, lambda n: 0 < n < 5)).validate(3.33) == 3
-    with SE: Schema(is_a(str, int, lambda n: 0 < n < 5)).validate(3.33)
+    assert is_a(int, lambda n: 0 < n < 5).validate(3) == 3
+    assert is_a(int, lambda n: 0 < n < 5).validate(3.33) == 3
+    with SE: is_a(str, int, lambda n: 0 < n < 5).validate(3.33)
 
 
 def test_either():
-    assert Schema(either(int, dict)).validate(5) == 5
-    assert Schema(either(int, dict)).validate({}) == {}
-    with SE: Schema(either(int, dict)).validate('hai')
+    assert either(int, dict).validate(5) == 5
+    assert either(int, dict).validate({}) == {}
+    with SE: either(int, dict).validate('hai')
 
 
 def test_validate_list():
