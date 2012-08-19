@@ -83,3 +83,15 @@ def test_dict_keys():
 def test_dict_optional_keys():
     with SE: Schema({'a': 1, 'b': 2}).validate({'a': 1})
     assert Schema({'a': 1, optional('b'): 2}).validate({'a': 1}) == {'a': 1}
+
+
+def test_complex():
+    import os
+    s = Schema({'<file>': is_a([file], lambda l: len(l)),
+                '<path>': os.path.exists,
+                optional('--count'): is_a(int, lambda n: 0 <= n <= 5)})
+    data = s.validate({'<file>': ['./LICENSE-MIT'], '<path>': './'})
+    assert len(data) == 2
+    assert len(data['<file>']) == 1
+    assert data['<file>'][0].read().startswith('Copyright')
+    assert data['<path>'] == './'
