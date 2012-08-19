@@ -1,6 +1,6 @@
 from pytest import raises
 
-from schema import Schema, is_a, either, strictly, SchemaExit
+from schema import Schema, is_a, either, strictly, optional, SchemaExit
 
 
 SE = raises(SchemaExit)
@@ -72,6 +72,14 @@ def test_dict():
             {'n': 3.14, 'f': 5})
 
 
-#def test_dict_keys():
-#    assert Schema({strictly(str): strictly(int)}).validate(
-#            {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+def test_dict_keys():
+    assert Schema({strictly(str): strictly(int)}).validate(
+            {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+    with SE: Schema({strictly(str): strictly(int)}).validate({1: 1, 'b': 2})
+    assert Schema({str: int}).validate(
+            {1: 3.14, 3.14: 1}) == {'1': 3, '3.14': 1}
+
+
+def test_dict_optional_keys():
+    #with SE: Schema({'a': 1, 'b': 2}).validate({'a': 1})
+    assert Schema({'a': 1, optional('b'): 2}).validate({'a': 1}) == {'a': 1}

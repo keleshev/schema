@@ -44,6 +44,15 @@ class strictly(object):
         raise SchemaExit('did not validate %r %r' % (self, data))
 
 
+class optional(object):
+
+    def __init__(self, key):
+        self._key = key
+
+    def validate(self, data):
+        raise ValueError('`optional` is expected only as key of a dictionary')
+
+
 class Schema(object):
 
     def __init__(self, schema):
@@ -55,11 +64,17 @@ class Schema(object):
             return [either(*self._s).validate(d) for d in data]
         if type(self._s) is dict:
             data = Schema(dict).validate(data)
-            for key, value in data.items():
-                if key not in self._s:
-                    raise SchemaExit('missing key %r in %r' % (key, data))
-                data[key] = Schema(self._s[key]).validate(value)
-            return data
+            new = {}
+            for skey, svalue in self._s.items():
+                for key, value in data.items():
+                    try:
+                        new[Schema(skey).validate(key)] = \
+                                Schema(svalue).validate(value)
+                    except:
+                        pass
+            if len(new) != len(data):
+                raise SchemaExit('wrong keys %r in %r' % (new, data))
+            return new
         if type(self._s) is type:
             try:
                 return self._s(data)
