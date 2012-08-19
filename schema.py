@@ -27,7 +27,7 @@ class either(object):
         for s in schemas:
             try:
                 return s.validate(data)
-            except:
+            except SchemaExit:
                 pass
         raise SchemaExit('did not validate %r %r' % (self, data))
 
@@ -72,7 +72,7 @@ class Schema(object):
                     try:
                         nkey = Schema(skey).validate(key)
                         nvalue = Schema(svalue).validate(value)
-                    except:
+                    except SchemaExit:
                         pass
                     else:
                         coverage.add(skey)
@@ -92,15 +92,18 @@ class Schema(object):
         if type(self._s) is type:
             try:
                 return self._s(data)
-            except:
-                raise SchemaExit('did not validate %r %r' % (self._s, data))
+            except Exception as e:
+                raise SchemaExit('%r riased %r when validating %r'
+                                 % (self._s, e, data))
         if hasattr(self._s, 'validate'):
             return self._s.validate(data)
         if hasattr(self._s, '__call__'):
-            if self._s(data):
-                return data
-            else:
-                raise SchemaExit('did not validate %r %r' % (self._s, data))
+            try:
+                if self._s(data):
+                    return data
+            except Exception as e:
+                raise SchemaExit('%r raised %r' % (self._s.__name__, e))
+            raise SchemaExit('did not validate %r %r' % (self._s, data))
         if self._s == data:
             return data
         else:
