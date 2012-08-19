@@ -1,3 +1,5 @@
+import os
+
 from pytest import raises
 
 from schema import Schema, is_a, either, strictly, optional, SchemaExit
@@ -29,7 +31,6 @@ def test_schema():
 def test_validate_file():
     assert Schema(file).validate('LICENSE-MIT').read().startswith('Copyright')
     with SE: Schema(file).validate('NON-EXISTENT')
-    import os
     assert Schema(os.path.exists).validate('.') == '.'
     with SE: Schema(os.path.exists).validate('./non-existent/')
     assert Schema(os.path.isfile).validate('LICENSE-MIT') == 'LICENSE-MIT'
@@ -86,7 +87,6 @@ def test_dict_optional_keys():
 
 
 def test_complex():
-    import os
     s = Schema({'<file>': is_a([file], lambda l: len(l)),
                 '<path>': os.path.exists,
                 optional('--count'): is_a(int, lambda n: 0 <= n <= 5)})
