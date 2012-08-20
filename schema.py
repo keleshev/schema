@@ -44,15 +44,6 @@ class strictly(object):
         raise SchemaExit('did not validate %r %r' % (self, data))
 
 
-class optional(object):
-
-    def __init__(self, key):
-        self._key = key
-
-    def validate(self, data):
-        return Schema(self._key).validate(data)
-
-
 class Schema(object):
 
     def __init__(self, schema):
@@ -108,3 +99,8 @@ class Schema(object):
             return data
         else:
             raise SchemaExit('did not validate %r %r' % (self._s, data))
+
+
+class optional(Schema):
+
+    pass
