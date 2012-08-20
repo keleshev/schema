@@ -40,7 +40,7 @@ This is how you validate it using `schema`:
 As you can see, **schema** validated data successfully, opened files and
 converted `'3'` to `int`.
 
-How `Schema` works validates data
+How `Schema` validates data
 -------------------------------------------------------------------------------
 
 If `Schema(...)` encounteres a type (such as `int`, `str`, `object`), it will
