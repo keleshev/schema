@@ -61,6 +61,16 @@ def test_validate_list():
     with SE: is_a([1, 0], lambda l: len(l) > 2).validate([0, 1])
 
 
+def test_list_tuple_set_frozenset():
+    assert Schema([int]).validate([1, 2])
+    with SE: Schema([int]).validate(['1', 2])
+    assert Schema(set([int])).validate(set([1, 2])) == set([1, 2])
+    with SE: Schema(set([int])).validate([1, 2])  # not a set
+    with SE: Schema(set([int])).validate(['1', 2])
+    assert Schema(tuple([int])).validate(tuple([1, 2])) == tuple([1, 2])
+    with SE: Schema(tuple([int])).validate([1, 2])  # not a set
+
+
 def test_strictly():
     assert Schema(int).validate(1) == 1
     with SE: Schema(int).validate('1')

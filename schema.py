@@ -51,9 +51,10 @@ class Schema(object):
         self._s = schema
 
     def validate(self, data):
-        if type(self._s) is list:
-            data = Schema(list).validate(data)
-            return [either(*self._s).validate(d) for d in data]
+        if type(self._s) in (list, tuple, set, frozenset):
+            t = type(self._s)
+            data = Schema(t).validate(data)
+            return t(either(*self._s).validate(d) for d in data)
         if type(self._s) is dict:
             data = Schema(dict).validate(data)
             new = {}
