@@ -12,24 +12,30 @@ valid integer and in correct range*.
 Assume you are using [docopt library](http://github.com/docopt/docopt),
 which returns you a dict like this:
 
-    >>> args = {'<files>': ['LICENSE-MIT', 'setup.py'],
-    ...         '<path>': '../',
-    ...         '--count': '3'}
+```python
+>>> args = {'<files>': ['LICENSE-MIT', 'setup.py'],
+...         '<path>': '../',
+...         '--count': '3'}
+
+```
 
 This is how you validate it using `schema`:
 
-    >>> from schema import Schema, And, Use
-    >>> import os
-    >>> s = Schema({'<files>': [Use(open)],
-    ...             '<path>': os.path.exists,
-    ...             '--count': And(Use(int), lambda n: 0 < n < 5)})
-    >>> args = s.validate(args)
-    >>> args['<files>']
-    [<open file 'LICENSE-MIT', mode 'r' at 0x...>, <open file 'setup.py', mode 'r' at 0x...>]
-    >>> args['<path>']
-    '../'
-    >>> args['--count']
-    3
+```python
+>>> from schema import Schema, And, Use
+>>> import os
+>>> s = Schema({'<files>': [Use(open)],
+...             '<path>': os.path.exists,
+...             '--count': And(Use(int), lambda n: 0 < n < 5)})
+>>> args = s.validate(args)
+>>> args['<files>']
+[<open file 'LICENSE-MIT', mode 'r' at 0x...>, <open file 'setup.py', mode 'r' at 0x...>]
+>>> args['<path>']
+'../'
+>>> args['--count']
+3
+
+```
 
 As you can see, **schema** validated data successfully, opened files and
 converted `'3'` to `int`.
