@@ -5,7 +5,7 @@ class SchemaExit(SystemExit):
     pass
 
 
-class is_a(object):
+class And(object):
 
     def __init__(self, *args):
         self._args = args
@@ -17,7 +17,7 @@ class is_a(object):
         return data
 
 
-class either(object):
+class Or(object):
 
     def __init__(self, *args):
         self._args = args
@@ -32,7 +32,7 @@ class either(object):
         raise SchemaExit('did not validate %r %r' % (self, data))
 
 
-class use(object):
+class Use(object):
 
     def __init__(self, callable_):
         assert callable(callable_)
@@ -54,7 +54,7 @@ class Schema(object):
         if type(self._s) in (list, tuple, set, frozenset):
             t = type(self._s)
             data = Schema(t).validate(data)
-            return t(either(*self._s).validate(d) for d in data)
+            return t(Or(*self._s).validate(d) for d in data)
         if type(self._s) is dict:
             data = Schema(dict).validate(data)
             new = {}
@@ -73,10 +73,10 @@ class Schema(object):
                         break
                 if valid:
                     new[nkey] = nvalue
-                elif type(skey) is not optional:
+                elif type(skey) is not Optional:
                     raise SchemaExit('key %r is required' % key)
-            coverage = set(k for k in coverage if type(k) is not optional)
-            required = set(k for k in self._s if type(k) is not optional)
+            coverage = set(k for k in coverage if type(k) is not Optional)
+            required = set(k for k in self._s if type(k) is not Optional)
             if coverage != required:
                 raise SchemaExit('missed keys %r' % (required - coverage))
             if len(new) != len(data):
@@ -102,6 +102,6 @@ class Schema(object):
             raise SchemaExit('did not validate %r %r' % (self._s, data))
 
 
-class optional(Schema):
+class Optional(Schema):
 
     """Marker for an optional part of schema."""
