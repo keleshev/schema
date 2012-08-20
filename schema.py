@@ -32,16 +32,17 @@ class either(object):
         raise SchemaExit('did not validate %r %r' % (self, data))
 
 
-class strictly(object):
+class use(object):
 
-    def __init__(self, type_):
-        assert type(type_) is type
-        self._type = type_
+    def __init__(self, callable_):
+        assert callable(callable_)
+        self._callable = callable_
 
     def validate(self, data):
-        if type(data) is self._type:
-            return data
-        raise SchemaExit('did not validate %r %r' % (self, data))
+        try:
+            return self._callable(data)
+        except Exception as e:
+            raise SchemaExit('%r raised %r' % (self._callable.__name__, e))
 
 
 class Schema(object):
@@ -56,7 +57,7 @@ class Schema(object):
         if type(self._s) is dict:
             data = Schema(dict).validate(data)
             new = {}
-            coverage = set()  # how many non-optional schema keys were matched
+            coverage = set()  # non-optional schema keys that were matched
             for key, value in data.items():
                 valid = False
                 for skey, svalue in self._s.items():
@@ -80,15 +81,14 @@ class Schema(object):
             if len(new) != len(data):
                 raise SchemaExit('wrong keys %r in %r' % (new, data))
             return new
-        if type(self._s) is type:
-            try:
-                return self._s(data)
-            except Exception as e:
-                raise SchemaExit('%r riased %r when validating %r'
-                                 % (self._s, e, data))
         if hasattr(self._s, 'validate'):
             return self._s.validate(data)
-        if hasattr(self._s, '__call__'):
+        if type(self._s) is type:
+            if isinstance(data, self._s):
+                return data
+            else:
+                raise SchemaExit('%r should be instance of %r' % (data, self._s))
+        if callable(self._s):
             try:
                 if self._s(data):
                     return data
@@ -103,4 +103,4 @@ class Schema(object):
 
 class optional(Schema):
 
-    pass
+    """Marker for an optional part of schema."""
