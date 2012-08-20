@@ -10,6 +10,10 @@ class And(object):
     def __init__(self, *args):
         self._args = args
 
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,
+                           ', '.join(repr(a) for a in self._args))
+
     def validate(self, data):
         schemas = map(Schema, self._args)
         for s in schemas:
@@ -17,10 +21,7 @@ class And(object):
         return data
 
 
-class Or(object):
-
-    def __init__(self, *args):
-        self._args = args
+class Or(And):
 
     def validate(self, data):
         schemas = map(Schema, self._args)
@@ -38,6 +39,9 @@ class Use(object):
         assert callable(callable_)
         self._callable = callable_
 
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self._callable)
+
     def validate(self, data):
         try:
             return self._callable(data)
@@ -49,6 +53,9 @@ class Schema(object):
 
     def __init__(self, schema):
         self._s = schema
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self._s)
 
     def validate(self, data):
         if type(self._s) in (list, tuple, set, frozenset):
@@ -104,4 +111,4 @@ class Schema(object):
 
 class Optional(Schema):
 
-    """Marker for an optional part of schema."""
+    """Marker for an optional part of Schema."""
