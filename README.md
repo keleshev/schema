@@ -86,8 +86,8 @@ method on corresponding data as `data = smth.validate(data)`. This method may
 raise `SchemaExit` exit-exception, which will tell `Schema` that that piece
 of data is invalid, otherwise -- it will continue to validate;
 
-As example, you can use `Use` for creating such objects. `Use` help to use
-a function or a type to convert a value while validating it:
+As example, you can use `Use` for creating such objects. `Use` helps to use
+a function or type to convert a value while validating it:
 
 ```python
 >>> from schema import Use
@@ -115,10 +115,10 @@ class Use(object):
             raise SchemaExit('%r raised %r' % (self._callable.__name__, e))
 ```
 
-So you can write your own validation-aware classes.
+So you can write your own validation-aware classes and data types.
 
 If `Schema(...)` encounteres an instance of `list`, `tuple`, `set` or
-`frozenset`, it will validate contents corresponding data container against
+`frozenset`, it will validate contents of corresponding data container against
 schemas listed inside that container:
 
 
@@ -133,13 +133,13 @@ SchemaExit: ...
 
 ```
 
-If `Schema(...)` encounters an instance of `dict`, it will validate data's
+If `Schema(...)` encounters an instance of `dict`, it will validate data
 key-value pairs:
 
 ```python
 >>> Schema({'name': str,
-...         'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28}) == \
-... {'name': 'Sue', 'age': 28}
+...         'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28}) \
+... == {'name': 'Sue', 'age': 28}
 True
 
 ```
@@ -163,8 +163,7 @@ for the same data:
 >>> Schema({'age': And(int, lambda n: 0 < n < 99)}).validate({'age': 7})
 {'age': 7}
 
->>> Schema({'password':
-...              And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
+>>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
 SchemaExit: ...
@@ -211,4 +210,4 @@ This library was largely inspired by Alec Thomas'
 [voluptuous](https://github.com/alecthomas/voluptuous) library, however,
 **schema** tries to make it easier to use Python built-in capabilities
 through lambdas, at the same time allowing to make validation-aware
-classes with `validate` method.
+classes and data types with `validate` method.
