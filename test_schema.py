@@ -110,3 +110,9 @@ def test_complex():
     assert len(data['<file>']) == 1
     assert data['<file>'][0].read().startswith('Copyright')
     assert data['<path>'] == './'
+
+
+def test_error():
+    s = Schema(Use(float), error='Should be a number.')
+    assert s.validate('1') == 1.0
+    with SE: s.validate('hai')
