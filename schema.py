@@ -9,7 +9,7 @@ class And(object):
 
     def __init__(self, *args, **kw):
         self._args = args
-        assert kw.keys() in (['error'], [])
+        assert list(kw) in (['error'], [])
         self._error = kw.get('error')
 
     def __repr__(self):

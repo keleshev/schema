@@ -50,6 +50,7 @@ otherwise it will exit with error;
 ```python
 >>> Schema(int).validate(123)
 123
+
 >>> Schema(int).validate('123')
 Traceback (most recent call last):
 ...
@@ -67,6 +68,7 @@ else -- it will exit with error;
 ```python
 >>> Schema(os.path.exists).validate('./')
 './'
+
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
@@ -74,6 +76,7 @@ SchemaExit: ...
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
+
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
@@ -95,8 +98,8 @@ a function or type to convert a value while validating it:
 >>> Schema(Use(int)).validate('123')
 123
 
->>> Schema(Use(file)).validate('LICENSE-MIT')
-<open file 'LICENSE-MIT', mode 'r' at 0x...>
+>>> Schema(Use(lambda f: open(f, 'a'))).validate('LICENSE-MIT')
+<open file 'LICENSE-MIT', mode 'a' at 0x...>
 
 ```
 

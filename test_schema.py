@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import os
 
 from pytest import raises
@@ -31,8 +32,8 @@ def test_schema():
 
 
 def test_validate_file():
-    assert Schema(Use(file)).validate('LICENSE-MIT').read().startswith('Copyright')
-    with SE: Schema(Use(file)).validate('NON-EXISTENT')
+    assert Schema(Use(open)).validate('LICENSE-MIT').read().startswith('Copyright')
+    with SE: Schema(Use(open)).validate('NON-EXISTENT')
     assert Schema(os.path.exists).validate('.') == '.'
     with SE: Schema(os.path.exists).validate('./non-existent/')
     assert Schema(os.path.isfile).validate('LICENSE-MIT') == 'LICENSE-MIT'
@@ -102,7 +103,7 @@ def test_dict_optional_keys():
 
 
 def test_complex():
-    s = Schema({'<file>': And([Use(file)], lambda l: len(l)),
+    s = Schema({'<file>': And([Use(open)], lambda l: len(l)),
                 '<path>': os.path.exists,
                 Optional('--count'): And(int, lambda n: 0 <= n <= 5)})
     data = s.validate({'<file>': ['./LICENSE-MIT'], '<path>': './'})
