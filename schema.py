@@ -3,13 +3,13 @@
 class SchemaExit(SystemExit):
 
     def __init__(self, autos, errors):
+        SystemExit.__init__(self, errors or autos)
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
-        SystemExit.__init__(self)
 
     @property
     def code(self):
-        return '\n'.join(self.errors)
+        return self.autos, self.errors
 
 
 class And(object):
@@ -35,9 +35,10 @@ class Or(And):
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
-            except SchemaExit:
+            except SchemaExit as x:
                 pass
-        raise SchemaExit('%r did not validate %r' % (self, data), self._error)
+        raise SchemaExit(x.autos + ['%r did not validate %r' % (self, data)],
+                         x.errors + [self._error])
 
 
 class Use(object):
@@ -103,26 +104,32 @@ class Schema(object):
                 raise SchemaExit('wrong keys %r in %r' % (new, data), e)
             return new
         if hasattr(s, 'validate'):
-            #try:
+            try:
                 return s.validate(data)
-            #except SchemaExit as ex:
-            #    raise SchemaExit(e)
+            except SchemaExit as x:
+                raise SchemaExit(x.autos + [None], x.errors + [e])
+            except BaseException as x:
+                raise SchemaExit('%r.validate(%r) raised %r' % (s, data, x),
+                                 self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
             else:
                 raise SchemaExit('%r should be instance of %r' % (data, s), e)
         if callable(s):
+            f = s.__name__
             try:
                 if s(data):
                     return data
-            except BaseException as ex:
-                raise SchemaExit('%r raised %r' % (s.__name__, ex), e)
-            raise SchemaExit('did not validate %r %r' % (s, data), e)
+            except SchemaExit as x:
+                raise SchemaExit(x.autos + [None], x.errors + [e])
+            except BaseException as x:
+                raise SchemaExit('%s(%r) raised %r' % (f, data, x), self._error)
+            raise SchemaExit('bool(%s(%r)) should be True ' % (f, data), e)
         if s == data:
             return data
         else:
-            raise SchemaExit('did not validate %r %r' % (s, data), e)
+            raise SchemaExit('%r does not match %r' % (s, data), e)
 
 
 class Optional(Schema):
