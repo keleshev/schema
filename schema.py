@@ -3,9 +3,16 @@
 class SchemaExit(SystemExit):
 
     def __init__(self, autos, errors):
-        SystemExit.__init__(self, errors or autos)
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
+        for a, e in zip(self.autos, self.errors):
+            if e is not None:
+                message = e
+                break
+            if a is not None:
+                message = a
+                break
+        SystemExit.__init__(self, message)
 
     @property
     def code(self):

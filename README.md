@@ -66,7 +66,7 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: ...
+SchemaExit: bool(exists('./non-existent/')) should be True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -74,7 +74,7 @@ SchemaExit: ...
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: ...
+SchemaExit: bool(<lambda>(-12)) should be True
 
 ```
 
@@ -130,7 +130,7 @@ schemas listed inside that container:
 >>> Schema(set([int, float])).validate(set([5, 7, 8, 'not int or float here']))
 Traceback (most recent call last):
 ...
-SchemaExit: ...
+SchemaExit: 'not int or float here' should be instance of <type 'float'>
 
 ```
 
@@ -160,7 +160,7 @@ You can specify keys as schemas too:
 ...                   10: 'not None here'})
 Traceback (most recent call last):
 ...
-SchemaExit: ...
+SchemaExit: key 10 is required
 
 ```
 
@@ -186,7 +186,7 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaExit: ...
+SchemaExit: key 'password' is required
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
