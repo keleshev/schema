@@ -19,11 +19,8 @@ request from github API.
 >>> gist = {'description': 'the description for this gist',
 ...         'public': True,
 ...         'files': {
-...             'file1.txt': {
-...               'content': 'String file contents'
-...             }
-...           }
-...         }
+...             'file1.txt': {'content': 'String file contents'},
+...             'other.txt': {'content': 'Another file contents'}}}
 
 >>> gist = gist_schema.validate(gist)
 
