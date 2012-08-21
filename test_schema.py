@@ -113,7 +113,37 @@ def test_complex():
     assert data['<path>'] == './'
 
 
-def test_error():
-    s = Schema(Use(float), error='Should be a number.')
-    assert s.validate('1') == 1.0
-    with SE: s.validate('hai')
+def test_nice_errors():
+    try:
+        Schema(int, error='should be integer').validate('x')
+    except SchemaExit as e:
+        assert e.errors == ['should be integer']
+    #try:
+    #    Schema(Use(float), error='should be a number').validate('x')
+    #except SchemaExit as e:
+    #    assert e.errors == ['should be a number']
+
+
+def test_use_error_handling():
+    def ve(_): raise ValueError()
+    try:
+        Use(ve).validate('x')
+    except SchemaExit as e:
+        assert e.autos == ["ve('x') raised ValueError()"]
+        assert e.errors == [None]
+    try:
+        Use(ve, error='should not raise').validate('x')
+    except SchemaExit as e:
+        assert e.autos == ["ve('x') raised ValueError()"]
+        assert e.errors == ['should not raise']
+    def se(_): raise SchemaExit('first auto', 'first error')
+    try:
+        Use(se).validate('x')
+    except SchemaExit as e:
+        assert e.autos == ['first auto', None]
+        assert e.errors == ['first error', None]
+    try:
+        Use(se, error='second error').validate('x')
+    except SchemaExit as e:
+        assert e.autos == ['first auto', None]
+        assert e.errors == ['first error', 'second error']

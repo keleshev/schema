@@ -2,7 +2,14 @@
 
 class SchemaExit(SystemExit):
 
-    pass
+    def __init__(self, autos, errors):
+        self.autos = autos if type(autos) is list else [autos]
+        self.errors = errors if type(errors) is list else [errors]
+        SystemExit.__init__(self)
+
+    @property
+    def code(self):
+        return '\n'.join(self.errors)
 
 
 class And(object):
@@ -30,7 +37,7 @@ class Or(And):
                 return s.validate(data)
             except SchemaExit:
                 pass
-        raise SchemaExit(self._error or 'did not validate %r %r' % (self, data))
+        raise SchemaExit('%r did not validate %r' % (self, data), self._error)
 
 
 class Use(object):
@@ -46,9 +53,11 @@ class Use(object):
     def validate(self, data):
         try:
             return self._callable(data)
-        except Exception as e:
-            raise SchemaExit(self._error
-                             or '%r raised %r' % (self._callable.__name__, e))
+        except SchemaExit as x:
+            raise SchemaExit(x.autos + [None], x.errors + [self._error])
+        except BaseException as x:
+            f = self._callable.__name__
+            raise SchemaExit('%s(%r) raised %r' % (f, data, x), self._error)
 
 
 class Schema(object):
@@ -76,7 +85,7 @@ class Schema(object):
                     try:
                         nkey = Schema(skey, error=e).validate(key)
                         nvalue = Schema(svalue, error=e).validate(value)
-                    except SchemaExit:
+                    except SchemaExit:  # XXX
                         pass
                     else:
                         coverage.add(skey)
@@ -85,32 +94,35 @@ class Schema(object):
                 if valid:
                     new[nkey] = nvalue
                 elif type(skey) is not Optional:
-                    raise SchemaExit('key %r is required' % key)
+                    raise SchemaExit('key %r is required' % key, e)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise SchemaExit('missed keys %r' % (required - coverage))
+                raise SchemaExit('missed keys %r' % (required - coverage), e)
             if len(new) != len(data):
-                raise SchemaExit('wrong keys %r in %r' % (new, data))
+                raise SchemaExit('wrong keys %r in %r' % (new, data), e)
             return new
         if hasattr(s, 'validate'):
-            return s.validate(data)
+            #try:
+                return s.validate(data)
+            #except SchemaExit as ex:
+            #    raise SchemaExit(e)
         if type(s) is type:
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaExit('%r should be instance of %r' % (data, s))
+                raise SchemaExit('%r should be instance of %r' % (data, s), e)
         if callable(s):
             try:
                 if s(data):
                     return data
-            except Exception as e:
-                raise SchemaExit('%r raised %r' % (s.__name__, e))
-            raise SchemaExit('did not validate %r %r' % (s, data))
+            except BaseException as ex:
+                raise SchemaExit('%r raised %r' % (s.__name__, ex), e)
+            raise SchemaExit('did not validate %r %r' % (s, data), e)
         if s == data:
             return data
         else:
-            raise SchemaExit('did not validate %r %r' % (s, data))
+            raise SchemaExit('did not validate %r %r' % (s, data), e)
 
 
 class Optional(Schema):
