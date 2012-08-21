@@ -9,36 +9,6 @@ Imagine you need to validate data that was passed via command-line interface.
 You need to check things like *file is readable*, *path exists*, *string is
 valid integer and in correct range*.
 
-Assume you are using [docopt library](http://github.com/docopt/docopt),
-which returns you a dict like this:
-
-```python
->>> args = {'<files>': ['LICENSE-MIT', 'setup.py'],
-...         '<path>': '../',
-...         '--count': '3'}
-
-```
-
-This is how you validate it using `schema`:
-
-```python
->>> from schema import Schema, And, Use
->>> import os
->>> s = Schema({'<files>': [Use(open)],
-...             '<path>': os.path.exists,
-...             '--count': And(Use(int), lambda n: 0 < n < 5)})
->>> args = s.validate(args)
->>> args['<files>']
-[<open file 'LICENSE-MIT', mode 'r' at 0x...>, <open file 'setup.py', mode 'r' at 0x...>]
->>> args['<path>']
-'../'
->>> args['--count']
-3
-
-```
-
-As you can see, **schema** validated data successfully, opened files and
-converted `'3'` to `int`.
 
 How `Schema` validates data
 -------------------------------------------------------------------------------
@@ -48,6 +18,8 @@ check if correspoinding piece of data is instance of that type,
 otherwise it will exit with error;
 
 ```python
+>>> from schema import Schema
+
 >>> Schema(int).validate(123)
 123
 
@@ -66,6 +38,8 @@ call it, and if return value evaluates to `True` it will continue validating,
 else -- it will exit with error;
 
 ```python
+>>> import os
+
 >>> Schema(os.path.exists).validate('./')
 './'
 
@@ -199,6 +173,52 @@ personal information:
 'male'
 
 ```
+
+Using **schema** with [**docopt**](http://github.com/docopt/docopt)
+-------------------------------------------------------------------------------
+
+Assume you are using **docopt** with the following usage-pattern:
+
+    Usage: my_program.py [--count=N] <path> <files>...
+
+and you would like to validate that `<files>` are readable, and that `<path>`
+exists, and that `--count` is either integer from 0 to 5, or `None`.
+
+Assuming **docopt** returns the following dict:
+
+```python
+>>> args = {'<files>': ['LICENSE-MIT', 'setup.py'],
+...         '<path>': '../',
+...         '--count': '3'}
+
+```
+
+this is how you validate it using `schema`:
+
+```python
+>>> from schema import Schema, And, Or, Use
+>>> import os
+
+>>> s = Schema({'<files>': [Use(open)],
+...             '<path>': os.path.exists,
+...             '--count': Or(None, And(Use(int), lambda n: 0 < n < 5))})
+
+>>> args = s.validate(args)
+
+>>> args['<files>']
+[<open file 'LICENSE-MIT', mode 'r' at 0x...>, <open file 'setup.py', mode 'r' at 0x...>]
+
+>>> args['<path>']
+'../'
+
+>>> args['--count']
+3
+
+```
+
+As you can see, **schema** validated data successfully, opened files and
+converted `'3'` to `int`.
+
 
 Note
 -------------------------------------------------------------------------------
