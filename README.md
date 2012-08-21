@@ -92,7 +92,7 @@ class Use(object):
             raise SchemaExit('%r raised %r' % (self._callable.__name__, e))
 ```
 
-So you can write your own validation-aware classes and data types.
+Now you can write your own validation-aware classes and data types.
 
 If `Schema(...)` encounteres an instance of `list`, `tuple`, `set` or
 `frozenset`, it will validate contents of corresponding data container against
@@ -118,6 +118,23 @@ key-value pairs:
 ...         'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28}) \
 ... == {'name': 'Sue', 'age': 28}
 True
+
+```
+
+You can specify keys as schemas too:
+
+```python
+>>> schema = Schema({str: int,  # string keys should have integer values
+...                  int: None})  # int keys should be always None
+
+>>> data = schema.validate({'key1': 1, 'key2': 2,
+...                         10: None, 20: None})
+
+>>> schema.validate({'key1': 1,
+...                   10: 'not None here'})
+Traceback (most recent call last):
+...
+SchemaExit: ...
 
 ```
 
