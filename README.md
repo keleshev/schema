@@ -13,8 +13,10 @@ valid integer and in correct range*.
 How `Schema` validates data
 -------------------------------------------------------------------------------
 
-If `Schema(...)` encounteres a type (such as `int`, `str`, `object`), it will
-check if correspoinding piece of data is instance of that type,
+### Types
+
+If `Schema(...)` encounteres a type (such as `int`, `str`, `object`, etc),
+it will check if correspoinding piece of data is instance of that type,
 otherwise it will exit with error;
 
 ```python
@@ -33,9 +35,11 @@ SchemaExit: '123' should be instance of <type 'int'>
 
 ```
 
-If `Schema(...)` encounteres a callable (such as `os.path.exists`), it will
-call it, and if return value evaluates to `True` it will continue validating,
-else -- it will exit with error;
+### Callables
+
+If `Schema(...)` encounteres a callable (function, class, of object with
+`__call__` method) it will call it, and if return value evaluates to
+`True` it will continue validating, else -- it will exit with error.
 
 ```python
 >>> import os
@@ -58,10 +62,12 @@ SchemaExit: ...
 
 ```
 
+### Validatable
+
 If `Schema(...)` encounteres an object with method `validate` it will run this
 method on corresponding data as `data = smth.validate(data)`. This method may
 raise `SchemaExit` exit-exception, which will tell `Schema` that that piece
-of data is invalid, otherwise -- it will continue to validate;
+of data is invalid, otherwise -- it will continue to validate.
 
 As example, you can use `Use` for creating such objects. `Use` helps to use
 a function or type to convert a value while validating it:
@@ -94,6 +100,8 @@ class Use(object):
 
 Now you can write your own validation-aware classes and data types.
 
+### Lists, similar containers
+
 If `Schema(...)` encounteres an instance of `list`, `tuple`, `set` or
 `frozenset`, it will validate contents of corresponding data container against
 schemas listed inside that container:
@@ -109,6 +117,8 @@ Traceback (most recent call last):
 SchemaExit: ...
 
 ```
+
+### Dictionaries
 
 If `Schema(...)` encounters an instance of `dict`, it will validate data
 key-value pairs:
@@ -166,6 +176,9 @@ SchemaExit: ...
 3.1415
 
 ```
+
+Example
+-------------------------------------------------------------------------------
 
 Here is a more complex example that validates list of entries with
 personal information:
