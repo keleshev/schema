@@ -10,7 +10,7 @@ validation of [*create a gist*](http://developer.github.com/v3/gists/)
 request from github API.
 
 ```python
->>> from schema import Schema, And, Or, Use, Optional
+>>> from schema import Schema, Optional
 
 >>> gist_schema = Schema({Optional('description'): str,
 ...                       'public': bool,
