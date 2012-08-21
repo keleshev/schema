@@ -5,10 +5,29 @@ Schema validation just got Pythonic
 obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
-Imagine you need to validate data that was passed via command-line interface.
-You need to check things like *file is readable*, *path exists*, *string is
-valid integer and in correct range*.
+Here is a quick example to get a feeling of **schema**:
+validation of [create a gist](http://developer.github.com/v3/gists/)
+request from github API.
 
+```python
+>>> from schema import Schema, And, Or, Use, Optional
+
+>>> gist_schema = Schema({Optional('description'): str,
+...                       'public': bool,
+...                       'files': {str: {'content': str}}})
+
+>>> gist = {'description': 'the description for this gist',
+...         'public': True,
+...         'files': {
+...             'file1.txt': {
+...               'content': 'String file contents'
+...             }
+...           }
+...         }
+
+>>> gist = gist_schema.validate(gist)
+
+```
 
 How `Schema` validates data
 -------------------------------------------------------------------------------
