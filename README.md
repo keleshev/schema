@@ -6,7 +6,7 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 Here is a quick example to get a feeling of **schema**:
-validation of [create a gist](http://developer.github.com/v3/gists/)
+validation of [*create a gist*](http://developer.github.com/v3/gists/)
 request from github API.
 
 ```python
@@ -78,7 +78,7 @@ SchemaExit: ...
 
 ```
 
-### Validatable
+### "Validatables"
 
 If `Schema(...)` encounteres an object with method `validate` it will run this
 method on corresponding data as `data = smth.validate(data)`. This method may
