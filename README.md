@@ -66,7 +66,9 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: bool(exists('./non-existent/')) should be True
+SchemaExit: ...
+
+bool(exists('./non-existent/')) should be True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -74,7 +76,9 @@ SchemaExit: bool(exists('./non-existent/')) should be True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: bool(<lambda>(-12)) should be True
+SchemaExit: ...
+
+bool(<lambda>(-12)) should be True
 
 ```
 
@@ -160,7 +164,7 @@ You can specify keys as schemas too:
 ...                   10: 'not None here'})
 Traceback (most recent call last):
 ...
-SchemaExit: key 10 is required
+SchemaExit: None does not match 'not None here'
 
 ```
 
@@ -186,7 +190,9 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaExit: key 'password' is required
+SchemaExit: ...
+
+#######bool(<lambda>('hai')) should be True
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
@@ -217,6 +223,21 @@ personal information:
 42
 >>> sacha['sex']
 'male'
+
+```
+
+User-friendly error reporting
+-------------------------------------------------------------------------------
+
+You can pass a keyword argument `error` to any of validatable classes
+(such as `Schema`, `And`, `Or`, `Use`) to report this error instead of
+a built-in one.
+
+```python
+>>> Schema(Use(int, error='Invalid year')).validate('XVII')
+Traceback (most recent call last):
+...
+SchemaExit: Invalid year
 
 ```
 

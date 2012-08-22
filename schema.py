@@ -16,7 +16,8 @@ class SchemaExit(SystemExit):
 
     @property
     def code(self):
-        return self.autos, self.errors
+        return '\n'.join([e or a for a, e in zip(self.autos, self.errors)
+                          if a or e])
 
 
 class And(object):
@@ -93,7 +94,7 @@ class Schema(object):
                     try:
                         nkey = Schema(skey, error=e).validate(key)
                         nvalue = Schema(svalue, error=e).validate(value)
-                    except SchemaExit:  # XXX
+                    except SchemaExit as x:  # XXX
                         pass
                     else:
                         coverage.add(skey)
@@ -102,7 +103,8 @@ class Schema(object):
                 if valid:
                     new[nkey] = nvalue
                 elif type(skey) is not Optional:
-                    raise SchemaExit('key %r is required' % key, e)
+                    raise SchemaExit(x.autos + ['key %r is required' % key],
+                                     x.errors + [e])
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
