@@ -2,6 +2,7 @@
 
 # Vim
 *.swp
+*.swo
 
 # Packages
 *.egg
