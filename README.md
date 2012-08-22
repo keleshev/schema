@@ -39,6 +39,20 @@ If data is valid, `Schema.validate` will return the validated data
 
 If data is invalid, `Schema` will raise `SchemaError` exception.
 
+
+Installation
+-------------------------------------------------------------------------------
+
+Use [pip](http://pip-installer.org) or easy_install:
+
+    pip install schema==0.1.0
+
+Alternatively, you can just drop `schema.py` file into your project--it is
+self-contained.
+
+- **schema** is tested with Python 2.6, 2.7
+- **schema** follows [semantic versioning](http://semver.org).
+
 How `Schema` validates data
 -------------------------------------------------------------------------------
 
