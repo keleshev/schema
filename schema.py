@@ -3,9 +3,7 @@ class SchemaError(Exception):
     def __init__(self, autos, errors):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
-        for a, e in zip(self.autos, self.errors)[::-1]:
-            if e is not None or a is not None:
-                break
+        Exception.__init__(self, self.code)
 
     @property
     def code(self):
