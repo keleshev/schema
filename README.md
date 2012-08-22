@@ -5,32 +5,32 @@ Schema validation just got Pythonic
 obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
-Here is a quick example to get a feeling of **schema**:
-validation of [*create a gist*](http://developer.github.com/v3/gists/)
-request from github API.
+Example
+-------------------------------------------------------------------------------
+
+Here is a quick example to get a feeling of **schema**, validating a list of
+entries with personal iformation:
 
 ```python
->>> gist = '''{"description": "the description for this gist",
-...            "public": true,
-...            "files": {
-...                "file1.txt": {"content": "String file contents"},
-...                "other.txt": {"content": "Another file contents"}}}'''
-
 >>> from schema import Schema, And, Use, Optional
 
->>> import json
-
->>> gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
-...                          {Optional('description'): basestring,
-...                           'public': bool,
-...                           'files': {basestring: {'content': basestring}}}))
-
->>> gist_schema.validate(gist)
-
-{u'description': u'the description for this gist',
- u'files': {u'file1.txt': {u'content': u'String file contents'},
-            u'other.txt': {u'content': u'Another file contents'}},
- u'public': True}
+>>> schema = Schema([{'name': And(str, lambda s: len(s)),
+...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
+...                   Optional('sex'): And(Use(lambda s: s.lower()),
+...                                        lambda s: s in ('male', 'female'))
+...                  }])
+>>> data = [{'name': 'Sue', 'age': '28', 'sex': 'FEMALE'},
+...         {'name': 'Sam', 'age': '42'},
+...         {'name': 'Sacha', 'age': '20', 'sex': 'Male'}]
+>>> sue, sam, sacha = schema.validate(data)
+>>> sue['age']
+28
+>>> sue['sex']
+'female'
+>>> sam['age']
+42
+>>> sacha['sex']
+'male'
 
 ```
 
@@ -74,7 +74,9 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: bool(exists('./non-existent/')) should be True
+SchemaExit: ...
+
+bool(exists('./non-existent/')) should be True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -82,7 +84,9 @@ SchemaExit: bool(exists('./non-existent/')) should be True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: bool(<lambda>(-12)) should be True
+SchemaExit: ...
+
+bool(<lambda>(-12)) should be True
 
 ```
 
@@ -203,33 +207,6 @@ SchemaExit: ...
 
 ```
 
-Example
--------------------------------------------------------------------------------
-
-Here is a more complex example that validates list of entries with
-personal information:
-
-```python
->>> schema = Schema([{'name': And(str, lambda s: len(s)),
-...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
-...                   Optional('sex'): And(Use(lambda s: s.lower()),
-...                                        lambda s: s in ('male', 'female'))
-...                  }])
->>> data = [{'name': 'Sue', 'age': '28', 'sex': 'FEMALE'},
-...         {'name': 'Sam', 'age': '42'},
-...         {'name': 'Sacha', 'age': '20', 'sex': 'Male'}]
->>> sue, sam, sacha = schema.validate(data)
->>> sue['age']
-28
->>> sue['sex']
-'female'
->>> sam['age']
-42
->>> sacha['sex']
-'male'
-
-```
-
 User-friendly error reporting
 -------------------------------------------------------------------------------
 
@@ -242,6 +219,40 @@ a built-in one.
 Traceback (most recent call last):
 ...
 SchemaExit: Invalid year
+
+```
+
+A JSON API example
+-------------------------------------------------------------------------------
+
+Here is a quick example: validation of
+[*create a gist*](http://developer.github.com/v3/gists/)
+request from github API.
+
+```python
+>>> gist = '''{"description": "the description for this gist",
+...            "public": true,
+...            "files": {
+...                "file1.txt": {"content": "String file contents"},
+...                "other.txt": {"content": "Another file contents"}}}'''
+
+>>> from schema import Schema, And, Use, Optional
+
+>>> import json
+
+>>> gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
+...                          # use basestring since json returns unicode
+...                          {Optional('description'): basestring,
+...                           'public': bool,
+...                           'files': {basestring: {'content': basestring}}}))
+
+>>> gist = gist_schema.validate(gist)
+
+# gist:
+{u'description': u'the description for this gist',
+ u'files': {u'file1.txt': {u'content': u'String file contents'},
+            u'other.txt': {u'content': u'Another file contents'}},
+ u'public': True}
 
 ```
 
@@ -289,13 +300,6 @@ this is how you validate it using `schema`:
 
 As you can see, **schema** validated data successfully, opened files and
 converted `'3'` to `int`.
-
-
-Note
--------------------------------------------------------------------------------
-
-**schema** is work-in-progress.  Backwards-incompatible changes are made on a
-daily basis.
 
 Credits
 -------------------------------------------------------------------------------
