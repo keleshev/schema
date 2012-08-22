@@ -10,6 +10,12 @@ validation of [*create a gist*](http://developer.github.com/v3/gists/)
 request from github API.
 
 ```python
+>>> gist = '''{"description": "the description for this gist",
+...            "public": true,
+...            "files": {
+...                "file1.txt": {"content": "String file contents"},
+...                "other.txt": {"content": "Another file contents"}}}'''
+
 >>> from schema import Schema, And, Use, Optional
 
 >>> import json
@@ -19,13 +25,12 @@ request from github API.
 ...                           'public': bool,
 ...                           'files': {basestring: {'content': basestring}}}))
 
->>> gist = '''{"description": "the description for this gist",
-...            "public": true,
-...            "files": {
-...                "file1.txt": {"content": "String file contents"},
-...                "other.txt": {"content": "Another file contents"}}}'''
+>>> gist_schema.validate(gist)
 
->>> gist = gist_schema.validate(gist)
+{u'description': u'the description for this gist',
+ u'files': {u'file1.txt': {u'content': u'String file contents'},
+            u'other.txt': {u'content': u'Another file contents'}},
+ u'public': True}
 
 ```
 
