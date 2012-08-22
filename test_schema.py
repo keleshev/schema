@@ -3,7 +3,7 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaError
+from schema import Schema, Use, And, Or, Optional, SchemaError, guard
 
 
 SE = raises(SchemaError)
@@ -263,3 +263,16 @@ def test_error_reporting():
         s.validate({'<files>': ['hai'], '<path>': './', '--count': '2'})
     except SchemaError as e:
         assert e.code == 'Error:\n<files> should be readable'
+
+
+def test_guard():
+    @guard(Use(int), And(str, lambda s: len(s)), Or(None, float))
+    def fn(i, s, f=None):
+        assert type(i) is int
+        assert type(s) is str and len(s)
+        assert type(f) is float or f is None
+    fn('1', 'hai')
+    fn(123, 'hai', 3.14)
+    with SE: fn('not int', 'hai')
+    with SE: fn(123, '')
+    with SE: fn(123, 'hai', 314)

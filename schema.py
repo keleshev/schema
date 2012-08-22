@@ -150,3 +150,14 @@ class Schema(object):
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
+
+
+def guard(*schemas):
+    print schemas
+    def decorator(oldf):
+        print 'hai'
+        def newf(*args):
+            args = [Schema(s).validate(a) for s, a in zip(schemas, args)]
+            return oldf(*args)
+        return newf
+    return decorator
