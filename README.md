@@ -34,6 +34,19 @@ entries with personal iformation:
 
 ```
 
+If data is valid, `Schema.validate` will return the validated data
+(optionally converted with `Use` calls, see below).
+
+If data is invalid, `Schema` will raise `SchemaExit` exit-exception which is a
+subclass of `SystemExit`, which means that if you don't catch it, the
+program will exit with error message, but without traceback, which is
+especially useful to show custom error-messages directly to the user
+(see `error` keyword parameter). Otherwise you can always catch it and inspect.
+
+This file is also a doctest, thus lines "Traceback (most recent call last):"
+were necessary here, although in reality **schema** will exit without
+a traceback.
+
 How `Schema` validates data
 -------------------------------------------------------------------------------
 
@@ -74,9 +87,7 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: ...
-
-bool(exists('./non-existent/')) should be True
+SchemaExit: bool(exists('./non-existent/')) should be True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -84,9 +95,7 @@ bool(exists('./non-existent/')) should be True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: ...
-
-bool(<lambda>(-12)) should be True
+SchemaExit: bool(<lambda>(-12)) should be True
 
 ```
 
@@ -198,9 +207,7 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaExit: ...
-
-#######bool(<lambda>('hai')) should be True
+SchemaExit: bool(<lambda>('hai')) should be True
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
