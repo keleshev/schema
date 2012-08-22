@@ -10,17 +10,20 @@ validation of [*create a gist*](http://developer.github.com/v3/gists/)
 request from github API.
 
 ```python
->>> from schema import Schema, Optional
+>>> from schema import Schema, And, Use, Optional
 
->>> gist_schema = Schema({Optional('description'): str,
-...                       'public': bool,
-...                       'files': {str: {'content': str}}})
+>>> import json
 
->>> gist = {'description': 'the description for this gist',
-...         'public': True,
-...         'files': {
-...             'file1.txt': {'content': 'String file contents'},
-...             'other.txt': {'content': 'Another file contents'}}}
+>>> gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
+...                          {Optional('description'): basestring,
+...                           'public': bool,
+...                           'files': {basestring: {'content': basestring}}}))
+
+>>> gist = '''{"description": "the description for this gist",
+...            "public": true,
+...            "files": {
+...                "file1.txt": {"content": "String file contents"},
+...                "other.txt": {"content": "Another file contents"}}}'''
 
 >>> gist = gist_schema.validate(gist)
 
@@ -66,9 +69,7 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: ...
-
-bool(exists('./non-existent/')) should be True
+SchemaExit: bool(exists('./non-existent/')) should be True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -76,9 +77,7 @@ bool(exists('./non-existent/')) should be True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: ...
-
-bool(<lambda>(-12)) should be True
+SchemaExit: bool(<lambda>(-12)) should be True
 
 ```
 

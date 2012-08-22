@@ -227,3 +227,17 @@ def test_schema_error_handling():
     except SchemaExit as e:
         assert e.autos == ['first auto', None, None]
         assert e.errors == ['first error', None, 'second error']
+
+
+def test_use_json():
+    import json
+    gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
+                             {Optional('description'): basestring,
+                              'public': bool,
+                              'files': {basestring: {'content': basestring}}}))
+    gist = '''{"description": "the description for this gist",
+               "public": true,
+               "files": {
+                   "file1.txt": {"content": "String file contents"},
+                   "other.txt": {"content": "Another file contents"}}}'''
+    assert gist_schema.validate(gist)
