@@ -5,14 +5,10 @@ class SchemaExit(SystemExit):
     def __init__(self, autos, errors):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
-        for a, e in zip(self.autos, self.errors):
-            if e is not None:
-                message = e
+        for a, e in zip(self.autos, self.errors)[::-1]:
+            if e is not None or a is not None:
                 break
-            if a is not None:
-                message = a
-                break
-        SystemExit.__init__(self, message)
+        SystemExit.__init__(self, e or a)
 
     @property
     def code(self):
@@ -52,8 +48,8 @@ class Or(And):
                 return s.validate(data)
             except SchemaExit as x:
                 pass
-        raise SchemaExit(x.autos + ['%r did not validate %r' % (self, data)],
-                         x.errors + [self._error])
+        raise SchemaExit(['%r did not validate %r' % (self, data)] + x.autos,
+                         [self._error] + x.errors)
 
 
 class Use(object):
@@ -70,7 +66,7 @@ class Use(object):
         try:
             return self._callable(data)
         except SchemaExit as x:
-            raise SchemaExit(x.autos + [None], x.errors + [self._error])
+            raise SchemaExit([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
             f = self._callable.__name__
             raise SchemaExit('%s(%r) raised %r' % (f, data, x), self._error)
@@ -115,8 +111,8 @@ class Schema(object):
                     new[nkey] = nvalue
                 elif type(skey) is not Optional:
                     if x is not None:
-                        raise SchemaExit(x.autos + ['key %r is required' % key],
-                                         x.errors + [e])
+                        raise SchemaExit(['key %r is required' % key] + x.autos,
+                                         [e] + x.errors)
                     else:
                         raise SchemaExit('key %r is required' % key, e)
             coverage = set(k for k in coverage if type(k) is not Optional)
@@ -130,7 +126,7 @@ class Schema(object):
             try:
                 return s.validate(data)
             except SchemaExit as x:
-                raise SchemaExit(x.autos + [None], x.errors + [e])
+                raise SchemaExit([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaExit('%r.validate(%r) raised %r' % (s, data, x),
                                  self._error)
@@ -145,10 +141,10 @@ class Schema(object):
                 if s(data):
                     return data
             except SchemaExit as x:
-                raise SchemaExit(x.autos + [None], x.errors + [e])
+                raise SchemaExit([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaExit('%s(%r) raised %r' % (f, data, x), self._error)
-            raise SchemaExit('bool(%s(%r)) should be True ' % (f, data), e)
+            raise SchemaExit('%s(%r) should evalutate to True' % (f, data), e)
         if s == data:
             return data
         else:

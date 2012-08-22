@@ -87,7 +87,7 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: bool(exists('./non-existent/')) should be True
+SchemaExit: exists('./non-existent/') should evalutate to True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -95,7 +95,7 @@ SchemaExit: bool(exists('./non-existent/')) should be True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: bool(<lambda>(-12)) should be True
+SchemaExit: <lambda>(-12) should evalutate to True
 
 ```
 
@@ -207,7 +207,7 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaExit: bool(<lambda>('hai')) should be True
+SchemaExit: <lambda>('hai') should evalutate to True
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
