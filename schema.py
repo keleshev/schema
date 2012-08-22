@@ -16,8 +16,15 @@ class SchemaExit(SystemExit):
 
     @property
     def code(self):
-        return '\n'.join([e or a for a, e in zip(self.autos, self.errors)
-                          if a or e])
+        def uniq(seq):
+            seen = set()
+            seen_add = seen.add
+            return [x for x in seq if x not in seen and not seen_add(x)]
+        a = uniq(i for i in self.autos if i is not None)
+        e = uniq(i for i in self.errors if i is not None)
+        if e:
+            return '\n'.join(e)
+        return '\n'.join(a)
 
 
 class And(object):
@@ -87,14 +94,18 @@ class Schema(object):
         if type(s) is dict:
             data = Schema(dict, error=e).validate(data)
             new = {}
+            x = None
             coverage = set()  # non-optional schema keys that were matched
             for key, value in data.items():
                 valid = False
                 for skey, svalue in s.items():
                     try:
                         nkey = Schema(skey, error=e).validate(key)
-                        nvalue = Schema(svalue, error=e).validate(value)
-                    except SchemaExit as x:  # XXX
+                        try:
+                            nvalue = Schema(svalue, error=e).validate(value)
+                        except SchemaExit as x:
+                            raise
+                    except SchemaExit:
                         pass
                     else:
                         coverage.add(skey)
@@ -103,8 +114,11 @@ class Schema(object):
                 if valid:
                     new[nkey] = nvalue
                 elif type(skey) is not Optional:
-                    raise SchemaExit(x.autos + ['key %r is required' % key],
-                                     x.errors + [e])
+                    if x is not None:
+                        raise SchemaExit(x.autos + ['key %r is required' % key],
+                                         x.errors + [e])
+                    else:
+                        raise SchemaExit('key %r is required' % key, e)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:

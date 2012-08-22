@@ -241,3 +241,25 @@ def test_use_json():
                    "file1.txt": {"content": "String file contents"},
                    "other.txt": {"content": "Another file contents"}}}'''
     assert gist_schema.validate(gist)
+
+
+def test_error_reporting():
+    s = Schema({'<files>': [Use(open, error='<files> should be readable')],
+                '<path>': And(os.path.exists, error='<path> should exist'),
+                '--count': Or(None, And(Use(int), lambda n: 0 < n < 5),
+                              error='--count should be integer 0 < n < 5')},
+               error='The following errors occure:')
+    s.validate({'<files>': [], '<path>': './', '--count': 3})
+
+    try:
+        s.validate({'<files>': [], '<path>': './', '--count': '10'})
+    except SchemaExit as e:
+        assert e.code == '--count should be integer 0 < n < 5'
+    try:
+        s.validate({'<files>': [], '<path>': './hai', '--count': '2'})
+    except SchemaExit as e:
+        assert e.code == '<path> should exist'
+    try:
+        s.validate({'<files>': ['hai'], '<path>': './', '--count': '2'})
+    except SchemaExit as e:
+        assert e.code == '<files> should be readable'
