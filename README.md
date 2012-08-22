@@ -37,15 +37,7 @@ entries with personal iformation:
 If data is valid, `Schema.validate` will return the validated data
 (optionally converted with `Use` calls, see below).
 
-If data is invalid, `Schema` will raise `SchemaExit` exit-exception which is a
-subclass of `SystemExit`, which means that if you don't catch it, the
-program will exit with error message, but without traceback, which is
-especially useful to show custom error-messages directly to the user
-(see `error` keyword parameter). Otherwise you can always catch it and inspect.
-
-This file is also a doctest, thus lines "Traceback (most recent call last):"
-were necessary here, although in reality **schema** will exit without
-a traceback.
+If data is invalid, `Schema` will raise `SchemaError` exception.
 
 How `Schema` validates data
 -------------------------------------------------------------------------------
@@ -65,7 +57,7 @@ otherwise it will exit with error;
 >>> Schema(int).validate('123')
 Traceback (most recent call last):
 ...
-SchemaExit: '123' should be instance of <type 'int'>
+SchemaError: '123' should be instance of <type 'int'>
 
 >>> Schema(object).validate('hai')
 'hai'
@@ -87,7 +79,7 @@ If `Schema(...)` encounteres a callable (function, class, of object with
 >>> Schema(os.path.exists).validate('./non-existent/')
 Traceback (most recent call last):
 ...
-SchemaExit: exists('./non-existent/') should evalutate to True
+SchemaError: exists('./non-existent/') should evalutate to True
 
 >>> Schema(lambda n: n > 0).validate(123)
 123
@@ -95,7 +87,7 @@ SchemaExit: exists('./non-existent/') should evalutate to True
 >>> Schema(lambda n: n > 0).validate(-12)
 Traceback (most recent call last):
 ...
-SchemaExit: <lambda>(-12) should evalutate to True
+SchemaError: <lambda>(-12) should evalutate to True
 
 ```
 
@@ -103,7 +95,7 @@ SchemaExit: <lambda>(-12) should evalutate to True
 
 If `Schema(...)` encounteres an object with method `validate` it will run this
 method on corresponding data as `data = smth.validate(data)`. This method may
-raise `SchemaExit` exit-exception, which will tell `Schema` that that piece
+raise `SchemaError` exit-exception, which will tell `Schema` that that piece
 of data is invalid, otherwise -- it will continue to validate.
 
 As example, you can use `Use` for creating such objects. `Use` helps to use
@@ -132,7 +124,7 @@ class Use(object):
         try:
             return self._callable(data)
         except Exception as e:
-            raise SchemaExit('%r raised %r' % (self._callable.__name__, e))
+            raise SchemaError('%r raised %r' % (self._callable.__name__, e))
 ```
 
 Now you can write your own validation-aware classes and data types.
@@ -151,7 +143,7 @@ schemas listed inside that container:
 >>> Schema(set([int, float])).validate(set([5, 7, 8, 'not int or float here']))
 Traceback (most recent call last):
 ...
-SchemaExit: 'not int or float here' should be instance of <type 'float'>
+SchemaError: 'not int or float here' should be instance of <type 'float'>
 
 ```
 
@@ -181,7 +173,7 @@ You can specify keys as schemas too:
 ...                   10: 'not None here'})
 Traceback (most recent call last):
 ...
-SchemaExit: None does not match 'not None here'
+SchemaError: None does not match 'not None here'
 
 ```
 
@@ -207,7 +199,7 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaExit: <lambda>('hai') should evalutate to True
+SchemaError: <lambda>('hai') should evalutate to True
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
@@ -225,9 +217,17 @@ a built-in one.
 >>> Schema(Use(int, error='Invalid year')).validate('XVII')
 Traceback (most recent call last):
 ...
-SchemaExit: Invalid year
+SchemaError: Invalid year
 
 ```
+
+You can see all errors that occured by accessing `exc.autos`
+for auto-generated error messages, and `exc.errors` for errors
+which had `error` text passed to them.
+
+You can exit with `sys.exit(exc.code)` if you want to show the messages
+to the user without traceback. `error` messages are given precedence in that
+case.
 
 A JSON API example
 -------------------------------------------------------------------------------

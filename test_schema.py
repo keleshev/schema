@@ -3,10 +3,10 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaExit
+from schema import Schema, Use, And, Or, Optional, SchemaError
 
 
-SE = raises(SchemaExit)
+SE = raises(SchemaError)
 
 
 def test_schema():
@@ -116,11 +116,11 @@ def test_complex():
 def test_nice_errors():
     try:
         Schema(int, error='should be integer').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.errors == ['should be integer']
     try:
         Schema(Use(float), error='should be a number').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.code == 'should be a number'
 
 
@@ -128,23 +128,23 @@ def test_use_error_handling():
     def ve(_): raise ValueError()
     try:
         Use(ve).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == [None]
     try:
         Use(ve, error='should not raise').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == ['should not raise']
-    def se(_): raise SchemaExit('first auto', 'first error')
+    def se(_): raise SchemaError('first auto', 'first error')
     try:
         Use(se).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, 'first auto']
         assert e.errors == [None, 'first error']
     try:
         Use(se, error='second error').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, 'first auto']
         assert e.errors == ['second error', 'first error']
 
@@ -153,7 +153,7 @@ def test_or_error_handling():
     def ve(_): raise ValueError()
     try:
         Or(ve).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos[0].startswith('Or(')
         assert e.autos[0].endswith(") did not validate 'x'")
         assert e.autos[1] == "ve('x') raised ValueError()"
@@ -161,7 +161,7 @@ def test_or_error_handling():
         assert e.errors == [None, None]
     try:
         Or(ve, error='should not raise').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos[0].startswith('Or(')
         assert e.autos[0].endswith(") did not validate 'x'")
         assert e.autos[1] == "ve('x') raised ValueError()"
@@ -169,12 +169,12 @@ def test_or_error_handling():
         assert e.errors == ['should not raise', 'should not raise']
     try:
         Or('o').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
         assert e.errors == [None, None]
     try:
         Or('o', error='second error').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
         assert e.errors == ['second error', 'second error']
 
@@ -183,23 +183,23 @@ def test_and_error_handling():
     def ve(_): raise ValueError()
     try:
         And(ve).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == [None]
     try:
         And(ve, error='should not raise').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == ['should not raise']
-    def se(_): raise SchemaExit('first auto', 'first error')
+    def se(_): raise SchemaError('first auto', 'first error')
     try:
         And(str, se).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, 'first auto']
         assert e.errors == [None, 'first error']
     try:
         And(str, se, error='second error').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, 'first auto']
         assert e.errors == ['second error', 'first error']
 
@@ -208,23 +208,23 @@ def test_schema_error_handling():
     def ve(_): raise ValueError()
     try:
         Schema(Use(ve)).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, "ve('x') raised ValueError()"]
         assert e.errors == [None, None]
     try:
         Schema(Use(ve), error='should not raise').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, "ve('x') raised ValueError()"]
         assert e.errors == ['should not raise', None]
-    def se(_): raise SchemaExit('first auto', 'first error')
+    def se(_): raise SchemaError('first auto', 'first error')
     try:
         Schema(Use(se)).validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, None, 'first auto']
         assert e.errors == [None, None, 'first error']
     try:
         Schema(Use(se), error='second error').validate('x')
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.autos == [None, None, 'first auto']
         assert e.errors == ['second error', None, 'first error']
 
@@ -253,13 +253,13 @@ def test_error_reporting():
 
     try:
         s.validate({'<files>': [], '<path>': './', '--count': '10'})
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.code == 'Error:\n--count should be integer 0 < n < 5'
     try:
         s.validate({'<files>': [], '<path>': './hai', '--count': '2'})
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.code == 'Error:\n<path> should exist'
     try:
         s.validate({'<files>': ['hai'], '<path>': './', '--count': '2'})
-    except SchemaExit as e:
+    except SchemaError as e:
         assert e.code == 'Error:\n<files> should be readable'
