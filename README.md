@@ -157,7 +157,8 @@ schemas listed inside that container:
 >>> Schema(set([int, float])).validate(set([5, 7, 8, 'not int or float here']))
 Traceback (most recent call last):
 ...
-SchemaError: 'not int or float here' should be instance of <type 'float'>
+SchemaError: Or(<type 'int'>, <type 'float'>) did not validate 'not int or float here'
+'not int or float here' should be instance of <type 'float'>
 
 ```
 
@@ -187,7 +188,8 @@ You can specify keys as schemas too:
 ...                   10: 'not None here'})
 Traceback (most recent call last):
 ...
-SchemaError: None does not match 'not None here'
+SchemaError: key 10 is required
+None does not match 'not None here'
 
 ```
 
@@ -213,7 +215,8 @@ for the same data:
 >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
 Traceback (most recent call last):
 ...
-SchemaError: <lambda>('hai') should evalutate to True
+SchemaError: key 'password' is required
+<lambda>('hai') should evalutate to True
 
 >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
 3.1415
