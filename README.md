@@ -14,14 +14,15 @@ entries with personal iformation:
 ```python
 >>> from schema import Schema, And, Use, Optional
 
->>> schema = Schema([{'name': And(str, lambda s: len(s)),
+>>> schema = Schema([{'name': And(str, len),
 ...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
-...                   Optional('sex'): And(Use(lambda s: s.lower()),
-...                                        lambda s: s in ('male', 'female'))
-...                  }])
+...                   Optional('sex'): And(str, Use(str.lower),
+...                                        lambda s: s in ('male', 'female'))}])
+
 >>> data = [{'name': 'Sue', 'age': '28', 'sex': 'FEMALE'},
 ...         {'name': 'Sam', 'age': '42'},
 ...         {'name': 'Sacha', 'age': '20', 'sex': 'Male'}]
+
 >>> sue, sam, sacha = schema.validate(data)
 >>> sue['age']
 28
