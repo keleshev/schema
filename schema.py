@@ -1,3 +1,6 @@
+from inspect import getargspec
+
+
 class SchemaError(Exception):
 
     def __init__(self, autos, errors):
@@ -84,7 +87,7 @@ class Schema(object):
             return type(s)(Or(*s, error=e).validate(d) for d in data)
         if type(s) is dict:
             data = Schema(dict, error=e).validate(data)
-            new = {}
+            new = type(data)()
             x = None
             coverage = set()  # non-optional schema keys that were matched
             for key, value in data.items():
@@ -152,12 +155,18 @@ class Optional(Schema):
     """Marker for an optional part of Schema."""
 
 
-def guard(*schemas):
-    print schemas
+def guard(*schemas, **kwschema):
     def decorator(oldf):
-        print 'hai'
-        def newf(*args):
-            args = [Schema(s).validate(a) for s, a in zip(schemas, args)]
-            return oldf(*args)
+        spec = getargspec(oldf)
+        def newf(*args, **kw):
+            env = dict(zip(reversed(spec.args), reversed(spec.defaults or ()))
+                       + zip(spec.args, args) + kw.items())
+            senv = dict(zip(spec.args, schemas) + kwschema.items())
+            print env
+            print senv
+            print
+            #args = [Schema(s).validate(a) for s, a in zip(schemas, args)]
+            venv = Schema(senv).validate(env)
+            return oldf(**venv)
         return newf
     return decorator

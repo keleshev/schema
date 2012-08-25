@@ -276,3 +276,7 @@ def test_guard():
     with SE: fn('not int', 'hai')
     with SE: fn(123, '')
     with SE: fn(123, 'hai', 314)
+    fn(i='1', s='hai')
+    fn(1, s='hai')
+    with SE: fn(i='X', s='hai')
+    with SE: fn('X', s='hai')

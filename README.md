@@ -23,15 +23,11 @@ entries with personal iformation:
 ...         {'name': 'Sam', 'age': '42'},
 ...         {'name': 'Sacha', 'age': '20', 'sex': 'Male'}]
 
->>> sue, sam, sacha = schema.validate(data)
->>> sue['age']
-28
->>> sue['sex']
-'female'
->>> sam['age']
-42
->>> sacha['sex']
-'male'
+>>> validated = schema.validate(data)
+
+>>> assert validated == [{'name': 'Sue', 'age': 28, 'sex': 'female'},
+...                      {'name': 'Sam', 'age': 42},
+...                      {'name': 'Sacha', 'age' : 20, 'sex': 'male'}]
 
 ```
 
@@ -61,7 +57,7 @@ How `Schema` validates data
 
 If `Schema(...)` encounteres a type (such as `int`, `str`, `object`, etc),
 it will check if correspoinding piece of data is instance of that type,
-otherwise it will exit with error;
+otherwise it will raise `SchemaError`.
 
 ```python
 >>> from schema import Schema
@@ -83,7 +79,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 If `Schema(...)` encounteres a callable (function, class, of object with
 `__call__` method) it will call it, and if return value evaluates to
-`True` it will continue validating, else -- it will exit with error.
+`True` it will continue validating, else -- it will raise `Schema Error`.
 
 ```python
 >>> import os
@@ -110,8 +106,8 @@ SchemaError: <lambda>(-12) should evalutate to True
 
 If `Schema(...)` encounteres an object with method `validate` it will run this
 method on corresponding data as `data = smth.validate(data)`. This method may
-raise `SchemaError` exit-exception, which will tell `Schema` that that piece
-of data is invalid, otherwise -- it will continue to validate.
+raise `SchemaError` exception, which will tell `Schema` that that piece
+of data is invalid, otherwise---it will continue validating.
 
 As example, you can use `Use` for creating such objects. `Use` helps to use
 a function or type to convert a value while validating it:
@@ -169,10 +165,10 @@ If `Schema(...)` encounters an instance of `dict`, it will validate data
 key-value pairs:
 
 ```python
->>> Schema({'name': str,
-...         'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28}) \
-... == {'name': 'Sue', 'age': 28}
-True
+>>> d = Schema({'name': str,
+...             'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28})
+
+>>> assert d == {'name': 'Sue', 'age': 28}
 
 ```
 
@@ -239,7 +235,7 @@ SchemaError: Invalid year
 
 ```
 
-You can see all errors that occured by accessing `exc.autos`
+You can see all errors that occured by accessing exception's `exc.autos`
 for auto-generated error messages, and `exc.errors` for errors
 which had `error` text passed to them.
 
