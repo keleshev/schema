@@ -79,7 +79,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 If `Schema(...)` encounteres a callable (function, class, of object with
 `__call__` method) it will call it, and if return value evaluates to
-`True` it will continue validating, else -- it will raise `Schema Error`.
+`True` it will continue validating, else -- it will raise `SchemaError`.
 
 ```python
 >>> import os
