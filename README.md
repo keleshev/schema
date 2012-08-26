@@ -6,7 +6,7 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 Example
--------------------------------------------------------------------------------
+----------------------------------------------------------------------------
 
 Here is a quick example to get a feeling of **schema**, validating a list of
 entries with personal iformation:
@@ -44,7 +44,7 @@ Use [pip](http://pip-installer.org) or easy_install:
 
     pip install schema==0.1.1
 
-Alternatively, you can just drop `schema.py` file into your project--it is
+Alternatively, you can just drop `schema.py` file into your project—it is
 self-contained.
 
 - **schema** is tested with Python 2.6, 2.7
@@ -79,7 +79,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 If `Schema(...)` encounteres a callable (function, class, of object with
 `__call__` method) it will call it, and if return value evaluates to
-`True` it will continue validating, else -- it will raise `Schema Error`.
+`True` it will continue validating, else—it will raise `SchemaError`.
 
 ```python
 >>> import os
@@ -105,9 +105,9 @@ SchemaError: <lambda>(-12) should evalutate to True
 ### "Validatables"
 
 If `Schema(...)` encounteres an object with method `validate` it will run this
-method on corresponding data as `data = smth.validate(data)`. This method may
+method on corresponding data as `data = obj.validate(data)`. This method may
 raise `SchemaError` exception, which will tell `Schema` that that piece
-of data is invalid, otherwise---it will continue validating.
+of data is invalid, otherwise—it will continue validating.
 
 As example, you can use `Use` for creating such objects. `Use` helps to use
 a function or type to convert a value while validating it:
@@ -200,7 +200,7 @@ You can mark a key as optional as follows:
 
 ```
 
-**schema** has classes `And` and `Or` that help to validate several schemas
+**schema** has classes `And` and `Or` that help validating several schemas
 for the same data:
 
 ```python
