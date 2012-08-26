@@ -105,7 +105,7 @@ SchemaError: <lambda>(-12) should evalutate to True
 ### "Validatables"
 
 If `Schema(...)` encounteres an object with method `validate` it will run this
-method on corresponding data as `data = smth.validate(data)`. This method may
+method on corresponding data as `data = obj.validate(data)`. This method may
 raise `SchemaError` exception, which will tell `Schema` that that piece
 of data is invalid, otherwise---it will continue validating.
 
