@@ -44,7 +44,7 @@ Use [pip](http://pip-installer.org) or easy_install:
 
     pip install schema==0.1.1
 
-Alternatively, you can just drop `schema.py` file into your project--it is
+Alternatively, you can just drop `schema.py` file into your project—it is
 self-contained.
 
 - **schema** is tested with Python 2.6, 2.7
@@ -79,7 +79,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 If `Schema(...)` encounteres a callable (function, class, of object with
 `__call__` method) it will call it, and if return value evaluates to
-`True` it will continue validating, else -- it will raise `SchemaError`.
+`True` it will continue validating, else—it will raise `SchemaError`.
 
 ```python
 >>> import os
