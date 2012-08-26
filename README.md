@@ -200,7 +200,7 @@ You can mark a key as optional as follows:
 
 ```
 
-**schema** has classes `And` and `Or` that help to validate several schemas
+**schema** has classes `And` and `Or` that help validating several schemas
 for the same data:
 
 ```python
