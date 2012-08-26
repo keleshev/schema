@@ -6,7 +6,7 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 Example
--------------------------------------------------------------------------------
+----------------------------------------------------------------------------
 
 Here is a quick example to get a feeling of **schema**, validating a list of
 entries with personal iformation:
@@ -107,7 +107,7 @@ SchemaError: <lambda>(-12) should evalutate to True
 If `Schema(...)` encounteres an object with method `validate` it will run this
 method on corresponding data as `data = obj.validate(data)`. This method may
 raise `SchemaError` exception, which will tell `Schema` that that piece
-of data is invalid, otherwise---it will continue validating.
+of data is invalid, otherwise—it will continue validating.
 
 As example, you can use `Use` for creating such objects. `Use` helps to use
 a function or type to convert a value while validating it:
