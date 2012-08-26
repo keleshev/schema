@@ -280,3 +280,16 @@ def test_guard():
     fn(1, s='hai')
     with SE: fn(i='X', s='hai')
     with SE: fn('X', s='hai')
+
+
+def test_guard_args_kw():
+    @guard(a=Use(int), b=int, args=(3,), kw={Optional(str): int})
+    def fn(a, b=2, *args, **kw):
+        """Docstring."""
+        return locals()
+    assert fn.__doc__ == "Docstring."
+    assert fn('1', 2, 3, ka=10, kb=20) == \
+            {'a': 1, 'b': 2, 'args': (3,), 'kw': {'ka': 10, 'kb': 20}}
+    assert fn(1, 2, 3) == {'a': 1, 'b': 2, 'args': (3,), 'kw': {}}
+    with SE: fn(1, 2, 3, 4)
+    assert fn(1, 2, 3, 3, 3) == {'a': 1, 'b': 2, 'args': (3, 3, 3), 'kw': {}}

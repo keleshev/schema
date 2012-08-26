@@ -1,4 +1,5 @@
 from inspect import getargspec
+from functools import wraps
 
 
 class SchemaError(Exception):
@@ -158,15 +159,26 @@ class Optional(Schema):
 def guard(*schemas, **kwschema):
     def decorator(oldf):
         spec = getargspec(oldf)
+        @wraps(oldf)
         def newf(*args, **kw):
+        #make_env = eval('lambda %s: locals()' % formatargspec(*spec)[1:][:-1])
+        #env = make_env(*args, **kw)
             env = dict(zip(reversed(spec.args), reversed(spec.defaults or ()))
-                       + zip(spec.args, args) + kw.items())
+                     + zip(spec.args, args)
+                     + [(k, v) for k, v in kw.items() if k in spec.args])
+            if spec.varargs is not None:
+                env[spec.varargs] = args[len(spec.args):]
+            if spec.keywords is not None:
+                env[spec.keywords] = dict((k, v) for k, v in kw.items()
+                                          if k not in spec.args)
             senv = dict(zip(spec.args, schemas) + kwschema.items())
-            print env
-            print senv
-            print
-            #args = [Schema(s).validate(a) for s, a in zip(schemas, args)]
             venv = Schema(senv).validate(env)
-            return oldf(**venv)
+            nargs = tuple(venv[k] for k in spec.args)
+            if spec.varargs is not None:
+                nargs += venv[spec.varargs]
+            nkw = dict((venv[spec.keywords].items() if spec.keywords else [])
+                    + [(k, v) for k, v in venv.items() if k not in
+                       tuple(spec.args) + (spec.varargs, spec.keywords)])
+            return oldf(*nargs, **nkw)
         return newf
     return decorator
