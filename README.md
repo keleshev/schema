@@ -9,7 +9,7 @@ Example
 ----------------------------------------------------------------------------
 
 Here is a quick example to get a feeling of **schema**, validating a list of
-entries with personal iformation:
+entries with personal information:
 
 ```python
 >>> from schema import Schema, And, Use, Optional
