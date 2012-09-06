@@ -85,6 +85,24 @@ def test_dict():
             {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
     with SE: Schema({'n': int, 'f': float}).validate(
             {'n': 3.14, 'f': 5})
+    with SE:
+        try:
+            Schema({'key': 5}).validate({})
+        except SchemaError as e:
+            assert e.args[0] == "missed keys set(['key'])"
+            raise
+    with SE:
+        try:
+            Schema({'key': 5}).validate({'n': 5})
+        except SchemaError as e:
+            assert e.args[0] == "key 'key' is required"
+            raise
+    with SE:
+        try:
+            Schema({}).validate({'n': 5})
+        except SchemaError as e:
+            assert e.args[0] == "wrong keys {} in {'n': 5}"
+            raise
 
 
 def test_dict_keys():
