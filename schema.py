@@ -93,6 +93,7 @@ class Schema(object):
             coverage = set()  # non-optional schema keys that were matched
             for key, value in data.items():
                 valid = False
+                skey = None
                 for skey, svalue in s.items():
                     try:
                         nkey = Schema(skey, error=e).validate(key)
@@ -108,12 +109,12 @@ class Schema(object):
                         break
                 if valid:
                     new[nkey] = nvalue
-                elif type(skey) is not Optional:
+                elif type(skey) is not Optional and skey is not None:
                     if x is not None:
                         raise SchemaError(['key %r is required' % key] +
                                           x.autos, [e] + x.errors)
                     else:
-                        raise SchemaError('key %r is required' % key, e)
+                        raise SchemaError('key %r is required' % skey, e)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
