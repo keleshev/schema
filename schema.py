@@ -4,6 +4,8 @@ from functools import wraps
 
 class SchemaError(Exception):
 
+    """Error during Schema validation."""
+
     def __init__(self, autos, errors):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]

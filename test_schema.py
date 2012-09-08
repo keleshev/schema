@@ -9,6 +9,14 @@ from schema import Schema, Use, And, Or, Optional, SchemaError, guard
 SE = raises(SchemaError)
 
 
+def ve(_):
+    raise ValueError()
+
+
+def se(_):
+    raise SchemaError('first auto', 'first error')
+
+
 def test_schema():
 
     assert Schema(1).validate(1) == 1
@@ -32,7 +40,8 @@ def test_schema():
 
 
 def test_validate_file():
-    assert Schema(Use(open)).validate('LICENSE-MIT').read().startswith('Copyright')
+    assert Schema(
+            Use(open)).validate('LICENSE-MIT').read().startswith('Copyright')
     with SE: Schema(Use(open)).validate('NON-EXISTENT')
     assert Schema(os.path.exists).validate('.') == '.'
     with SE: Schema(os.path.exists).validate('./non-existent/')
@@ -125,7 +134,6 @@ def test_nice_errors():
 
 
 def test_use_error_handling():
-    def ve(_): raise ValueError()
     try:
         Use(ve).validate('x')
     except SchemaError as e:
@@ -136,7 +144,6 @@ def test_use_error_handling():
     except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == ['should not raise']
-    def se(_): raise SchemaError('first auto', 'first error')
     try:
         Use(se).validate('x')
     except SchemaError as e:
@@ -150,7 +157,6 @@ def test_use_error_handling():
 
 
 def test_or_error_handling():
-    def ve(_): raise ValueError()
     try:
         Or(ve).validate('x')
     except SchemaError as e:
@@ -170,17 +176,18 @@ def test_or_error_handling():
     try:
         Or('o').validate('x')
     except SchemaError as e:
-        assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
+        assert e.autos == ["Or('o') did not validate 'x'",
+                           "'o' does not match 'x'"]
         assert e.errors == [None, None]
     try:
         Or('o', error='second error').validate('x')
     except SchemaError as e:
-        assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
+        assert e.autos == ["Or('o') did not validate 'x'",
+                           "'o' does not match 'x'"]
         assert e.errors == ['second error', 'second error']
 
 
 def test_and_error_handling():
-    def ve(_): raise ValueError()
     try:
         And(ve).validate('x')
     except SchemaError as e:
@@ -191,7 +198,6 @@ def test_and_error_handling():
     except SchemaError as e:
         assert e.autos == ["ve('x') raised ValueError()"]
         assert e.errors == ['should not raise']
-    def se(_): raise SchemaError('first auto', 'first error')
     try:
         And(str, se).validate('x')
     except SchemaError as e:
@@ -205,7 +211,6 @@ def test_and_error_handling():
 
 
 def test_schema_error_handling():
-    def ve(_): raise ValueError()
     try:
         Schema(Use(ve)).validate('x')
     except SchemaError as e:
@@ -216,7 +221,6 @@ def test_schema_error_handling():
     except SchemaError as e:
         assert e.autos == [None, "ve('x') raised ValueError()"]
         assert e.errors == ['should not raise', None]
-    def se(_): raise SchemaError('first auto', 'first error')
     try:
         Schema(Use(se)).validate('x')
     except SchemaError as e:
@@ -293,3 +297,10 @@ def test_guard_args_kw():
     assert fn(1, 2, 3) == {'a': 1, 'b': 2, 'args': (3,), 'kw': {}}
     with SE: fn(1, 2, 3, 4)
     assert fn(1, 2, 3, 3, 3) == {'a': 1, 'b': 2, 'args': (3, 3, 3), 'kw': {}}
+
+
+def test_schema_repr():  # what about repr with `error`s?
+    s = Schema([Or(None, And(str,
+                             Use(float)))])
+    assert repr(s) == ("Schema([Or(None, And(<type 'str'>, "
+                                            "Use(<type 'float'>)))])")
