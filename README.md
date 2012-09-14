@@ -77,7 +77,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 ### Callables
 
-If `Schema(...)` encounteres a callable (function, class, of object with
+If `Schema(...)` encounteres a callable (function, class, or object with
 `__call__` method) it will call it, and if return value evaluates to
 `True` it will continue validating, else—it will raise `SchemaError`.
 
