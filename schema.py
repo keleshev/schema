@@ -120,8 +120,6 @@ class Schema(object):
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
                 raise SchemaError('missed keys %r' % (required - coverage), e)
-            if len(new) != len(data):
-                raise SchemaError('wrong keys %r in %r' % (new, data), e)
             return new
         if hasattr(s, 'validate'):
             try:
