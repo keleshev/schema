@@ -154,8 +154,8 @@ schemas listed inside that container:
 >>> Schema(set([int, float])).validate(set([5, 7, 8, 'not int or float here']))
 Traceback (most recent call last):
 ...
-SchemaError: Or(<type 'int'>, <type 'float'>) did not validate 'not int or float here'
-'not int or float here' should be instance of <type 'float'>
+SchemaError: Or(<type 'float'>, <type 'int'>) did not validate 'not int or float here'
+'not int or float here' should be instance of <type 'int'>
 
 ```
 
