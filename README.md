@@ -9,7 +9,7 @@ Example
 ----------------------------------------------------------------------------
 
 Here is a quick example to get a feeling of **schema**, validating a list of
-entries with personal iformation:
+entries with personal information:
 
 ```python
 >>> from schema import Schema, And, Use, Optional
@@ -77,7 +77,7 @@ SchemaError: '123' should be instance of <type 'int'>
 
 ### Callables
 
-If `Schema(...)` encounteres a callable (function, class, of object with
+If `Schema(...)` encounteres a callable (function, class, or object with
 `__call__` method) it will call it, and if return value evaluates to
 `True` it will continue validating, else—it will raise `SchemaError`.
 
