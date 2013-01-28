@@ -111,7 +111,7 @@ class Schema(object):
                         break
                 if valid:
                     new[nkey] = nvalue
-                elif type(skey) is not Optional and skey is not None:
+                elif skey is not None:
                     if x is not None:
                         raise SchemaError(['key %r is required' % key] +
                                           x.autos, [e] + x.errors)

@@ -149,6 +149,10 @@ def test_nice_errors():
         Schema(Use(float), error='should be a number').validate('x')
     except SchemaError as e:
         assert e.code == 'should be a number'
+    try:
+        Schema({Optional('i'): Use(int, error='should be a number')}).validate({'i': 'x'})
+    except SchemaError as e:
+        assert e.code == 'should be a number'
 
 
 def test_use_error_handling():
