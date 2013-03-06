@@ -42,12 +42,12 @@ Installation
 
 Use `pip <http://pip-installer.org>`_ or easy_install::
 
-    pip install schema==0.1.3
+    pip install schema==0.1.4
 
 Alternatively, you can just drop ``schema.py`` file into your project—it is
 self-contained.
 
-- **schema** is tested with Python 2.6, 2.7
+- **schema** is tested with Python 2.6, 2.7, 3.2, 3.3 and PyPy.
 - **schema** follows `semantic versioning <http://semver.org>`_.
 
 How ``Schema`` validates data
