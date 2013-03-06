@@ -47,11 +47,12 @@ class And(object):
 class Or(And):
 
     def validate(self, data):
+        x = None
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
-            except SchemaError as x:
-                pass
+            except SchemaError as _x:
+                x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
                          [self._error] + x.errors)
 
@@ -104,7 +105,8 @@ class Schema(object):
                         nkey = Schema(skey, error=e).validate(key)
                         try:
                             nvalue = Schema(svalue, error=e).validate(value)
-                        except SchemaError as x:
+                        except SchemaError as _x:
+                            x = _x
                             raise
                     except SchemaError:
                         pass
