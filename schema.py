@@ -159,7 +159,8 @@ class Optional(Schema):
     """Marker for an optional part of Schema."""
 
 
-def guard(*schemas, **kwschema):
+def _guard(*schemas, **kwschema):
+    """Experimental code."""
     def decorator(oldf):
         spec = getargspec(oldf)
         @wraps(oldf)

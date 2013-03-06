@@ -3,7 +3,7 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaError, guard
+from schema import Schema, Use, And, Or, Optional, SchemaError, _guard
 
 
 SE = raises(SchemaError)
@@ -292,7 +292,7 @@ def test_error_reporting():
 
 
 def test_guard():
-    @guard(Use(int), And(str, lambda s: len(s)), Or(None, float))
+    @_guard(Use(int), And(str, lambda s: len(s)), Or(None, float))
     def fn(i, s, f=None):
         assert type(i) is int
         assert type(s) is str and len(s)
@@ -309,7 +309,7 @@ def test_guard():
 
 
 def test_guard_args_kw():
-    @guard(a=Use(int), b=int, args=(3,), kw={Optional(str): int})
+    @_guard(a=Use(int), b=int, args=(3,), kw={Optional(str): int})
     def fn(a, b=2, *args, **kw):
         """Docstring."""
         return locals()
