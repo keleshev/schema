@@ -80,7 +80,7 @@ Callables
 
 If ``Schema(...)`` encounteres a callable (function, class, or object with
 ``__call__`` method) it will call it, and if return value evaluates to
-``True`` it will continue validating, else—it will raise `SchemaError`.
+``True`` it will continue validating, else—it will raise ``SchemaError``.
 
 .. code:: python
 
@@ -243,7 +243,7 @@ A JSON API example
 -------------------------------------------------------------------------------
 
 Here is a quick example: validation of
-*`create a gist <http://developer.github.com/v3/gists/>`_*
+`create a gist <http://developer.github.com/v3/gists/>`_
 request from github API.
 
 .. code:: python
@@ -272,7 +272,7 @@ request from github API.
                 u'other.txt': {u'content': u'Another file contents'}},
      u'public': True}
 
-Using **schema** with **`docopt <http://github.com/docopt/docopt>`_**
+Using **schema** with `docopt <http://github.com/docopt/docopt>`_
 -------------------------------------------------------------------------------
 
 Assume you are using **docopt** with the following usage-pattern:
