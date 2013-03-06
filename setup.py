@@ -1,10 +1,12 @@
 """`schema` lives on `GitHub <http://github.com/halst/schema/>`_."""
 from setuptools import setup
 
+import schema
+
 
 setup(
-    name = "schema",
-    version = "0.1.1",
+    name = schema.__name__,
+    version = schema.__version__,
     author = "Vladimir Keleshev",
     author_email = "vladimir@keleshev.com",
     description = "Simple data validation library",

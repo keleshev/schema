@@ -2,6 +2,9 @@ from inspect import getargspec
 from functools import wraps
 
 
+__version__ = '0.1.2'
+
+
 class SchemaError(Exception):
 
     """Error during Schema validation."""
