@@ -98,7 +98,8 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({})
         except SchemaError as e:
-            assert e.args[0] == "missed keys set(['key'])"
+            assert e.args[0] in ["missed keys set(['key'])",
+                                 "missed keys {'key'}"]  # Python 3 style
             raise
     with SE:
         try:
@@ -257,6 +258,10 @@ def test_schema_error_handling():
 
 def test_use_json():
     import json
+    try:
+        basestring
+    except NameError:
+        basestring = str  # Python 3 does not have basestring
     gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
                              {Optional('description'): basestring,
                               'public': bool,
@@ -292,7 +297,7 @@ def test_error_reporting():
 
 
 def test_schema_repr():  # what about repr with `error`s?
-    s = Schema([Or(None, And(str,
-                             Use(float)))])
-    assert repr(s) == ("Schema([Or(None, And(<type 'str'>, "
-                                            "Use(<type 'float'>)))])")
+    schema = Schema([Or(None, And(str, Use(float)))])
+    repr_ = "Schema([Or(None, And(<type 'str'>, Use(<type 'float'>)))])"
+    # in Python 3 repr contains <class 'str'>, not <type 'str'>
+    assert repr(schema).replace('class', 'type') == repr_
