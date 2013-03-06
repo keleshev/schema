@@ -42,7 +42,7 @@ Installation
 
 Use `pip <http://pip-installer.org>`_ or easy_install::
 
-    pip install schema==0.1.2
+    pip install schema==0.1.3
 
 Alternatively, you can just drop ``schema.py`` file into your project—it is
 self-contained.
