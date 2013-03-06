@@ -160,32 +160,3 @@ class Schema(object):
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
-
-
-def _guard(*schemas, **kwschema):
-    """Experimental code."""
-    def decorator(oldf):
-        spec = getargspec(oldf)
-        @wraps(oldf)
-        def newf(*args, **kw):
-        #make_env = eval('lambda %s: locals()' % formatargspec(*spec)[1:][:-1])
-        #env = make_env(*args, **kw)
-            env = dict(zip(reversed(spec.args), reversed(spec.defaults or ()))
-                     + zip(spec.args, args)
-                     + [(k, v) for k, v in kw.items() if k in spec.args])
-            if spec.varargs is not None:
-                env[spec.varargs] = args[len(spec.args):]
-            if spec.keywords is not None:
-                env[spec.keywords] = dict((k, v) for k, v in kw.items()
-                                          if k not in spec.args)
-            senv = dict(zip(spec.args, schemas) + kwschema.items())
-            venv = Schema(senv).validate(env)
-            nargs = tuple(venv[k] for k in spec.args)
-            if spec.varargs is not None:
-                nargs += venv[spec.varargs]
-            nkw = dict((venv[spec.keywords].items() if spec.keywords else [])
-                    + [(k, v) for k, v in venv.items() if k not in
-                       tuple(spec.args) + (spec.varargs, spec.keywords)])
-            return oldf(*nargs, **nkw)
-        return newf
-    return decorator

@@ -3,7 +3,7 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaError, _guard
+from schema import Schema, Use, And, Or, Optional, SchemaError
 
 
 SE = raises(SchemaError)
@@ -289,36 +289,6 @@ def test_error_reporting():
         s.validate({'<files>': ['hai'], '<path>': './', '--count': '2'})
     except SchemaError as e:
         assert e.code == 'Error:\n<files> should be readable'
-
-
-def test_guard():
-    @_guard(Use(int), And(str, lambda s: len(s)), Or(None, float))
-    def fn(i, s, f=None):
-        assert type(i) is int
-        assert type(s) is str and len(s)
-        assert type(f) is float or f is None
-    fn('1', 'hai')
-    fn(123, 'hai', 3.14)
-    with SE: fn('not int', 'hai')
-    with SE: fn(123, '')
-    with SE: fn(123, 'hai', 314)
-    fn(i='1', s='hai')
-    fn(1, s='hai')
-    with SE: fn(i='X', s='hai')
-    with SE: fn('X', s='hai')
-
-
-def test_guard_args_kw():
-    @_guard(a=Use(int), b=int, args=(3,), kw={Optional(str): int})
-    def fn(a, b=2, *args, **kw):
-        """Docstring."""
-        return locals()
-    assert fn.__doc__ == "Docstring."
-    assert fn('1', 2, 3, ka=10, kb=20) == \
-            {'a': 1, 'b': 2, 'args': (3,), 'kw': {'ka': 10, 'kb': 20}}
-    assert fn(1, 2, 3) == {'a': 1, 'b': 2, 'args': (3,), 'kw': {}}
-    with SE: fn(1, 2, 3, 4)
-    assert fn(1, 2, 3, 3, 3) == {'a': 1, 'b': 2, 'args': (3, 3, 3), 'kw': {}}
 
 
 def test_schema_repr():  # what about repr with `error`s?
