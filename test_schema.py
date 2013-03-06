@@ -6,6 +6,12 @@ from pytest import raises
 from schema import Schema, Use, And, Or, Optional, SchemaError
 
 
+try:
+    basestring
+except NameError:
+    basestring = str  # Python 3 does not have basestring
+
+
 SE = raises(SchemaError)
 
 
@@ -258,10 +264,6 @@ def test_schema_error_handling():
 
 def test_use_json():
     import json
-    try:
-        basestring
-    except NameError:
-        basestring = str  # Python 3 does not have basestring
     gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
                              {Optional('description'): basestring,
                               'public': bool,
