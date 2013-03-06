@@ -2,7 +2,7 @@ from inspect import getargspec
 from functools import wraps
 
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 class SchemaError(Exception):
