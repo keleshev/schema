@@ -189,6 +189,19 @@ You can specify keys as schemas too:
     SchemaError: key 10 is required
     None does not match 'not None here'
 
+This is useful if you want to check certain key-values, but don't care
+about other:
+
+.. code:: python
+
+    >>> schema = Schema({'<id>': int,
+    ...                  '<file>': Use(open),
+    ...                  str: object})  # don't care about other str keys
+
+    >>> data = schema.validate({'<id>': 10,
+    ...                         '<file>': 'README.rst',
+    ...                         '--verbose': True})
+
 You can mark a key as optional as follows:
 
 .. code:: python

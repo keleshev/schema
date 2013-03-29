@@ -303,3 +303,25 @@ def test_schema_repr():  # what about repr with `error`s?
     repr_ = "Schema([Or(None, And(<type 'str'>, Use(<type 'float'>)))])"
     # in Python 3 repr contains <class 'str'>, not <type 'str'>
     assert repr(schema).replace('class', 'type') == repr_
+
+
+def test_validate_object():
+    schema = Schema({object: str})
+    assert schema.validate({42: 'str'}) == {42: 'str'}
+    with SE: schema.validate({42: 777})
+
+
+def test_issue_9_prioritized_key_comparison():
+    validate = Schema({'key': 42, object: 42}).validate
+    assert validate({'key': 42, 777: 42}) == {'key': 42, 777: 42}
+
+
+def test_issue_9_prioritized_key_comparison_in_dicts():
+    # http://stackoverflow.com/questions/14588098/docopt-schema-validation
+    s = Schema({'ID': Use(int, error='ID should be an int'),
+                'FILE': Or(None, Use(open, error='FILE should be readable')),
+                Optional(str): object})
+    data = {'ID': 10, 'FILE': None, 'other': 'other', 'other2': 'other2'}
+    assert s.validate(data) == data
+    data = {'ID': 10, 'FILE': None}
+    assert s.validate(data) == data

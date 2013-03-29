@@ -77,6 +77,21 @@ class Use(object):
             raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
+def priority(s):
+    if type(s) in (list, tuple, set, frozenset):
+        return 6
+    if type(s) is dict:
+        return 5
+    if hasattr(s, 'validate'):
+        return 4
+    if type(s) is type:
+        return 3
+    if callable(s):
+        return 2
+    else:
+        return 1
+
+
 class Schema(object):
 
     def __init__(self, schema, error=None):
@@ -100,7 +115,8 @@ class Schema(object):
             for key, value in data.items():
                 valid = False
                 skey = None
-                for skey, svalue in s.items():
+                for skey in sorted(s, key=priority):
+                    svalue = s[skey]
                     try:
                         nkey = Schema(skey, error=e).validate(key)
                         try:
