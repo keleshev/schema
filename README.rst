@@ -100,7 +100,7 @@ If ``Schema(...)`` encounteres a callable (function, class, or object with
     >>> Schema(os.path.exists).validate('./non-existent/')
     Traceback (most recent call last):
     ...
-    SchemaError: exists('./non-existent/') should evalutate to True
+    SchemaError: exists('./non-existent/') should evaluate to True
 
     >>> Schema(lambda n: n > 0).validate(123)
     123
@@ -108,7 +108,7 @@ If ``Schema(...)`` encounteres a callable (function, class, or object with
     >>> Schema(lambda n: n > 0).validate(-12)
     Traceback (most recent call last):
     ...
-    SchemaError: <lambda>(-12) should evalutate to True
+    SchemaError: <lambda>(-12) should evaluate to True
 
 "Validatables"
 ~~~~~~~~~~~~~~
@@ -233,7 +233,7 @@ for the same data:
     Traceback (most recent call last):
     ...
     SchemaError: key 'password' is required
-    <lambda>('hai') should evalutate to True
+    <lambda>('hai') should evaluate to True
 
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
     3.1415
