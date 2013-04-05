@@ -168,7 +168,7 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%s(%r) raised %r' % (f, data, x),
                                   self._error)
-            raise SchemaError('%s(%r) should evalutate to True' % (f, data), e)
+            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
         if s == data:
             return data
         else:
