@@ -47,7 +47,7 @@ class And(object):
 class Or(And):
 
     def validate(self, data):
-        x = None
+        x = SchemaError([], [])
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
