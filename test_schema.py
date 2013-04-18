@@ -66,6 +66,8 @@ def test_or():
     assert Or(int, dict).validate(5) == 5
     assert Or(int, dict).validate({}) == {}
     with SE: Or(int, dict).validate('hai')
+    assert Or(int).validate(4)
+    with SE: Or().validate(2)
 
 
 def test_validate_list():
