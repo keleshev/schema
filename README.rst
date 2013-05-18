@@ -161,7 +161,7 @@ against schemas listed inside that container:
     >>> Schema([1, 0]).validate([1, 1, 0, 1])
     [1, 1, 0, 1]
 
-    >>> Schema(set([int, float])).validate(set([5, 7, 8, 'not int or float here']))
+    >>> Schema((int, float)).validate((5, 7, 8, 'not int or float here'))
     Traceback (most recent call last):
     ...
     SchemaError: Or(<type 'int'>, <type 'float'>) did not validate 'not int or float here'
