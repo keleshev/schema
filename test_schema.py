@@ -19,8 +19,8 @@ def ve(_):
     raise ValueError()
 
 
-def se(_):
-    raise SchemaError('first auto', 'first error')
+def se(data):
+    raise SchemaError('first auto', 'first error', data)
 
 
 def test_schema():
@@ -162,6 +162,21 @@ def test_nice_errors():
         Schema({Optional('i'): Use(int, error='should be a number')}).validate({'i': 'x'})
     except SchemaError as e:
         assert e.code == 'should be a number'
+
+
+def test_nice_errors_format():
+    try:
+        Schema(int, error='{value} should be integer').validate('x')
+    except SchemaError as e:
+        assert e.errors == ['x should be integer']
+    try:
+        Schema(Use(float), error='{value} should be a number').validate('x')
+    except SchemaError as e:
+        assert e.code == 'x should be a number'
+    try:
+        Schema({Optional('i'): Use(int, error='{value} should be a number')}).validate({'i': 'x'})
+    except SchemaError as e:
+        assert e.code == 'x should be a number'
 
 
 def test_use_error_handling():
