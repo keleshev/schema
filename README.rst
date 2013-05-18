@@ -243,18 +243,21 @@ User-friendly error reporting
 
 You can pass a keyword argument ``error`` to any of validatable classes
 (such as ``Schema``, ``And``, ``Or``, ``Use``) to report this error instead of
-a built-in one.
+a built-in one. The format ``{value}`` will get replaced with the value failing
+the validation.
 
 .. code:: python
 
-    >>> Schema(Use(int, error='Invalid year')).validate('XVII')
+    >>> Schema(Use(int, error='Invalid year: {value}')).validate('XVII')
     Traceback (most recent call last):
     ...
-    SchemaError: Invalid year
+    SchemaError: Invalid year: XVII
 
 You can see all errors that occured by accessing exception's ``exc.autos``
 for auto-generated error messages, and ``exc.errors`` for errors
 which had ``error`` text passed to them.
+
+You can use ``exc.value`` to directly access the faulty value.
 
 You can exit with ``sys.exit(exc.code)`` if you want to show the messages
 to the user without traceback. ``error`` messages are given precedence in that
