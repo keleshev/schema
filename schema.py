@@ -1,7 +1,3 @@
-from inspect import getargspec
-from functools import wraps
-
-
 __version__ = '0.2.0'
 
 
@@ -112,24 +108,27 @@ class Schema(object):
             new = type(data)()
             x = None
             coverage = set()  # non-optional schema keys that were matched
+            sorted_skeys = list(sorted(s, key=priority))
+
             for key, value in data.items():
                 valid = False
                 skey = None
-                for skey in sorted(s, key=priority):
+                for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
                         nkey = Schema(skey, error=e).validate(key)
+                    except SchemaError:
+                        pass
+                    else:
                         try:
                             nvalue = Schema(svalue, error=e).validate(value)
                         except SchemaError as _x:
                             x = _x
                             raise
-                    except SchemaError:
-                        pass
-                    else:
-                        coverage.add(skey)
-                        valid = True
-                        break
+                        else:
+                            coverage.add(skey)
+                            valid = True
+                            break
                 if valid:
                     new[nkey] = nvalue
                 elif skey is not None:
