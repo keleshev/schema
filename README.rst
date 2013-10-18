@@ -21,7 +21,7 @@ entries with personal information:
 
 .. code:: python
 
-    >>> from schema import Schema, And, Use, Optional
+    >>> from schema import Schema, And, Use, Optional, SchemaError
 
     >>> schema = Schema([{'name': And(str, len),
     ...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
@@ -194,8 +194,7 @@ You can specify keys as schemas too:
     ...                   10: 'not None here'})
     Traceback (most recent call last):
     ...
-    SchemaError: key 10 is required
-    None does not match 'not None here'
+    SchemaError: None does not match 'not None here'
 
 This is useful if you want to check certain key-values, but don't care
 about other:
@@ -232,8 +231,7 @@ for the same data:
     >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
     Traceback (most recent call last):
     ...
-    SchemaError: key 'password' is required
-    <lambda>('hai') should evaluate to True
+    SchemaError: <lambda>('hai') should evaluate to True
 
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
     3.1415
@@ -255,6 +253,20 @@ a built-in one.
 You can see all errors that occured by accessing exception's ``exc.autos``
 for auto-generated error messages, and ``exc.errors`` for errors
 which had ``error`` text passed to them.
+
+If you are using a dict, you can introspect the key for which the value
+generated an error by using the ``name`` attribute of the exception. For
+instance:
+
+.. code:: python
+
+    >>> schema = {"year": Use(int, error="Invalid year")}
+    >>> try:
+    ...     Schema(schema).validate({"year": "XVII"})
+    ... except SchemaError as e:
+    ...     response = {e.name: e.code}
+    >>> response
+    {'year': 'Invalid year'}
 
 You can exit with ``sys.exit(exc.code)`` if you want to show the messages
 to the user without traceback. ``error`` messages are given precedence in that

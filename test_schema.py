@@ -102,6 +102,7 @@ def test_dict():
             {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
     with SE: Schema({'n': int, 'f': float}).validate(
             {'n': 3.14, 'f': 5})
+
     with SE:
         try:
             Schema({'key': 5}).validate({})
@@ -109,12 +110,14 @@ def test_dict():
             assert e.args[0] in ["missed keys set(['key'])",
                                  "missed keys {'key'}"]  # Python 3 style
             raise
+
     with SE:
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaError as e:
             assert e.args[0] == "key 'key' is required"
             raise
+
     with SE:
         try:
             Schema({}).validate({'n': 5})
@@ -156,18 +159,29 @@ def test_complex():
 
 
 def test_nice_errors():
+
     try:
         Schema(int, error='should be integer').validate('x')
     except SchemaError as e:
         assert e.errors == ['should be integer']
+
     try:
         Schema(Use(float), error='should be a number').validate('x')
     except SchemaError as e:
         assert e.code == 'should be a number'
+
     try:
         Schema({Optional('i'): Use(int, error='should be a number')}).validate({'i': 'x'})
     except SchemaError as e:
+        assert e.name == 'i'
         assert e.code == 'should be a number'
+
+    try:
+        Schema({"a": int}).validate({"a": "e"})
+
+    except SchemaError as e:
+        assert e.name == "a"
+        assert e.code == "'e' should be instance of <type 'int'>"
 
 
 def test_use_error_handling():

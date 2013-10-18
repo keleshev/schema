@@ -1,13 +1,16 @@
 __version__ = '0.2.0'
 
+from functools import partial
+
 
 class SchemaError(Exception):
 
     """Error during Schema validation."""
 
-    def __init__(self, autos, errors):
+    def __init__(self, autos, errors, name=None):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
+        self.name = name
         Exception.__init__(self, self.code)
 
     @property
@@ -97,9 +100,10 @@ def priority(s):
 
 class Schema(object):
 
-    def __init__(self, schema, error=None):
+    def __init__(self, schema, error=None, name=None):
         self._schema = schema
         self._error = error
+        self.name = name
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
@@ -107,9 +111,12 @@ class Schema(object):
     def validate(self, data):
         s = self._schema
         e = self._error
+        Error = partial(SchemaError, name=self.name)
+
         if type(s) in (list, tuple, set, frozenset):
             data = Schema(type(s), error=e).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
+
         if type(s) is dict:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()
@@ -120,65 +127,97 @@ class Schema(object):
             for key, value in data.items():
                 valid = False
                 skey = None
+
                 for skey in sorted_skeys:
                     svalue = s[skey]
+                    name = skey
+
+                    # Optional is not terribly explicit, that's why we'd
+                    # rather use its actual content.
+                    if type(name) is Optional:
+                        name = skey._schema
+
                     try:
                         nkey = Schema(skey, error=e).validate(key)
+
                     except SchemaError:
                         pass
+
                     else:
+
                         try:
-                            nvalue = Schema(svalue, error=e).validate(value)
+                            nvalue = Schema(
+                                svalue, error=e, name=name).validate(value)
+
                         except SchemaError as _x:
                             x = _x
                             raise
+
                         else:
                             coverage.add(skey)
                             valid = True
                             break
+
                 if valid:
                     new[nkey] = nvalue
                 elif skey is not None:
                     if x is not None:
-                        raise SchemaError(['key %r is required' % key] +
+                        raise Error(['key %r is required' % key] +
                                           x.autos, [e] + x.errors)
                     else:
-                        raise SchemaError('key %r is required' % skey, e)
+                        raise Error('key %r is required' % skey, e)
+
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
+
             if coverage != required:
-                raise SchemaError('missed keys %r' % (required - coverage), e)
+                raise Error('missed keys %r' % (required - coverage), e)
+
             if len(new) != len(data):
-                raise SchemaError('wrong keys %r in %r' % (new, data), e)
+                raise Error('wrong keys %r in %r' % (new, data), e)
+
             return new
+
         if hasattr(s, 'validate'):
+
             try:
                 return s.validate(data)
+
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise Error([None] + x.autos, [e] + x.errors)
+
             except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
+                raise Error('%r.validate(%r) raised %r' % (s, data, x),
                                  self._error)
         if type(s) is type:
+
             if isinstance(data, s):
                 return data
+
             else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
+                raise Error('%r should be instance of %r' % (data, s), e)
+
         if callable(s):
             f = s.__name__
+
             try:
                 if s(data):
                     return data
+
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise Error([None] + x.autos, [e] + x.errors)
+
             except BaseException as x:
-                raise SchemaError('%s(%r) raised %r' % (f, data, x),
+                raise Error('%s(%r) raised %r' % (f, data, x),
                                   self._error)
-            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
+
+            raise Error('%s(%r) should evaluate to True' % (f, data), e)
+
         if s == data:
             return data
+
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e)
+            raise Error('%r does not match %r' % (s, data), e)
 
 
 class Optional(Schema):
