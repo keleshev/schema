@@ -106,11 +106,11 @@ class Schema(object):
             return type(s)(Or(*s, error=e).validate(d) for d in data)
         if type(s) is dict:
             data = Schema(dict, error=e).validate(data)
-            new = type(data)()
+            new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # non-optional schema keys that were matched
+            # for each key and value find a schema entry matching them, if any
             sorted_skeys = list(sorted(s, key=priority))
-
             for key, value in data.items():
                 valid = False
                 skey = None
@@ -141,7 +141,10 @@ class Schema(object):
             if coverage != required:
                 raise SchemaError('missed keys %r' % (required - coverage), e)
             if len(new) != len(data):
-                raise SchemaError('wrong keys %r in %r' % (new, data), e)
+                wrong_keys = set(data.keys()) - set(new.keys())
+                s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
+                raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
+                                  e)
             return new
         if hasattr(s, 'validate'):
             try:
