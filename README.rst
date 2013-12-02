@@ -64,8 +64,8 @@ How ``Schema`` validates data
 Types
 ~~~~~
 
-If ``Schema(...)`` encounteres a type (such as ``int``, ``str``, ``object``,
-etc), it will check if correspoinding piece of data is instance of that type,
+If ``Schema(...)`` encounters a type (such as ``int``, ``str``, ``object``,
+etc.), it will check if the corresponding piece of data is an instance of that type,
 otherwise it will raise `SchemaError`.
 
 .. code:: python
