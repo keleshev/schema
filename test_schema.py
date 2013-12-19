@@ -333,3 +333,11 @@ def test_issue_9_prioritized_key_comparison_in_dicts():
     assert s.validate(data) == data
     data = {'ID': 10, 'FILE': None}
     assert s.validate(data) == data
+
+
+def test_old_style_classes():
+    # This test should be done with Python 2
+
+    class Bar:  pass
+
+    assert Schema(Bar).validate(Bar())
