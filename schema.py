@@ -1,3 +1,5 @@
+import inspect
+
 __version__ = '0.2.0'
 
 
@@ -159,7 +161,7 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                  self._error)
-        if type(s) is type:
+        if inspect.isclass(s):
             if isinstance(data, s):
                 return data
             else:
