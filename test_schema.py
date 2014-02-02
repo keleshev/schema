@@ -113,13 +113,21 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] == "key 'key' is required"
+            assert e.args[0] in ["missed keys set(['key'])",
+                                 "missed keys {'key'}"]  # Python 3 style
             raise
     with SE:
         try:
             Schema({}).validate({'n': 5})
         except SchemaError as e:
             assert e.args[0] == "wrong keys {} in {'n': 5}"
+            raise
+    with SE:
+        try:
+            Schema({'key': 5}).validate({'key': 5, 'n': 5})
+        except SchemaError as e:
+            assert e.args[0] in ["wrong keys {'key': 5} in {'key': 5, 'n': 5}",
+                                 "wrong keys {'key': 5} in {'n': 5, 'key': 5}"]
             raise
 
 
