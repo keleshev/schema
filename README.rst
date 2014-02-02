@@ -64,9 +64,9 @@ How ``Schema`` validates data
 Types
 ~~~~~
 
-If ``Schema(...)`` encounteres a type (such as ``int``, ``str``, ``object``,
-etc), it will check if correspoinding piece of data is instance of that type,
-otherwise it will raise `SchemaError`.
+If ``Schema(...)`` encounters a type (such as ``int``, ``str``, ``object``,
+etc.), it will check if the corresponding piece of data is an instance of that type,
+otherwise it will raise ``SchemaError``.
 
 .. code:: python
 
@@ -86,8 +86,8 @@ otherwise it will raise `SchemaError`.
 Callables
 ~~~~~~~~~
 
-If ``Schema(...)`` encounteres a callable (function, class, or object with
-``__call__`` method) it will call it, and if return value evaluates to
+If ``Schema(...)`` encounters a callable (function, class, or object with
+``__call__`` method) it will call it, and if its return value evaluates to
 ``True`` it will continue validating, else—it will raise ``SchemaError``.
 
 .. code:: python
@@ -113,7 +113,7 @@ If ``Schema(...)`` encounteres a callable (function, class, or object with
 "Validatables"
 ~~~~~~~~~~~~~~
 
-If ``Schema(...)`` encounteres an object with method ``validate`` it will run
+If ``Schema(...)`` encounters an object with method ``validate`` it will run
 this method on corresponding data as ``data = obj.validate(data)``. This method
 may raise ``SchemaError`` exception, which will tell ``Schema`` that that piece
 of data is invalid, otherwise—it will continue validating.
@@ -151,7 +151,7 @@ Now you can write your own validation-aware classes and data types.
 Lists, similar containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If ``Schema(...)`` encounteres an instance of ``list``, ``tuple``, ``set`` or
+If ``Schema(...)`` encounters an instance of ``list``, ``tuple``, ``set`` or
 ``frozenset``, it will validate contents of corresponding data container
 against schemas listed inside that container:
 
