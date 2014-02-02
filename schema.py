@@ -74,18 +74,12 @@ class Use(object):
 
 
 def priority(s):
-    """Return priority for a give object.
-
-    :rtype: int
-    """
+    """Return priority for a give object."""
     if type(s) in (list, tuple, set, frozenset):
         return 6
     if type(s) is dict:
         return 5
-    # We exclude Optional from the test, otherwise it will make a
-    # catch-all rule like "str" take precedence over any optional field,
-    # which would be inintuitive.
-    if hasattr(s, 'validate')  and not type(s) is Optional:
+    if hasattr(s, 'validate'):
         return 4
     if type(s) is type:
         return 3

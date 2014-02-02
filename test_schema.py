@@ -138,12 +138,6 @@ def test_dict_optional_keys():
             {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
 
 
-def test_dict_optional_keys_with_catch_all():
-    """Verify that optional keys still take precedence over catch-all."""
-    with SE:
-        Schema({str: object, Optional("b"): 1}).validate({"b": 2})
-
-
 def test_complex():
     s = Schema({'<file>': And([Use(open)], lambda l: len(l)),
                 '<path>': os.path.exists,
