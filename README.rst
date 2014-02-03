@@ -194,8 +194,7 @@ You can specify keys as schemas too:
     ...                   10: 'not None here'})
     Traceback (most recent call last):
     ...
-    SchemaError: key 10 is required
-    None does not match 'not None here'
+    SchemaError: None does not match 'not None here'
 
 This is useful if you want to check certain key-values, but don't care
 about other:
@@ -232,8 +231,7 @@ for the same data:
     >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
     Traceback (most recent call last):
     ...
-    SchemaError: key 'password' is required
-    <lambda>('hai') should evaluate to True
+    SchemaError: <lambda>('hai') should evaluate to True
 
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
     3.1415
