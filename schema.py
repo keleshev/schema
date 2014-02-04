@@ -50,7 +50,7 @@ class Or(And):
             except SchemaError as _x:
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
-                         [self._error] + x.errors)
+                          [self._error] + x.errors)
 
 
 class Use(object):
@@ -152,7 +152,7 @@ class Schema(object):
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                 self._error)
+                                  self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
