@@ -150,9 +150,6 @@ class Schema(object):
                 return s.validate(data)
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
-            except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                 self._error)
         if type(s) is type:
             if isinstance(data, s):
                 return data
