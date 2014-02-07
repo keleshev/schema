@@ -1,3 +1,9 @@
 language: python
 install: pip install tox --use-mirrors
 script: tox
+
+# install coveralls and publish coverage only after a successful build
+after_success:
+  - pip install coveralls --use-mirrors
+  - coveralls # coveralls submit coverage report
+

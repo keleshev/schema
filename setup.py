@@ -4,14 +4,14 @@ import schema
 
 
 setup(
-    name = schema.__name__,
-    version = schema.__version__,
-    author = "Vladimir Keleshev",
-    author_email = "vladimir@keleshev.com",
-    description = "Simple data validation library",
-    license = "MIT",
-    keywords = "schema json validation",
-    url = "http://github.com/halst/schema",
+    name=schema.__name__,
+    version=schema.__version__,
+    author="Vladimir Keleshev",
+    author_email="vladimir@keleshev.com",
+    description="Simple data validation library",
+    license="MIT",
+    keywords="schema json validation",
+    url="http://github.com/halst/schema",
     py_modules=['schema'],
     long_description=open('README.rst').read(),
     classifiers=[
