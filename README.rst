@@ -15,8 +15,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 
 .. image:: https://travis-ci.org/halst/schema.png?branch=master   :target: https://travis-ci.org/halst/schema
-.. image:: https://coveralls.io/repos/halst/schema/badge.png :target: https://coveralls.io/r/halst/schema
-
+.. image:: https://coveralls.io/repos/halst/schema/badge.png?branch=master :target: https://coveralls.io/r/halst/schema?branch=master
 
 Example
 ----------------------------------------------------------------------------
