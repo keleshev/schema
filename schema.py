@@ -38,6 +38,7 @@ class SchemaCutError(SchemaError):
 
 
 class SchemaBase(object):
+    priority = 4  # default priority for "validatables"
 
     def validate(self, data):
         raise NotImplementedError("redefine this method in subclasses")
@@ -49,6 +50,9 @@ class And(SchemaBase):
         self._args = args
         assert list(kw) in (['error'], [])
         self._error = kw.get('error')
+        priority = kw.get('priority', None)
+        if priority is not None:
+            self.priority = priority
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
@@ -77,11 +81,13 @@ class Or(And):
 
 class Use(SchemaBase):
 
-    def __init__(self, callable_, error=None):
+    def __init__(self, callable_, error=None, priority=None):
         if not callable(callable_):
             raise ValueError("callable argument required")
         self._callable = callable_
         self._error = error
+        if priority is not None:
+            self.priority = priority
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)
@@ -97,8 +103,10 @@ class Use(SchemaBase):
 
 
 class Cut(SchemaBase):
-    def __init__(self, error=None):
+    def __init__(self, error=None, priority=None):
         self._error = error
+        if priority is not None:
+            self.priority = priority
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._error)
@@ -113,7 +121,7 @@ def priority(s):
     if type(s) is dict:
         return 5
     if isinstance(s, SchemaBase):
-        return 4
+        return s.priority
     if isinstance(s, type):
         return 3
     if callable(s):
@@ -124,9 +132,11 @@ def priority(s):
 
 class Schema(SchemaBase):
 
-    def __init__(self, schema, error=None):
+    def __init__(self, schema, error=None, priority=None):
         self._schema = schema
         self._error = error
+        if priority is not None:
+            self.priority = priority
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)

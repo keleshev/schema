@@ -155,6 +155,16 @@ def test_cuts():
             assert e.args[0] == "foo is not a float"
             raise
 
+    with raises(SchemaCutError):
+        try:
+            Schema(
+                {Optional("foo", priority=0): Or(float, Cut("foo is not a float")),
+                 object: object}
+            ).validate({"foo": "a"})
+        except SchemaCutError as e:
+            assert e.args[0] == "foo is not a float"
+            raise
+
 
 def test_dict_keys():
     assert Schema({str: int}).validate(
