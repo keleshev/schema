@@ -3,7 +3,8 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaError
+from schema import (Schema, Use, And, Or, Optional, Cut,
+                    SchemaError, SchemaCutError)
 
 
 try:
@@ -113,28 +114,55 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] in ["missed keys set(['key'])",
-                                 "missed keys {'key'}"]  # Python 3 style
+            assert e.args[0] == "unable to match 'n' to any schema key"
             raise
     with SE:
         try:
             Schema({}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] == "wrong keys 'n' in {'n': 5}"
+            assert e.args[0] == "unable to match 'n' to any schema key"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'key': 5, 'bad': 5})
         except SchemaError as e:
-            assert e.args[0] in ["wrong keys 'bad' in {'key': 5, 'bad': 5}",
-                                 "wrong keys 'bad' in {'bad': 5, 'key': 5}"]
+            assert e.args[0] == "unable to match 'bad' to any schema key"
             raise
     with SE:
         try:
             Schema({}).validate({'a': 5, 'b': 5})
         except SchemaError as e:
-            assert e.args[0] in ["wrong keys 'a', 'b' in {'a': 5, 'b': 5}",
-                                 "wrong keys 'a', 'b' in {'b': 5, 'a': 5}"]
+            assert e.args[0] in ["unable to match 'a' to any schema key",
+                                 "unable to match 'b' to any schema key"]
+            raise
+
+
+def test_cuts():
+    with raises(SchemaCutError):
+        try:
+            Schema(Or(1, Cut("value is not equal to 1"))).validate(2)
+        except SchemaCutError as e:
+            assert e.args[0] == "value is not equal to 1"
+            raise
+
+    with raises(SchemaCutError):
+        try:
+            Schema(
+                {"foo": Or(float, Cut("foo is not a float")),
+                 str: object}
+            ).validate({"foo": "a"})
+        except SchemaCutError as e:
+            assert e.args[0] == "foo is not a float"
+            raise
+
+    with raises(SchemaCutError):
+        try:
+            Schema(
+                {Optional("foo", priority=0): Or(float, Cut("foo is not a float")),
+                 object: object}
+            ).validate({"foo": "a"})
+        except SchemaCutError as e:
+            assert e.args[0] == "foo is not a float"
             raise
 
 
