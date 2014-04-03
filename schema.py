@@ -103,6 +103,26 @@ class Use(SchemaBase):
 
 
 class Cut(SchemaBase):
+    """
+    Cut([msg]) allows terminating validation immediately with a given error
+    message. This is useful, e.g. when another pattern in the same schema,
+    say a dictionary with a 'object: object' rule would accept anything and
+    the error produced message would be difficult to understand or an
+    exception wouldn't even be raised.
+
+    Example:
+        Schema({Optional("foo"): float,
+                object: object}).validate({"foo": "a"})
+
+    This would not even raise an exception, and we want it to NOT match "foo"
+    with the 'object: object' rule, so we can simply add a custom priority to
+    the 'Optional("foo")' key and a cut after 'float', like this:
+        Schema({Optional("foo", priority=0): Or(float, Cut("foobar")),
+                object: object}).validate({"foo": "a"})
+
+    This way we get the desired behavior: the "foo" rule is tested before
+    "object", and the cut will make validation fail immediately.
+    """
     def __init__(self, error=None, priority=None):
         self._error = error
         if priority is not None:
