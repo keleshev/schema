@@ -81,7 +81,7 @@ def priority(s):
         return 5
     if hasattr(s, 'validate'):
         return 4
-    if type(s) is type:
+    if issubclass(type(s), type):
         return 3
     if callable(s):
         return 2
@@ -154,7 +154,7 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
-        if type(s) is type:
+        if issubclass(type(s), type):
             if isinstance(data, s):
                 return data
             else:
