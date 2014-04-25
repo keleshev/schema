@@ -177,7 +177,19 @@ def test_nice_errors():
         Schema({Optional('i'): Use(int, error='should be a number')}).validate({'i': 'x'})
     except SchemaError as e:
         assert e.code == 'should be a number'
-
+    try:
+        Schema(int, error='{data} should be integer').validate('x')
+    except SchemaError as e:
+        assert e.errors == ["'x' should be integer"]
+    try:
+        Schema(int, error='{data} {reason}').validate('x')
+    except SchemaError as e:
+        assert e.errors == ["'x' incorrect instance"]
+    try:
+        errfunc = lambda s, d, r, x: '%s should be integer' % d.upper()
+        Schema(int, error=errfunc).validate('x')
+    except SchemaError as e:
+        assert e.errors == ["X should be integer"]
 
 def test_use_error_handling():
     try:
