@@ -16,7 +16,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 .. image:: https://secure.travis-ci.org/halst/schema.png?branch=master
     :target: https://travis-ci.org/halst/schema
-    
+
 .. image:: https://coveralls.io/repos/halst/schema/badge.png?branch=master
     :target: https://coveralls.io/r/halst/schema?branch=master
 
@@ -57,7 +57,7 @@ Installation
 
 Use `pip <http://pip-installer.org>`_ or easy_install::
 
-    pip install schema==0.2.0
+    pip install schema==0.3.1
 
 Alternatively, you can just drop ``schema.py`` file into your project—it is
 self-contained.
