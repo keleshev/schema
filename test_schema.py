@@ -12,6 +12,8 @@ except NameError:
     basestring = str  # Python 3 does not have basestring
 
 
+AE = raises(AssertionError)
+VE = raises(ValueError)
 SE = raises(SchemaError)
 
 
@@ -56,6 +58,7 @@ def test_validate_file():
 
 
 def test_and():
+    with AE: And()
     assert And(int, lambda n: 0 < n < 5).validate(3) == 3
     with SE: And(int, lambda n: 0 < n < 5).validate(3.33)
     assert And(Use(int), lambda n: 0 < n < 5).validate(3.33) == 3
@@ -63,11 +66,11 @@ def test_and():
 
 
 def test_or():
+    with AE: Or()
     assert Or(int, dict).validate(5) == 5
     assert Or(int, dict).validate({}) == {}
     with SE: Or(int, dict).validate('hai')
     assert Or(int).validate(4)
-    with SE: Or().validate(2)
 
 
 def test_validate_list():
@@ -151,6 +154,35 @@ def test_dict_optional_keys():
     assert Schema({'a': 1, Optional('b'): 2}).validate({'a': 1}) == {'a': 1}
     assert Schema({'a': 1, Optional('b'): 2}).validate(
             {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+    assert Schema({'a': 1, Optional(Use(int)): 2}).validate(
+            {'a': 1, '4': 2}) == {'a': 1, 4: 2}
+
+
+def test_dict_optional_keys_defaults():
+    assert Schema({'a': 1, Optional('b'): Schema(2, default=2)}).validate(
+            {'a': 1}) == {'a': 1, 'b': 2}
+    assert Schema({'a': 1, Optional('b'): Use(int, default='4')}).validate(
+            {'a': 1}) == {'a': 1, 'b': 4}
+    assert Schema({'a': 1, Optional('b'): Use(int, default=4)}).validate(
+            {'a': 1}) == {'a': 1, 'b': 4}
+    assert Schema({'a': 1, Optional('b'): Or(2, 4, default=4)}).validate(
+            {'a': 1}) == {'a': 1, 'b': 4}
+    assert Schema({'a': 1, Optional('b'): And(
+            lambda x: x > 0,
+            lambda x: x < 16,
+            default=4)}).validate({'a': 1}) == {'a': 1, 'b': 4}
+    assert Schema({'a': 1, Optional(int): Schema(2, default=2)}).validate(
+            {'a': 1}) == {'a': 1, 0: 2}
+    assert Schema({
+        'a': 1,
+        Optional(int, default=4): Schema(2, default=2)
+    }).validate({'a': 1}) == {'a': 1, 4: 2}
+    with VE: Use(int, default='two')
+    with VE: Schema(lambda x: x < 42, default=1337)
+    assert Schema({
+        'a': 1,
+        Optional(Use(int, default=4)): Schema(int, default=2)
+    }).validate({'a': 1}) == {'a': 1, 4: 2}
 
 
 def test_complex():
