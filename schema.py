@@ -76,17 +76,17 @@ class Use(object):
 def priority(s):
     """Return priority for a give object."""
     if type(s) in (list, tuple, set, frozenset):
-        return 6
+        return [6]
     if type(s) is dict:
-        return 5
+        return [5]
     if hasattr(s, 'validate'):
-        return 4
-    if issubclass(type(s), type):
-        return 3
+        return [4] + priority(s._schema)
+    if type(s) is type:
+        return [3]
     if callable(s):
-        return 2
+        return [2]
     else:
-        return 1
+        return [1]
 
 
 class Schema(object):
