@@ -80,7 +80,10 @@ def priority(s):
     if type(s) is dict:
         return [5]
     if hasattr(s, 'validate'):
-        return [4] + priority(s._schema)
+        p = [4]
+        if hasattr(s, "_schema"):
+            p.extend(priority(s._schema))
+        return p
     if type(s) is type:
         return [3]
     if callable(s):
