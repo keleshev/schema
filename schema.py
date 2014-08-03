@@ -13,9 +13,7 @@ class SchemaError(Exception):
     @property
     def code(self):
         def uniq(seq):
-            seen = set()
-            seen_add = seen.add
-            return [x for x in seq if x not in seen and not seen_add(x)]
+            return list(set(seq))
         a = uniq(i for i in self.autos if i is not None)
         e = uniq(i for i in self.errors if i is not None)
         if e:
