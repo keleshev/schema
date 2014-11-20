@@ -60,6 +60,13 @@ def test_and():
     with SE: And(int, lambda n: 0 < n < 5).validate(3.33)
     assert And(Use(int), lambda n: 0 < n < 5).validate(3.33) == 3
     with SE: And(Use(int), lambda n: 0 < n < 5).validate('3.33')
+    # Bitwise operators:
+    s = Schema(int) & Schema(lambda n: 0 < n < 5)
+    assert s.validate(3) == 3
+    with SE: s.validate(3.33)
+    s = Schema(Use(int)) & Schema(lambda n: 0 < n < 5)
+    assert s.validate(3.33) == 3
+    with SE: s.validate('3.33')
 
 
 def test_or():
@@ -68,7 +75,11 @@ def test_or():
     with SE: Or(int, dict).validate('hai')
     assert Or(int).validate(4)
     with SE: Or().validate(2)
-
+    # Bitwise operators:
+    s = Schema(int) | Schema(dict)
+    assert s.validate(5) == 5
+    assert s.validate({}) == {}
+    with SE: s.validate('hai')
 
 def test_validate_list():
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
