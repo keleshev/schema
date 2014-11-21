@@ -103,7 +103,7 @@ class Schema(object):
 
     def __or__(self, other):
         return Or(self, other)
-    
+
     def validate(self, data):
         s = self._schema
         e = self._error

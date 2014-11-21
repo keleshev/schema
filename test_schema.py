@@ -81,6 +81,7 @@ def test_or():
     assert s.validate({}) == {}
     with SE: s.validate('hai')
 
+
 def test_validate_list():
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
     assert Schema([1, 0]).validate([]) == []
