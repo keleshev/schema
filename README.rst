@@ -14,8 +14,8 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
 
 
-.. image:: https://secure.travis-ci.org/halst/schema.png?branch=master
-    :target: https://travis-ci.org/halst/schema
+.. image:: https://secure.travis-ci.org/keleshev/schema.png?branch=master
+    :target: https://travis-ci.org/keleshev/schema
 
 .. image:: https://coveralls.io/repos/halst/schema/badge.png?branch=master
     :target: https://coveralls.io/r/halst/schema?branch=master
