@@ -183,7 +183,7 @@ key-value pairs:
 .. code:: python
 
     >>> d = Schema({'name': str,
-    ...             'age': lambda n: 18 < 99}).validate({'name': 'Sue', 'age': 28})
+    ...             'age': lambda n: 18 <= n <= 99}).validate({'name': 'Sue', 'age': 28})
 
     >>> assert d == {'name': 'Sue', 'age': 28}
 
