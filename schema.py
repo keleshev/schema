@@ -23,10 +23,44 @@ class SchemaError(Exception):
         return '\n'.join(a)
 
 
+def handle_default(init):
+
+    """Add default handling to the __init__ method
+    Meant to be used as a decorator"""
+
+    def init2(self, *args, **kw):
+        # get default from the ``default`` keyword argument
+        if 'default' in kw:
+            self.default = kw['default']
+            del(kw['default'])
+        # if auto_default is set, get default from first argument
+        elif hasattr(self, 'auto_default') and self.auto_default:
+            self.default = args[0]
+            if hasattr(self.default, 'default'):
+                self.default = self.default.default
+            elif issubclass(type(self.default), type):
+                self.default = self.default()
+            elif hasattr(self.default, 'validate'):
+                # e.g. {Optional(Use(int)): ...}
+                delattr(self, 'default')
+        # normal init
+        init(self, *args, **kw)
+        # validate default
+        if hasattr(self, 'default'):
+            try:
+                self.default = self.validate(self.default)
+            except SchemaError:
+                raise ValueError('%s does not validate its default: %s' % (
+                    self, self.default))
+    return init2
+
+
 class And(object):
 
+    @handle_default
     def __init__(self, *args, **kw):
         self._args = args
+        assert len(args)
         assert list(kw) in (['error'], [])
         self._error = kw.get('error')
 
@@ -55,6 +89,7 @@ class Or(And):
 
 class Use(object):
 
+    @handle_default
     def __init__(self, callable_, error=None):
         assert callable(callable_)
         self._callable = callable_
@@ -91,6 +126,7 @@ def priority(s):
 
 class Schema(object):
 
+    @handle_default
     def __init__(self, schema, error=None):
         self._schema = schema
         self._error = error
@@ -136,15 +172,22 @@ class Schema(object):
                     if x is not None:
                         raise SchemaError(['invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
-            coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
-            if coverage != required:
+            # missed keys
+            if not required.issubset(coverage):
                 raise SchemaError('missed keys %r' % (required - coverage), e)
+            # wrong keys
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
                 raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
+            # default for optional keys
+            for k in set(s) - required - coverage:
+                try:
+                    new[k.default] = s[k].default
+                except AttributeError:
+                    pass
             return new
         if hasattr(s, 'validate'):
             try:
@@ -179,3 +222,5 @@ class Schema(object):
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
+
+    auto_default = True

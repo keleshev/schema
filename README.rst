@@ -225,6 +225,28 @@ You can mark a key as optional as follows:
     ...         Optional('occupation'): str}).validate({'name': 'Sam'})
     {'name': 'Sam'}
 
+And if you want to give a default value, simply use the keyword argument
+``default``:
+
+.. code:: python
+
+    >>> from schema import Optional, Use, Or
+    >>> Schema({'event': str,
+    ...        # use the default argument for schema classes
+    ...        Optional('date'): Use(int, default=2012),
+    ...        # wrap other objects in a Schema class to add a default value
+    ...        Optional('comment'): Schema(str, default='Initial import'),
+    ...        }).validate({'event': 'First commit'})
+    {'comment': 'Initial import', 'date': 2012, 'event': 'First commit'}
+    >>> # advanced use:
+    ... Schema({
+    ...        # Optional key is a type, it gets instantiated as a default
+    ...        Optional(int): Or(True, False, default=False),
+    ...        # but it is possible to use the default attribute as well
+    ...        Optional(int, default=42): Use(str, default='The answer'),
+    ...        }).validate({})
+    {0: False, 42: 'The answer'}
+
 **schema** has classes ``And`` and ``Or`` that help validating several schemas
 for the same data:
 
