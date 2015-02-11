@@ -1,5 +1,36 @@
 __version__ = '0.3.1'
 
+error_messages = {
+    'did not validate': '{schema} {reason} {data}',
+    'callable raised exception': '{schema}({data}) raised {details}',
+    'validate raised exception': '{schema}.validate({data}) raised {details}',
+    'invalid value for key': '{reason} {details}',
+    'missed keys': '{reason} {details}',
+    'wrong keys': '{reason} {details} in {data}',
+    'incorrect instance': '{data} should be instance of {schema}',
+    'should evaluate to True': '{schema}({data}) {reason}',
+    'does not match': '{schema} {reason} {data}'
+}
+
+def auto_error(schema, data, reason, details):
+    return format_error(error_messages[reason], schema, data, reason, details)
+
+def format_error(error, schema, data, reason, details=None):
+    if error is None:
+        return
+    elif callable(error):
+        result = error(schema, data, reason, details)
+        assert isinstance(result, basestring), \
+            "error function must return a string"
+        return result
+    if callable(schema) and hasattr(schema, '__name__'):
+        schema = schema.__name__
+    else:
+        schema = repr(schema)
+    if not isinstance(details, basestring):
+        details = repr(details)
+    return error.format(schema=schema, data=repr(data), reason=reason,
+                        details=details)
 
 class SchemaError(Exception):
 
@@ -49,8 +80,11 @@ class Or(And):
                 return s.validate(data)
             except SchemaError as _x:
                 x = _x
-        raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
-                          [self._error] + x.errors)
+        reason = 'did not validate'
+        raise SchemaError([format_error(auto_error, self, data, reason)] + 
+                          x.autos,
+                          [format_error(self._error, self, data, reason)] + 
+                          x.errors)
 
 
 class Use(object):
@@ -69,8 +103,10 @@ class Use(object):
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
-            f = self._callable.__name__
-            raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
+            f = self._callable
+            reason = 'callable raised exception'
+            raise SchemaError(format_error(auto_error, f, data, reason, x),
+                              format_error(self._error, f, data, reason, x))
 
 
 def priority(s):
@@ -134,17 +170,29 @@ class Schema(object):
                     new[nkey] = nvalue
                 elif skey is not None:
                     if x is not None:
-                        raise SchemaError(['invalid value for key %r' % key] +
-                                          x.autos, [e] + x.errors)
+                        reason = 'invalid value for key'
+                        details =  '%r' % key
+                        raise SchemaError([format_error(auto_error, s, data,
+                                                        reason, details)] +
+                                          x.autos,
+                                          [format_error(e, s, data, reason,
+                                                        details)] + 
+                                          x.errors)
             coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise SchemaError('missed keys %r' % (required - coverage), e)
+                reason = 'missed keys'
+                details = '%r' % (required - coverage)
+                raise SchemaError(format_error(auto_error, s, data, reason,
+                                               details),
+                                  format_error(e, s, data, reason, details))
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
-                raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
-                                  e)
+                reason = 'wrong keys'
+                details = ', '.join('%r' % k for k in sorted(wrong_keys))
+                raise SchemaError(format_error(auto_error, s, data, reason,
+                                               details),
+                                  format_error(e, s, data, reason, details))
             return new
         if hasattr(s, 'validate'):
             try:
@@ -152,28 +200,35 @@ class Schema(object):
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                  self._error)
+                reason = 'validate raised exception'
+                raise SchemaError(format_error(auto_error, s, data, reason, x),
+                                  format_error(self._error, s, data, reason, x))
         if issubclass(type(s), type):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
+                reason = 'incorrect instance'
+                raise SchemaError(format_error(auto_error, s, data, reason),
+                                  format_error(e, s, data, reason))
         if callable(s):
-            f = s.__name__
             try:
                 if s(data):
                     return data
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                                  self._error)
-            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
+                reason = 'callable raised exception'
+                raise SchemaError(format_error(auto_error, s, data, reason, x),
+                                  format_error(self._error, s, data, reason, x))
+            reason = 'should evaluate to True'
+            raise SchemaError(format_error(auto_error, s, data, reason),
+                              format_error(e, s, data, reason))
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e)
+            reason = 'does not match'
+            raise SchemaError(format_error(auto_error, s, data, reason),
+                              format_error(e, s, data, reason))
 
 
 class Optional(Schema):
