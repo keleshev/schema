@@ -79,9 +79,9 @@ def priority(s):
         return 6
     if type(s) is dict:
         return 5
-    if hasattr(s, 'validate'):
-        return 4
     if issubclass(type(s), type):
+        return 4
+    if hasattr(s, 'validate'):
         return 3
     if callable(s):
         return 2
@@ -146,6 +146,11 @@ class Schema(object):
                 raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
             return new
+        if issubclass(type(s), type):
+            if isinstance(data, s):
+                return data
+            else:
+                raise SchemaError('%r should be instance of %r' % (data, s), e)
         if hasattr(s, 'validate'):
             try:
                 return s.validate(data)
@@ -154,11 +159,6 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
-        if issubclass(type(s), type):
-            if isinstance(data, s):
-                return data
-            else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
         if callable(s):
             f = s.__name__
             try:

@@ -151,6 +151,8 @@ def test_dict_optional_keys():
     assert Schema({'a': 1, Optional('b'): 2}).validate({'a': 1}) == {'a': 1}
     assert Schema({'a': 1, Optional('b'): 2}).validate(
             {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+    # Make sure Optionals are favored over types:
+    assert Schema({basestring: 1, Optional('b'): 2}).validate({'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
 
 
 def test_complex():
