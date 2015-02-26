@@ -128,6 +128,8 @@ class Schema(object):
                             raise
                         else:
                             coverage.add(skey)
+                            if type(skey) is not Optional:
+                                coverage.add(skey)
                             valid = True
                             break
                 if valid:
@@ -136,7 +138,6 @@ class Schema(object):
                     if x is not None:
                         raise SchemaError(['invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
-            coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
                 raise SchemaError('missed keys %r' % (required - coverage), e)
