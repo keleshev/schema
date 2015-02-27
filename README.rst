@@ -225,6 +225,19 @@ You can mark a key as optional as follows:
     ...         Optional('occupation'): str}).validate({'name': 'Sam'})
     {'name': 'Sam'}
 
+``Optional`` keys can also carry a ``default``, to be used when no key in the
+data matches:
+
+.. code:: python
+
+    >>> from schema import Optional
+    >>> Schema({Optional('color', default='blue'): str,
+    ...         str: str}).validate({'texture': 'furry'})
+    {'color': 'blue', 'texture': 'furry'}
+
+Defaults are used verbatim, not passed through any validators specified in the
+value.
+
 **schema** has classes ``And`` and ``Or`` that help validating several schemas
 for the same data:
 

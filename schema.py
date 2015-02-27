@@ -109,6 +109,7 @@ class Schema(object):
             new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # non-optional schema keys that were matched
+            covered_optionals = set()
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = list(sorted(s, key=priority))
             for key, value in data.items():
@@ -127,9 +128,8 @@ class Schema(object):
                             x = _x
                             raise
                         else:
-                            coverage.add(skey)
-                            if type(skey) is not Optional:
-                                coverage.add(skey)
+                            (covered_optionals if type(skey) is Optional
+                             else coverage).add(skey)
                             valid = True
                             break
                 if valid:
@@ -146,6 +146,13 @@ class Schema(object):
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
                 raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
+
+            # Apply default-having optionals that haven't been used:
+            defaults = set(k for k in s if type(k) is Optional and
+                           hasattr(k, 'default')) - covered_optionals
+            for default in defaults:
+                new[default.name] = default.default
+
             return new
         if issubclass(type(s), type):
             if isinstance(data, s):
@@ -177,6 +184,20 @@ class Schema(object):
             raise SchemaError('%r does not match %r' % (s, data), e)
 
 
+MARKER = object()
+
+
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
+
+    def __init__(self, *args, **kwargs):
+        default = kwargs.pop('default', MARKER)
+        super(Optional, self).__init__(*args, **kwargs)
+        if default is not MARKER:
+            # TODO: If I can't figure out a key name for myself, freak out.
+            self.default = default
+
+    @property
+    def name(self):
+        return self._schema

@@ -155,6 +155,17 @@ def test_dict_optional_keys():
     assert Schema({basestring: 1, Optional('b'): 2}).validate({'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
 
 
+def test_dict_optional_defaults():
+    # Optionals fill out their defaults:
+    assert Schema({Optional('a', default=1): 11,
+                   Optional('b', default=2): 22}).validate({'a': 11}) == {'a': 11, 'b': 2}
+
+    # Optionals take precedence over types. Here, the "a" is served by the
+    # Optional:
+    assert Schema({Optional('a', default=1): 11,
+                   basestring: 22}).validate({'b': 22}) == {'a': 1, 'b': 22}
+
+
 def test_complex():
     s = Schema({'<file>': And([Use(open)], lambda l: len(l)),
                 '<path>': os.path.exists,
