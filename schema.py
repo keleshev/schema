@@ -73,20 +73,23 @@ class Use(object):
             raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
+COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
+
+
 def priority(s):
-    """Return priority for a give object."""
+    """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
-        return 6
+        return ITERABLE
     if type(s) is dict:
-        return 5
-    if hasattr(s, 'validate'):
-        return 4
+        return DICT
     if issubclass(type(s), type):
-        return 3
+        return TYPE
+    if hasattr(s, 'validate'):
+        return VALIDATOR
     if callable(s):
-        return 2
+        return CALLABLE
     else:
-        return 1
+        return COMPARABLE
 
 
 class Schema(object):
@@ -101,14 +104,16 @@ class Schema(object):
     def validate(self, data):
         s = self._schema
         e = self._error
-        if type(s) in (list, tuple, set, frozenset):
+        flavor = priority(s)
+        if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
-        if type(s) is dict:
+        if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # non-optional schema keys that were matched
+            covered_optionals = set()
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = list(sorted(s, key=priority))
             for key, value in data.items():
@@ -127,7 +132,8 @@ class Schema(object):
                             x = _x
                             raise
                         else:
-                            coverage.add(skey)
+                            (covered_optionals if type(skey) is Optional
+                             else coverage).add(skey)
                             valid = True
                             break
                 if valid:
@@ -136,7 +142,6 @@ class Schema(object):
                     if x is not None:
                         raise SchemaError(['invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
-            coverage = set(k for k in coverage if type(k) is not Optional)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
                 raise SchemaError('missed keys %r' % (required - coverage), e)
@@ -145,8 +150,20 @@ class Schema(object):
                 s_wrong_keys = ', '.join('%r' % k for k in sorted(wrong_keys))
                 raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
+
+            # Apply default-having optionals that haven't been used:
+            defaults = set(k for k in s if type(k) is Optional and
+                           hasattr(k, 'default')) - covered_optionals
+            for default in defaults:
+                new[default.key] = default.default
+
             return new
-        if hasattr(s, 'validate'):
+        if flavor == TYPE:
+            if isinstance(data, s):
+                return data
+            else:
+                raise SchemaError('%r should be instance of %r' % (data, s), e)
+        if flavor == VALIDATOR:
             try:
                 return s.validate(data)
             except SchemaError as x:
@@ -154,12 +171,7 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
-        if issubclass(type(s), type):
-            if isinstance(data, s):
-                return data
-            else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
-        if callable(s):
+        if flavor == CALLABLE:
             f = s.__name__
             try:
                 if s(data):
@@ -176,6 +188,22 @@ class Schema(object):
             raise SchemaError('%r does not match %r' % (s, data), e)
 
 
+MARKER = object()
+
+
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
+
+    def __init__(self, *args, **kwargs):
+        default = kwargs.pop('default', MARKER)
+        super(Optional, self).__init__(*args, **kwargs)
+        if default is not MARKER:
+            # See if I can come up with a static key to use for myself:
+            if priority(self._schema) != COMPARABLE:
+                raise TypeError(
+                        'Optional keys with defaults must have simple, '
+                        'predictable values, like literal strings or ints. '
+                        '"%r" is too complex.' % (self._schema,))
+            self.default = default
+            self.key = self._schema
