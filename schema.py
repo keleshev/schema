@@ -73,20 +73,23 @@ class Use(object):
             raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
+COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
+
+
 def priority(s):
-    """Return priority for a give object."""
+    """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
-        return 6
+        return ITERABLE
     if type(s) is dict:
-        return 5
+        return DICT
     if issubclass(type(s), type):
-        return 4
+        return TYPE
     if hasattr(s, 'validate'):
-        return 3
+        return VALIDATOR
     if callable(s):
-        return 2
+        return CALLABLE
     else:
-        return 1
+        return COMPARABLE
 
 
 class Schema(object):
@@ -101,10 +104,11 @@ class Schema(object):
     def validate(self, data):
         s = self._schema
         e = self._error
-        if type(s) in (list, tuple, set, frozenset):
+        flavor = priority(s)
+        if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
-        if type(s) is dict:
+        if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
@@ -154,12 +158,12 @@ class Schema(object):
                 new[default.name] = default.default
 
             return new
-        if issubclass(type(s), type):
+        if flavor == TYPE:
             if isinstance(data, s):
                 return data
             else:
                 raise SchemaError('%r should be instance of %r' % (data, s), e)
-        if hasattr(s, 'validate'):
+        if flavor == VALIDATOR:
             try:
                 return s.validate(data)
             except SchemaError as x:
@@ -167,7 +171,7 @@ class Schema(object):
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
-        if callable(s):
+        if flavor == CALLABLE:
             f = s.__name__
             try:
                 if s(data):
