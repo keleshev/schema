@@ -165,6 +165,9 @@ def test_dict_optional_defaults():
     assert Schema({Optional('a', default=1): 11,
                    basestring: 22}).validate({'b': 22}) == {'a': 1, 'b': 22}
 
+    with raises(TypeError):
+        Optional(And(str, Use(int)), default=7)
+
 
 def test_complex():
     s = Schema({'<file>': And([Use(open)], lambda l: len(l)),

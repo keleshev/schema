@@ -155,7 +155,7 @@ class Schema(object):
             defaults = set(k for k in s if type(k) is Optional and
                            hasattr(k, 'default')) - covered_optionals
             for default in defaults:
-                new[default.name] = default.default
+                new[default.key] = default.default
 
             return new
         if flavor == TYPE:
@@ -199,9 +199,11 @@ class Optional(Schema):
         default = kwargs.pop('default', MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not MARKER:
-            # TODO: If I can't figure out a key name for myself, freak out.
+            # See if I can come up with a static key to use for myself:
+            if priority(self._schema) != COMPARABLE:
+                raise TypeError(
+                        'Optional keys with defaults must have simple, '
+                        'predictable values, like literal strings or ints. '
+                        '"%r" is too complex.' % (self._schema,))
             self.default = default
-
-    @property
-    def name(self):
-        return self._schema
+            self.key = self._schema
