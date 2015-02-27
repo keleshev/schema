@@ -156,6 +156,13 @@ def test_dict_optional_keys():
                    Optional('b'): 2}).validate({'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
 
 
+def test_delegated_priority():
+    """Make sure compound, instance-delegated priorities work."""
+    # Optional('a') should take precedence, because it's more specific.
+    assert Schema({Optional(str): 1,
+                   Optional('a'): 2}).validate({'a': 2}) == {'a': 2}
+
+
 def test_dict_optional_defaults():
     # Optionals fill out their defaults:
     assert Schema({Optional('a', default=1): 11,
