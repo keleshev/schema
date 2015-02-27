@@ -232,8 +232,8 @@ data matches:
 
     >>> from schema import Optional
     >>> Schema({Optional('color', default='blue'): str,
-    ...         str: str}).validate({'texture': 'furry'})
-    {'color': 'blue', 'texture': 'furry'}
+    ...         Optional(str): str}).validate({})
+    {'color': 'blue'}
 
 Defaults are used verbatim, not passed through any validators specified in the
 value.
