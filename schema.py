@@ -77,19 +77,29 @@ COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
 
 
 def priority(s):
-    """Return priority for a given object."""
+    """Return the priority with which a schema should be tried against an
+    object.
+
+    A priority is a tuple of at least 1 "flavor". Sorted lexically, they
+    determine the order in which to try schemata against data.
+
+    """
     if type(s) in (list, tuple, set, frozenset):
-        return ITERABLE
-    if type(s) is dict:
-        return DICT
-    if issubclass(type(s), type):
-        return TYPE
-    if hasattr(s, 'validate'):
-        return VALIDATOR
-    if callable(s):
-        return CALLABLE
+        ret = ITERABLE
+    elif type(s) is dict:
+        ret = DICT
+    elif issubclass(type(s), type):
+        ret = TYPE
+    elif hasattr(s, 'validate'):
+        # Deletegate to the object's priority() method if there is one,
+        # allowing it to traverse into itself and return a compound priority
+        # like (2, 3):
+        return getattr(s, 'priority', lambda: (VALIDATOR,))()
+    elif callable(s):
+        ret = CALLABLE
     else:
-        return COMPARABLE
+        ret = COMPARABLE
+    return (ret,)
 
 
 class Schema(object):
@@ -104,7 +114,7 @@ class Schema(object):
     def validate(self, data):
         s = self._schema
         e = self._error
-        flavor = priority(s)
+        flavor = priority(s)[0]
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
             return type(s)(Or(*s, error=e).validate(d) for d in data)
@@ -187,6 +197,9 @@ class Schema(object):
         else:
             raise SchemaError('%r does not match %r' % (s, data), e)
 
+    def priority(self):
+        return (VALIDATOR,)
+
 
 MARKER = object()
 
@@ -200,10 +213,17 @@ class Optional(Schema):
         super(Optional, self).__init__(*args, **kwargs)
         if default is not MARKER:
             # See if I can come up with a static key to use for myself:
-            if priority(self._schema) != COMPARABLE:
+            if priority(self._schema)[0] != COMPARABLE:
                 raise TypeError(
                         'Optional keys with defaults must have simple, '
                         'predictable values, like literal strings or ints. '
                         '"%r" is too complex.' % (self._schema,))
             self.default = default
             self.key = self._schema
+
+    def priority(self):
+        """Dig in one level so Optional('foo') takes precedence over
+        Optional('str'). We could go deeper if we wanted.
+
+        """
+        return super(Optional, self).priority() + priority(self._schema)
