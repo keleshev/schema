@@ -116,7 +116,7 @@ class Schema(object):
             coverage = set()  # non-optional schema keys that were matched
             covered_optionals = set()
             # for each key and value find a schema entry matching them, if any
-            sorted_skeys = list(sorted(s, key=priority))
+            sorted_skeys = sorted(s, key=priority)
             for key, value in data.items():
                 valid = False
                 skey = None
@@ -145,10 +145,11 @@ class Schema(object):
                                           x.autos, [e] + x.errors)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise SchemaError('Missing keys: %s' % ", ".join(required - coverage), e)
+                raise SchemaError('Missing keys: %s' %
+                                  ", ".join(required - coverage), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = ', '.join('%r' % (k,) for k in sorted(wrong_keys))
+                s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys))
                 raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
 
@@ -163,7 +164,8 @@ class Schema(object):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' % (data, s.__name__), e)
+                raise SchemaError('%r should be instance of %r' %
+                                  (data, s.__name__), e)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
@@ -203,8 +205,8 @@ class Optional(Schema):
             # See if I can come up with a static key to use for myself:
             if priority(self._schema) != COMPARABLE:
                 raise TypeError(
-                        'Optional keys with defaults must have simple, '
-                        'predictable values, like literal strings or ints. '
-                        '"%r" is too complex.' % (self._schema,))
+                    'Optional keys with defaults must have simple, '
+                    'predictable values, like literal strings or ints. '
+                    '"%r" is too complex.' % (self._schema,))
             self.default = default
             self.key = self._schema
