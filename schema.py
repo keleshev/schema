@@ -35,19 +35,19 @@ class And(object):
         return '%s(%s)' % (self.__class__.__name__,
                            ', '.join(repr(a) for a in self._args))
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
         for s in [Schema(s, error=self._error) for s in self._args]:
-            data = s.validate(data)
+            data = s.validate(data, **kwargs)
         return data
 
 
 class Or(And):
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
         x = SchemaError([], [])
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
-                return s.validate(data)
+                return s.validate(data, **kwargs)
             except SchemaError as _x:
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
@@ -64,7 +64,7 @@ class Use(object):
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
         try:
             return self._callable(data)
         except SchemaError as x:
@@ -102,16 +102,16 @@ class Schema(object):
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
         s = self._schema
         e = self._error
         flavor = priority(s)
         if flavor == ITERABLE:
-            data = Schema(type(s), error=e).validate(data)
+            data = Schema(type(s), error=e).validate(data, **kwargs)
             o = Or(*s, error=e)
-            return type(data)(o.validate(d) for d in data)
+            return type(data)(o.validate(d, **kwargs) for d in data)
         if flavor == DICT:
-            data = Schema(dict, error=e).validate(data)
+            data = Schema(dict, error=e).validate(data, **kwargs)
             new = type(data)()  # new - is a dict of the validated values
             x = None
             coverage = set()  # matched schema keys
@@ -123,12 +123,12 @@ class Schema(object):
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
-                        nkey = Schema(skey, error=e).validate(key)
+                        nkey = Schema(skey, error=e).validate(key, **kwargs)
                     except SchemaError:
                         pass
                     else:
                         try:
-                            nvalue = Schema(svalue, error=e).validate(value)
+                            nvalue = Schema(svalue, error=e).validate(value, **kwargs)
                         except SchemaError as _x:
                             x = _x
                             raise
@@ -169,7 +169,7 @@ class Schema(object):
                                   (data, s.__name__), e)
         if flavor == VALIDATOR:
             try:
-                return s.validate(data)
+                return s.validate(data, **kwargs)
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:

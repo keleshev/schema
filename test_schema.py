@@ -415,3 +415,27 @@ def test_issue_83_iterable_validation_return_type():
     data = TestSetType(["test", "strings"])
     s = Schema(set([str]))
     assert isinstance(s.validate(data), TestSetType)
+
+
+def test_validate_kwargs_doc_example():
+    """Example of Doc Feature Request: Issue #63"""
+    class Docs(And):
+        def __init__(self, docstring, *args, **kwargs):
+            self.docstring = docstring
+            super(Docs, self).__init__(*args, **kwargs)
+
+        def validate(self, data, **kwargs):
+            if kwargs.get('doc', False):
+                return self.docstring
+            return super(Docs, self).validate(data, **kwargs)
+
+    s = Schema({
+        'ID': Docs('This is id field', int),
+        'ID_nodocs': int,
+    })
+    data = s.validate({'ID': 4, 'ID_nodocs': 6})
+    assert data['ID'] == 4
+    assert data['ID_nodocs'] == 6
+    data = s.validate({'ID': 4, 'ID_nodocs': 6}, doc=True)
+    assert data['ID'] == 'This is id field'
+    assert data['ID_nodocs'] == 6
