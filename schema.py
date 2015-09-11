@@ -111,13 +111,20 @@ def _priority(s):
 
 class Schema(object):
 
-    _missing_keys_pattern_fn = staticmethod('Missing keys: {0}'.format)
-    _wrong_keys_pattern_fn = staticmethod('Wrong keys {0!s} in {1!r}'.format)
-    _should_be_instance_pattern_fn = staticmethod('{0!r} should be instance of {1!r}'.format)
-    _validate_raises_pattern_fn = staticmethod('{0!r}.validate({1!r}) raised {2!r}'.format)
-    _exception_raised_pattern_fn = staticmethod('{0!s}({1!r}) raised {2!r}'.format)
-    _should_evaluate_pattern_fn = staticmethod('{0!s}({1!r}) should evaluate to True'.format)
-    _does_not_match_pattern_fn = staticmethod('{0!r} does not match {1!r}'.format)
+    _missing_keys_pattern_fn = staticmethod(
+        'Missing keys: {0}'.format)
+    _wrong_keys_pattern_fn = staticmethod(
+        'Wrong keys {0!s} in {1!r}'.format)
+    _should_be_instance_pattern_fn = staticmethod(
+        '{0!r} should be instance of {1!r}'.format)
+    _validate_raises_pattern_fn = staticmethod(
+        '{0!r}.validate({1!r}) raised {2!r}'.format)
+    _exception_raised_pattern_fn = staticmethod(
+        '{0!s}({1!r}) raised {2!r}'.format)
+    _should_evaluate_pattern_fn = staticmethod(
+        '{0!s}({1!r}) should evaluate to True'.format)
+    _does_not_match_pattern_fn = staticmethod(
+        '{0!r} does not match {1!r}'.format)
 
     def __init__(self, schema, error=None, **patterns):
         self._schema = schema
