@@ -3,7 +3,7 @@ from collections import defaultdict, namedtuple
 from operator import methodcaller
 import os
 
-from pytest import raises
+from pytest import raises, mark
 
 from schema import Schema, Use, And, Or, Optional, SchemaError
 
@@ -450,3 +450,89 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
         # (most of the time)
         assert isinstance(validated_data['created_at'], datetime.datetime)
         # assert isinstance(validated_data['created_at'], basestring)
+
+
+@mark.parametrize('specify_by', ['subclass', 'constructor'])
+@mark.parametrize('wrong_obj,expected_message', [
+    ({'id1': 111, 'id2': 222, 'arg': {'param1': [1, 2, 3, 4, 5]}},
+     "Missing keys in arg: 'param2'"),
+
+    ({'id1': 111, 'arg': {'param1': [1, 2, 3, 4, 5], 'param2': [1, 2, 3, 4, 5]}},
+     "Missing keys in root: 'id2'"),
+
+    ({'id1': 111, 'id2': 222, 'arg': {'param1': [1, 2], 'param2': [1, 2, 3, 4, 5]}},
+     "Raised bad exception"),
+
+    ({'id1': 111, 'id2': 222, 'arg': {'param1': [1, 2, 3], 'param2': [1, 2, 3, 4, 5]}},
+     "Raised SERIOUSLY BAD EXCEPTION!"),
+
+])
+def test_custom_error_messages(specify_by, wrong_obj, expected_message):
+    class BadException(Exception):
+        pass
+
+    class SeriouslyBadException(Exception):
+        pass
+
+    def param_fn(param):
+        if len(param) % 2 == 0:
+            raise BadException
+        elif len(param) % 3 == 0:
+            raise SeriouslyBadException
+        return param
+
+    def missing_keys_root_pattern_fn(s):
+        return 'Missing keys in root: ' + s
+
+    def missing_keys_arg_pattern_fn(s):
+        return 'Missing keys in arg: ' + s
+
+    def exception_pattern_fn(fn, args, err):
+        if isinstance(err, BadException):
+            return 'Raised bad exception'
+        elif isinstance(err, SeriouslyBadException):
+            return 'Raised SERIOUSLY BAD EXCEPTION!'
+        else:
+            return '{0!s}({1!r}) raised {2!r}'.format(fn, args, err)
+
+    if specify_by == 'constructor':
+        constructor_root_kwargs = {
+            '_missing_keys_pattern_fn': missing_keys_root_pattern_fn,
+            '_exception_raised_pattern_fn': exception_pattern_fn,
+        }
+        constructor_arg_kwargs = {
+            '_missing_keys_pattern_fn': missing_keys_arg_pattern_fn,
+            '_exception_raised_pattern_fn': exception_pattern_fn,
+        }
+        use_kwargs = {
+            '_pattern_fn': exception_pattern_fn,
+        }
+        RootSchema = ArgSchema = Schema
+        CustomUse = Use
+    else:
+        constructor_root_kwargs = constructor_arg_kwargs = use_kwargs = {}
+
+        class RootSchema(Schema):
+            _missing_keys_pattern_fn = staticmethod(missing_keys_root_pattern_fn)
+            _exception_raised_pattern_fn = staticmethod(exception_pattern_fn)
+
+        class ArgSchema(Schema):
+            _missing_keys_pattern_fn = staticmethod(missing_keys_arg_pattern_fn)
+            _exception_raised_pattern_fn = staticmethod(exception_pattern_fn)
+
+        class CustomUse(Use):
+            _pattern_fn = staticmethod(exception_pattern_fn)
+
+    s = RootSchema({
+        'id1': int,
+        'id2': int,
+        'arg': ArgSchema({
+            'param1': CustomUse(param_fn, **use_kwargs),
+            'param2': CustomUse(param_fn, **use_kwargs),
+        }, **constructor_arg_kwargs)
+    }, **constructor_root_kwargs)
+
+    with raises(SchemaError) as err:
+        s.validate(wrong_obj)
+
+    assert err.value.code == expected_message
