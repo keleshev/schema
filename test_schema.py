@@ -22,7 +22,7 @@ def ve(_):
 
 
 def se(_):
-    raise SchemaError('first auto', 'first error')
+    raise SchemaError('first auto', 'first error', None)
 
 
 def test_schema():
