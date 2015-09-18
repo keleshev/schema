@@ -1,5 +1,6 @@
 from setuptools import setup
 
+import codecs
 import schema
 
 
@@ -13,7 +14,7 @@ setup(
     keywords="schema json validation",
     url="http://github.com/halst/schema",
     py_modules=['schema'],
-    long_description=open('README.rst').read(),
+    long_description=codecs.open('README.rst', 'r', 'utf-8').read(),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",

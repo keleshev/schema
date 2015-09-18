@@ -59,7 +59,7 @@ Use `pip <http://pip-installer.org>`_ or easy_install::
 
     pip install schema==0.3.1
 
-Alternatively, you can just drop ``schema.py`` file into your project—it is
+Alternatively, you can just drop ``schema.py`` file into your project--it is
 self-contained.
 
 - **schema** is tested with Python 2.6, 2.7, 3.2, 3.3 and PyPy.
@@ -95,7 +95,7 @@ Callables
 
 If ``Schema(...)`` encounters a callable (function, class, or object with
 ``__call__`` method) it will call it, and if its return value evaluates to
-``True`` it will continue validating, else—it will raise ``SchemaError``.
+``True`` it will continue validating, else--it will raise ``SchemaError``.
 
 .. code:: python
 
@@ -123,7 +123,7 @@ If ``Schema(...)`` encounters a callable (function, class, or object with
 If ``Schema(...)`` encounters an object with method ``validate`` it will run
 this method on corresponding data as ``data = obj.validate(data)``. This method
 may raise ``SchemaError`` exception, which will tell ``Schema`` that that piece
-of data is invalid, otherwise—it will continue validating.
+of data is invalid, otherwise--it will continue validating.
 
 As example, you can use ``Use`` for creating such objects. ``Use`` helps to use
 a function or type to convert a value while validating it:
@@ -232,8 +232,9 @@ data matches:
 
     >>> from schema import Optional
     >>> Schema({Optional('color', default='blue'): str,
-    ...         str: str}).validate({'texture': 'furry'})
-    {'color': 'blue', 'texture': 'furry'}
+    ...         str: str}).validate({'texture': 'furry'}
+    ...       ) == {'color': 'blue', 'texture': 'furry'}
+    True
 
 Defaults are used verbatim, not passed through any validators specified in the
 value.
