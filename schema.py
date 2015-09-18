@@ -140,15 +140,15 @@ class Schema(object):
                     new[nkey] = nvalue
                 elif skey is not None:
                     if x is not None:
-                        raise SchemaError(['invalid value for key %r' % key] +
+                        raise SchemaError(['Invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
             required = set(k for k in s if type(k) is not Optional)
             if coverage != required:
-                raise SchemaError('missed keys %r' % (required - coverage), e)
+                raise SchemaError('Missing keys: %s' % ", ".join(required - coverage), e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join('%r' % (k,) for k in sorted(wrong_keys))
-                raise SchemaError('wrong keys %s in %r' % (s_wrong_keys, data),
+                raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
 
             # Apply default-having optionals that haven't been used:
@@ -162,7 +162,7 @@ class Schema(object):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' % (data, s), e)
+                raise SchemaError('%r should be instance of %r' % (data, s.__name__), e)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
