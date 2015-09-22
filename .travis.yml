@@ -1,7 +1,6 @@
 language: python
 install: pip install tox --use-mirrors
 script: tox
-sudo: false
 
 # install coveralls and publish coverage only after a successful build
 after_success:
