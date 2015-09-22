@@ -85,7 +85,7 @@ otherwise it will raise ``SchemaError``.
     >>> Schema(int).validate('123')
     Traceback (most recent call last):
     ...
-    SchemaError: '123' should be instance of <type 'int'>
+    SchemaError: '123' should be instance of 'int'
 
     >>> Schema(object).validate('hai')
     'hai'
@@ -172,7 +172,7 @@ against schemas listed inside that container:
     Traceback (most recent call last):
     ...
     SchemaError: Or(<type 'int'>, <type 'float'>) did not validate 'not int or float here'
-    'not int or float here' should be instance of <type 'float'>
+    'not int or float here' should be instance of 'float'
 
 Dictionaries
 ~~~~~~~~~~~~
