@@ -106,7 +106,6 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({})
         except SchemaError as e:
-            print e.args[0]
             assert e.args[0] == "Missing keys: key"
             raise
     with SE:
