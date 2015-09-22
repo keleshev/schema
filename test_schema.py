@@ -106,35 +106,33 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({})
         except SchemaError as e:
-            assert e.args[0] in ["missed keys set(['key'])",
-                                 "missed keys {'key'}"]  # Python 3 style
+            assert e.args[0] == "Missing keys: key"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] in ["missed keys set(['key'])",
-                                 "missed keys {'key'}"]  # Python 3 style
+            assert e.args[0] == "Missing keys: key"
             raise
     with SE:
         try:
             Schema({}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] == "wrong keys 'n' in {'n': 5}"
+            assert e.args[0] == "Wrong keys 'n' in {'n': 5}"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'key': 5, 'bad': 5})
         except SchemaError as e:
-            assert e.args[0] in ["wrong keys 'bad' in {'key': 5, 'bad': 5}",
-                                 "wrong keys 'bad' in {'bad': 5, 'key': 5}"]
+            assert e.args[0] in ["Wrong keys 'bad' in {'key': 5, 'bad': 5}",
+                                 "Wrong keys 'bad' in {'bad': 5, 'key': 5}"]
             raise
     with SE:
         try:
             Schema({}).validate({'a': 5, 'b': 5})
         except SchemaError as e:
-            assert e.args[0] in ["wrong keys 'a', 'b' in {'a': 5, 'b': 5}",
-                                 "wrong keys 'a', 'b' in {'b': 5, 'a': 5}"]
+            assert e.args[0] in ["Wrong keys 'a', 'b' in {'a': 5, 'b': 5}",
+                                 "Wrong keys 'a', 'b' in {'b': 5, 'a': 5}"]
             raise
 
 
