@@ -1,3 +1,6 @@
+# use new container-based infrastructure
+sudo: false
+
 language: python
 install: pip install tox --use-mirrors
 script: tox
