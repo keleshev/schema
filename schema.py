@@ -113,8 +113,7 @@ class Schema(object):
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
-            coverage = set()  # non-optional schema keys that were matched
-            covered_optionals = set()
+            coverage = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=priority)
             for key, value in data.items():
@@ -133,8 +132,7 @@ class Schema(object):
                             x = _x
                             raise
                         else:
-                            (covered_optionals if type(skey) is Optional
-                             else coverage).add(skey)
+                            coverage.add(skey)
                             valid = True
                             break
                 if valid:
@@ -144,7 +142,7 @@ class Schema(object):
                         raise SchemaError(['Invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
             required = set(k for k in s if type(k) is not Optional)
-            if coverage != required:
+            if not required.issubset(coverage):
                 raise SchemaError('Missing keys: %s' %
                                   ", ".join(required - coverage), e)
             if len(new) != len(data):
@@ -155,7 +153,7 @@ class Schema(object):
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
-                           hasattr(k, 'default')) - covered_optionals
+                           hasattr(k, 'default')) - coverage
             for default in defaults:
                 new[default.key] = default.default
 
