@@ -97,6 +97,7 @@ def test_strictly():
 def test_dict():
     assert Schema({'key': 5}).validate({'key': 5}) == {'key': 5}
     with SE: Schema({'key': 5}).validate({'key': 'x'})
+    with SE: Schema({'key': 5}).validate(['key', 5])
     assert Schema({'key': int}).validate({'key': 5}) == {'key': 5}
     assert Schema({'n': int, 'f': float}).validate(
             {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
