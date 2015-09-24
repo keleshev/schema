@@ -1,9 +1,12 @@
+# use new container-based infrastructure
+sudo: false
+
 language: python
-install: pip install tox --use-mirrors
+install: pip install tox
 script: tox
 
-# install coveralls and publish coverage only after a successful build
+# install codecov and publish coverage only after a successful build
 after_success:
-  - pip install coveralls --use-mirrors
-  - coveralls # coveralls submit coverage report
+  - pip install codecov
+  - codecov
 

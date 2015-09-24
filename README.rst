@@ -17,8 +17,8 @@ parsing, converted from JSON/YAML (or something else) to Python data-types.
 .. image:: https://secure.travis-ci.org/keleshev/schema.png?branch=master
     :target: https://travis-ci.org/keleshev/schema
 
-.. image:: https://coveralls.io/repos/halst/schema/badge.png?branch=master
-    :target: https://coveralls.io/r/halst/schema?branch=master
+.. image:: https://img.shields.io/codecov/c/github/keleshev/schema.svg
+    :target: http://codecov.io/github/keleshev/schema
 
 Example
 ----------------------------------------------------------------------------
