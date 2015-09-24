@@ -1,4 +1,5 @@
 from __future__ import with_statement
+from collections import defaultdict
 import os
 
 from pytest import raises
@@ -167,6 +168,15 @@ def test_dict_optional_defaults():
 
     with raises(TypeError):
         Optional(And(str, Use(int)), default=7)
+
+
+def test_dict_subtypes():
+    d = defaultdict(int, key=1)
+    v = Schema({'key': 1}).validate(d)
+    assert v == d
+    assert isinstance(v, defaultdict)
+    # Please add tests for Counter and OrderedDict once support for Python2.6
+    # is dropped!
 
 
 def test_complex():
