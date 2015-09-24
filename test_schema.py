@@ -357,3 +357,8 @@ def test_issue_9_prioritized_key_comparison_in_dicts():
     assert s.validate(data) == data
     data = {'ID': 10, 'FILE': None}
     assert s.validate(data) == data
+
+
+def test_exception_with_non_str_dict_key():
+    s = Schema({And(str, Use(str.lower), 'name'): And(str, len)})
+    with SE: s.validate(dict())
