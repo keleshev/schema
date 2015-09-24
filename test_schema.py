@@ -106,13 +106,13 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({})
         except SchemaError as e:
-            assert e.args[0] == "Missing keys: key"
+            assert e.args[0] == "Missing keys: 'key'"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaError as e:
-            assert e.args[0] == "Missing keys: key"
+            assert e.args[0] == "Missing keys: 'key'"
             raise
     with SE:
         try:
@@ -362,3 +362,10 @@ def test_issue_9_prioritized_key_comparison_in_dicts():
 def test_exception_with_non_str_dict_key():
     s = Schema({And(str, Use(str.lower), 'name'): And(str, len)})
     with SE: s.validate(dict())
+    with SE:
+        try:
+            Schema({str.lower: 5}).validate(dict())
+        except SchemaError as e:
+            assert (e.args[0] ==
+                    "Missing keys: <method 'lower' of 'str' objects>")
+            raise
