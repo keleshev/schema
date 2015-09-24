@@ -359,7 +359,7 @@ def test_issue_9_prioritized_key_comparison_in_dicts():
     assert s.validate(data) == data
 
 
-def test_exception_with_non_str_dict_key():
+def test_missing_keys_exception_with_non_str_dict_keys():
     s = Schema({And(str, Use(str.lower), 'name'): And(str, len)})
     with SE: s.validate(dict())
     with SE:
