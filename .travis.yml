@@ -5,8 +5,8 @@ language: python
 install: pip install tox
 script: tox
 
-# install coveralls and publish coverage only after a successful build
+# install codecov and publish coverage only after a successful build
 after_success:
-  - pip install coveralls
-  - coveralls # coveralls submit coverage report
+  - pip install codecov
+  - codecov
 
