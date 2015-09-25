@@ -364,8 +364,8 @@ def test_missing_keys_exception_with_non_str_dict_keys():
     with SE: s.validate(dict())
     with SE:
         try:
-            Schema({str.lower: 5}).validate(dict())
+            Schema({1: 'x'}).validate(dict())
         except SchemaError as e:
             assert (e.args[0] ==
-                    "Missing keys: <method 'lower' of 'str' objects>")
+                    "Missing keys: 1")
             raise
