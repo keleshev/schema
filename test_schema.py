@@ -104,6 +104,12 @@ def test_dict():
             {'n': 3.14, 'f': 5})
     with SE:
         try:
+            Schema({}).validate({'abc': None, 1: None})
+        except SchemaError as e:
+            assert e.args[0] == "Wrong keys 'abc', 1 in {1: None, 'abc': None}"
+            raise
+    with SE:
+        try:
             Schema({'key': 5}).validate({})
         except SchemaError as e:
             assert e.args[0] == "Missing keys: 'key'"

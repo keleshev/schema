@@ -148,7 +148,7 @@ class Schema(object):
                 raise SchemaError('Missing keys: ' + s_missing_keys, e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys))
+                s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys, key=repr))
                 raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
                                   e)
 
