@@ -108,7 +108,7 @@ def test_dict():
         try:
             Schema({}).validate({'abc': None, 1: None})
         except SchemaError as e:
-            assert e.args[0] == "Wrong keys 'abc', 1 in {1: None, 'abc': None}"
+            assert e.args[0].startswith("Wrong keys 'abc', 1 in")
             raise
     with SE:
         try:
