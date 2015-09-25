@@ -108,7 +108,8 @@ class Schema(object):
         flavor = priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
-            return type(s)(Or(*s, error=e).validate(d) for d in data)
+            o = Or(*s, error=e)
+            return type(s)(o.validate(d) for d in data)
         if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
