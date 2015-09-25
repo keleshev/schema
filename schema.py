@@ -143,8 +143,9 @@ class Schema(object):
                                           x.autos, [e] + x.errors)
             required = set(k for k in s if type(k) is not Optional)
             if not required.issubset(coverage):
-                raise SchemaError('Missing keys: %s' %
-                                  ", ".join(required - coverage), e)
+                missing_keys = required - coverage
+                s_missing_keys = ", ".join(repr(k) for k in missing_keys)
+                raise SchemaError('Missing keys: ' + s_missing_keys, e)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys))
