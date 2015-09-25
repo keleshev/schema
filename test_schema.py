@@ -1,4 +1,5 @@
 from __future__ import with_statement
+from collections import defaultdict
 import os
 
 from pytest import raises
@@ -97,6 +98,7 @@ def test_strictly():
 def test_dict():
     assert Schema({'key': 5}).validate({'key': 5}) == {'key': 5}
     with SE: Schema({'key': 5}).validate({'key': 'x'})
+    with SE: Schema({'key': 5}).validate(['key', 5])
     assert Schema({'key': int}).validate({'key': 5}) == {'key': 5}
     assert Schema({'n': int, 'f': float}).validate(
             {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
@@ -172,6 +174,15 @@ def test_dict_optional_defaults():
 
     with raises(TypeError):
         Optional(And(str, Use(int)), default=7)
+
+
+def test_dict_subtypes():
+    d = defaultdict(int, key=1)
+    v = Schema({'key': 1}).validate(d)
+    assert v == d
+    assert isinstance(v, defaultdict)
+    # Please add tests for Counter and OrderedDict once support for Python2.6
+    # is dropped!
 
 
 def test_complex():
