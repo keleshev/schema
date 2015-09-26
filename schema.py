@@ -70,7 +70,7 @@ class Use(object):
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
-            f = self._callable.__name__
+            f = callable_str(self._callable)
             raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
 
 
@@ -176,7 +176,7 @@ class Schema(object):
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
                                   self._error)
         if flavor == CALLABLE:
-            f = s.__name__
+            f = callable_str(s)
             try:
                 if s(data):
                     return data
@@ -211,3 +211,9 @@ class Optional(Schema):
                     '"%r" is too complex.' % (self._schema,))
             self.default = default
             self.key = self._schema
+
+
+def callable_str(callable_):
+    if hasattr(callable_, '__name__'):
+        return callable_.__name__
+    return str(callable_)

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 from collections import defaultdict, namedtuple
+from operator import methodcaller
 import os
 
 from pytest import raises
@@ -383,8 +384,18 @@ def test_missing_keys_exception_with_non_str_dict_keys():
         try:
             Schema({1: 'x'}).validate(dict())
         except SchemaError as e:
-            assert (e.args[0] ==
-                    "Missing keys: 1")
+            assert e.args[0] == "Missing keys: 1"
+            raise
+
+
+def test_issue_56_cant_rely_on_callables_to_have_name():
+    s = Schema(methodcaller('endswith', '.csv'))
+    assert s.validate('test.csv') == 'test.csv'
+    with SE:
+        try:
+            s.validate('test.py')
+        except SchemaError as e:
+            assert "operator.methodcaller" in e.args[0]
             raise
 
 
