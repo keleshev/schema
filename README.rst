@@ -57,7 +57,7 @@ Installation
 
 Use `pip <http://pip-installer.org>`_ or easy_install::
 
-    pip install schema==0.3.1
+    pip install schema
 
 Alternatively, you can just drop ``schema.py`` file into your project—it is
 self-contained.
