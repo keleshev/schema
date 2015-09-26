@@ -1,5 +1,5 @@
 from __future__ import with_statement
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import os
 
 from pytest import raises
@@ -385,4 +385,15 @@ def test_missing_keys_exception_with_non_str_dict_keys():
         except SchemaError as e:
             assert (e.args[0] ==
                     "Missing keys: 1")
+            raise
+
+
+def test_exception_handling_with_bad_validators():
+    BadValidator = namedtuple("BadValidator", ["validate"])
+    s = Schema(BadValidator("haha"))
+    with SE:
+        try:
+            s.validate("test")
+        except SchemaError as e:
+            assert "TypeError" in e.args[0]
             raise
