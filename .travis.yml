@@ -10,11 +10,15 @@ addons:
     packages:
       - python3.5
 
-install: pip install tox
+cache:
+  pip: true
+  directories:
+    - .tox
+
+install: pip install codecov tox
 script: tox
 
-# install codecov and publish coverage only after a successful build
+# publish coverage only after a successful build
 after_success:
-  - pip install codecov
   - codecov
 
