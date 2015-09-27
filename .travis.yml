@@ -2,11 +2,23 @@
 sudo: false
 
 language: python
-install: pip install tox
+
+addons:
+  apt:
+    sources:
+      - deadsnakes
+    packages:
+      - python3.5
+
+cache:
+  pip: true
+  directories:
+    - .tox
+
+install: pip install codecov tox
 script: tox
 
-# install codecov and publish coverage only after a successful build
+# publish coverage only after a successful build
 after_success:
-  - pip install codecov
   - codecov
 
