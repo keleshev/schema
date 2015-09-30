@@ -408,3 +408,10 @@ def test_exception_handling_with_bad_validators():
         except SchemaError as e:
             assert "TypeError" in e.args[0]
             raise
+
+
+def test_issue_83_iterable_validation_return_type():
+    TestSetType = type("TestSetType", (set,), dict())
+    data = TestSetType(["test", "strings"])
+    s = Schema(set([str]))
+    assert isinstance(s.validate(data), TestSetType)
