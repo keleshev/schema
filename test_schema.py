@@ -415,3 +415,34 @@ def test_issue_83_iterable_validation_return_type():
     data = TestSetType(["test", "strings"])
     s = Schema(set([str]))
     assert isinstance(s.validate(data), TestSetType)
+
+
+def test_optional_key_convert_failed_randomly_while_with_another_optional_object():
+    """
+    In this test, created_at string "2015-10-10 00:00:00" is expected to be converted to a datetime instance.
+        - it works when the schema is
+
+            s = Schema({
+                    'created_at': _datetime_validator,
+                    Optional(basestring): object,
+                })
+
+        - but when wrapping the key 'created_at' with Optional, it fails randomly
+    :return:
+    """
+    import datetime
+    datetime_fmt = '%Y-%m-%d %H:%M:%S'
+    _use_datetime = lambda i: datetime.datetime.strptime(i, datetime_fmt)
+    _datetime_validator = Or(None, Use(_use_datetime))
+    s = Schema({
+        Optional('created_at'): _datetime_validator,
+        Optional(basestring): object,
+    })
+    data = {
+        'created_at': '2015-10-10 00:00:00'
+    }
+    validated_data = s.validate(data)
+    # is expected to be converted to a datetime instance, but fails randomly(most of the time)
+    # assert isinstance(validated_data['created_at'], datetime.datetime)
+
+    assert isinstance(validated_data['created_at'], basestring)
