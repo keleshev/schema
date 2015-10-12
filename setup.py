@@ -12,7 +12,7 @@ setup(
     description="Simple data validation library",
     license="MIT",
     keywords="schema json validation",
-    url="http://github.com/halst/schema",
+    url="https://github.com/keleshev/schema",
     py_modules=['schema'],
     long_description=codecs.open('README.rst', 'r', 'utf-8').read(),
     classifiers=[
