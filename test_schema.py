@@ -432,17 +432,21 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
     """
     import datetime
     datetime_fmt = '%Y-%m-%d %H:%M:%S'
-    _use_datetime = lambda i: datetime.datetime.strptime(i, datetime_fmt)
-    _datetime_validator = Or(None, Use(_use_datetime))
-    s = Schema({
-        Optional('created_at'): _datetime_validator,
-        Optional(basestring): object,
-    })
-    data = {
-        'created_at': '2015-10-10 00:00:00'
-    }
-    validated_data = s.validate(data)
-    # is expected to be converted to a datetime instance, but fails randomly(most of the time)
-    # assert isinstance(validated_data['created_at'], datetime.datetime)
-
-    assert isinstance(validated_data['created_at'], basestring)
+    _datetime_validator = Or(None, Use(lambda i: datetime.datetime.strptime(i, datetime_fmt)))
+    # FIXME given tests enough
+    for i in range(1024):
+        s = Schema({
+            Optional('created_at'): _datetime_validator,
+            Optional('updated_at'): _datetime_validator,
+            Optional('birth'): _datetime_validator,
+            Optional(basestring): object,
+        })
+        data = {
+            'created_at': '2015-10-10 00:00:00'
+        }
+        validated_data = s.validate(data)
+        if not isinstance(validated_data['created_at'], datetime.datetime):
+            print "'Optiona(created_at)'convert failed at {count}".format(count=i+1)
+        # is expected to be converted to a datetime instance, but fails randomly(most of the time)
+        assert isinstance(validated_data['created_at'], datetime.datetime)
+        # assert isinstance(validated_data['created_at'], basestring)
