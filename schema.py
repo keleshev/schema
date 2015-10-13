@@ -102,6 +102,12 @@ class Schema(object):
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
 
+    def __and__(self, other):
+        return And(self, other)
+
+    def __or__(self, other):
+        return Or(self, other)
+
     def validate(self, data):
         s = self._schema
         e = self._error
