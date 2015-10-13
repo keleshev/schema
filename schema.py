@@ -93,6 +93,13 @@ def priority(s):
         return COMPARABLE
 
 
+def priority_of_dict_key(s):
+    """Return priority for a given key object."""
+    if isinstance(s, Optional):
+        return priority(s._schema)
+    return priority(s)
+
+
 class Schema(object):
 
     def __init__(self, schema, error=None):
@@ -117,6 +124,8 @@ class Schema(object):
             coverage = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=priority)
+            # resort sorted_skeys with priority_of_dict_key
+            sorted_skeys = sorted(sorted_skeys, key=priority_of_dict_key)
             for key, value in data.items():
                 valid = False
                 skey = None
