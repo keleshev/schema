@@ -415,3 +415,16 @@ def test_issue_83_iterable_validation_return_type():
     data = TestSetType(["test", "strings"])
     s = Schema(set([str]))
     assert isinstance(s.validate(data), TestSetType)
+
+
+def test_issue_80_wrong_keys_exception():
+    s = Schema({And(str, Use(str.lower), 'id'): int})
+    data = {'Id': 10, 'Name': 'me'}
+    with SE:
+        try:
+            s.validate(data)
+        except SchemaError as e:
+            msg = e.args[0]
+            assert msg.count("'Id'") == 1
+            assert msg.count("'Name'") == 2
+            raise

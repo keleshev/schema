@@ -114,7 +114,8 @@ class Schema(object):
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             x = None
-            coverage = set()  # matched schema keys
+            matched_schema_keys = set()
+            matched_input_keys = set()
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=priority)
             for key, value in data.items():
@@ -133,7 +134,8 @@ class Schema(object):
                             x = _x
                             raise
                         else:
-                            coverage.add(skey)
+                            matched_schema_keys.add(skey)
+                            matched_input_keys.add(key)
                             valid = True
                             break
                 if valid:
@@ -143,12 +145,12 @@ class Schema(object):
                         raise SchemaError(['Invalid value for key %r' % key] +
                                           x.autos, [e] + x.errors)
             required = set(k for k in s if type(k) is not Optional)
-            if not required.issubset(coverage):
-                missing_keys = required - coverage
+            if not required.issubset(matched_schema_keys):
+                missing_keys = required - matched_schema_keys
                 s_missing_keys = ", ".join(repr(k) for k in missing_keys)
                 raise SchemaError('Missing keys: ' + s_missing_keys, e)
             if len(new) != len(data):
-                wrong_keys = set(data.keys()) - set(new.keys())
+                wrong_keys = set(data.keys()) - matched_input_keys
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
                                                                  key=repr))
                 raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
@@ -156,7 +158,7 @@ class Schema(object):
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
-                           hasattr(k, 'default')) - coverage
+                           hasattr(k, 'default')) - matched_schema_keys
             for default in defaults:
                 new[default.key] = default.default
 
