@@ -419,7 +419,8 @@ def test_issue_83_iterable_validation_return_type():
 
 def test_optional_key_convert_failed_randomly_while_with_another_optional_object():
     """
-    In this test, created_at string "2015-10-10 00:00:00" is expected to be converted to a datetime instance.
+    In this test, created_at string "2015-10-10 00:00:00" is expected to be converted
+    to a datetime instance.
         - it works when the schema is
 
             s = Schema({
@@ -431,8 +432,8 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
     :return:
     """
     import datetime
-    datetime_fmt = '%Y-%m-%d %H:%M:%S'
-    _datetime_validator = Or(None, Use(lambda i: datetime.datetime.strptime(i, datetime_fmt)))
+    fmt = '%Y-%m-%d %H:%M:%S'
+    _datetime_validator = Or(None, Use(lambda i: datetime.datetime.strptime(i, fmt)))
     # FIXME given tests enough
     for i in range(1024):
         s = Schema({
@@ -445,6 +446,7 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
             'created_at': '2015-10-10 00:00:00'
         }
         validated_data = s.validate(data)
-        # is expected to be converted to a datetime instance, but fails randomly(most of the time)
+        # is expected to be converted to a datetime instance, but fails randomly
+        # (most of the time)
         assert isinstance(validated_data['created_at'], datetime.datetime)
         # assert isinstance(validated_data['created_at'], basestring)
