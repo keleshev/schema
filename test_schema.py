@@ -49,7 +49,7 @@ def test_schema():
 
 def test_validate_file():
     assert Schema(
-            Use(open)).validate('LICENSE-MIT').read().startswith('Copyright')
+        Use(open)).validate('LICENSE-MIT').read().startswith('Copyright')
     with SE: Schema(Use(open)).validate('NON-EXISTENT')
     assert Schema(os.path.exists).validate('.') == '.'
     with SE: Schema(os.path.exists).validate('./non-existent/')
@@ -102,9 +102,9 @@ def test_dict():
     with SE: Schema({'key': 5}).validate(['key', 5])
     assert Schema({'key': int}).validate({'key': 5}) == {'key': 5}
     assert Schema({'n': int, 'f': float}).validate(
-            {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
+        {'n': 5, 'f': 3.14}) == {'n': 5, 'f': 3.14}
     with SE: Schema({'n': int, 'f': float}).validate(
-            {'n': 3.14, 'f': 5})
+        {'n': 3.14, 'f': 5})
     with SE:
         try:
             Schema({}).validate({'abc': None, 1: None})
@@ -147,17 +147,17 @@ def test_dict():
 
 def test_dict_keys():
     assert Schema({str: int}).validate(
-            {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+        {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
     with SE: Schema({str: int}).validate({1: 1, 'b': 2})
     assert Schema({Use(str): Use(int)}).validate(
-            {1: 3.14, 3.14: 1}) == {'1': 3, '3.14': 1}
+        {1: 3.14, 3.14: 1}) == {'1': 3, '3.14': 1}
 
 
 def test_dict_optional_keys():
     with SE: Schema({'a': 1, 'b': 2}).validate({'a': 1})
     assert Schema({'a': 1, Optional('b'): 2}).validate({'a': 1}) == {'a': 1}
     assert Schema({'a': 1, Optional('b'): 2}).validate(
-            {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
+        {'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
     # Make sure Optionals are favored over types:
     assert Schema({basestring: 1,
                    Optional('b'): 2}).validate({'a': 1, 'b': 2}) == {'a': 1, 'b': 2}
@@ -415,3 +415,27 @@ def test_issue_83_iterable_validation_return_type():
     data = TestSetType(["test", "strings"])
     s = Schema(set([str]))
     assert isinstance(s.validate(data), TestSetType)
+
+
+def test_validate_kwargs_doc_example():
+    """Example of Doc Feature Request: Issue #63"""
+    class Docs(And):
+        def __init__(self, docstring, *args, **kwargs):
+            self.docstring = docstring
+            super(Docs, self).__init__(*args, **kwargs)
+
+        def validate(self, data, **kwargs):
+            if kwargs.get('doc', False):
+                return self.docstring
+            return super(Docs, self).validate(data, **kwargs)
+
+    s = Schema({
+        'ID': Docs('This is id field', int),
+        'ID_nodocs': int,
+    })
+    data = s.validate({'ID': 4, 'ID_nodocs': 6})
+    assert data['ID'] == 4
+    assert data['ID_nodocs'] == 6
+    data = s.validate({'ID': 4, 'ID_nodocs': 6}, doc=True)
+    assert data['ID'] == 'This is id field'
+    assert data['ID_nodocs'] == 6
