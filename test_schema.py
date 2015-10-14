@@ -445,8 +445,6 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
             'created_at': '2015-10-10 00:00:00'
         }
         validated_data = s.validate(data)
-        if not isinstance(validated_data['created_at'], datetime.datetime):
-            print "'Optiona(created_at)'convert failed at {count}".format(count=i+1)
         # is expected to be converted to a datetime instance, but fails randomly(most of the time)
         assert isinstance(validated_data['created_at'], datetime.datetime)
         # assert isinstance(validated_data['created_at'], basestring)
