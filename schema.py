@@ -123,10 +123,7 @@ class Schema(object):
             x = None
             coverage = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
-            sorted_skeys = sorted(s, key=lambda k: (priority(k),
-                                                    self._dict_key_priority(k)
-                                                    )
-                                  )
+            sorted_skeys = sorted(s, key=self._dict_key_priority)
             for key, value in data.items():
                 valid = False
                 skey = None
