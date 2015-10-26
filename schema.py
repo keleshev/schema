@@ -1,4 +1,5 @@
 __version__ = '0.3.2.dev0'
+__all__ = ['Schema', 'And', 'Or', 'Optional', 'SchemaError']
 
 
 class SchemaError(Exception):
@@ -77,7 +78,7 @@ class Use(object):
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
 
 
-def priority(s):
+def _priority(s):
     """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
         return ITERABLE
@@ -106,13 +107,13 @@ class Schema(object):
     def _dict_key_priority(s):
         """Return priority for a given key object."""
         if isinstance(s, Optional):
-            return priority(s._schema) + 0.5
-        return priority(s)
+            return _priority(s._schema) + 0.5
+        return _priority(s)
 
     def validate(self, data):
         s = self._schema
         e = self._error
-        flavor = priority(s)
+        flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
             o = Or(*s, error=e)
@@ -199,19 +200,18 @@ class Schema(object):
             raise SchemaError('%r does not match %r' % (s, data), e)
 
 
-MARKER = object()
-
-
 class Optional(Schema):
 
     """Marker for an optional part of Schema."""
 
+    _MARKER = object()
+
     def __init__(self, *args, **kwargs):
-        default = kwargs.pop('default', MARKER)
+        default = kwargs.pop('default', self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
-        if default is not MARKER:
+        if default is not self._MARKER:
             # See if I can come up with a static key to use for myself:
-            if priority(self._schema) != COMPARABLE:
+            if _priority(self._schema) != COMPARABLE:
                 raise TypeError(
                     'Optional keys with defaults must have simple, '
                     'predictable values, like literal strings or ints. '
