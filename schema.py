@@ -1,4 +1,4 @@
-__version__ = '0.4.0'
+__version__ = '0.4.1-alpha'
 __all__ = ['Schema', 'And', 'Or', 'Optional', 'SchemaError']
 
 
