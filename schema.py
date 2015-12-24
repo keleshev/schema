@@ -121,13 +121,10 @@ class Schema(object):
         if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
-            x = None
             coverage = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for key, value in data.items():
-                valid = False
-                skey = None
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
@@ -135,21 +132,10 @@ class Schema(object):
                     except SchemaError:
                         pass
                     else:
-                        try:
-                            nvalue = Schema(svalue, error=e).validate(value)
-                        except SchemaError as _x:
-                            x = _x
-                            raise
-                        else:
-                            coverage.add(skey)
-                            valid = True
-                            break
-                if valid:
-                    new[nkey] = nvalue
-                elif skey is not None:
-                    if x is not None:
-                        raise SchemaError(['Invalid value for key %r' % key] +
-                                          x.autos, [e] + x.errors)
+                        nvalue = Schema(svalue, error=e).validate(value)
+                        new[nkey] = nvalue
+                        coverage.add(skey)
+                        break
             required = set(k for k in s if type(k) is not Optional)
             if not required.issubset(coverage):
                 missing_keys = required - coverage
