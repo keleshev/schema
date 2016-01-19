@@ -561,4 +561,5 @@ def test_custom_error_messages_or_cls(specify_by):
     with raises(SchemaError) as err:
         s.validate('oops')
 
-    assert err.value.autos[0] == "Rule CustomOr('foo', 'bar', 'baz') has no element 'oops'"
+    assert err.value.autos[0] == (
+        "Rule CustomOr('foo', 'bar', 'baz') has no element 'oops'")
