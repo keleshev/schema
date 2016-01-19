@@ -536,3 +536,29 @@ def test_custom_error_messages(specify_by, wrong_obj, expected_message):
         s.validate(wrong_obj)
 
     assert err.value.code == expected_message
+
+
+@mark.parametrize('specify_by', ['subclass', 'constructor'])
+def test_custom_error_messages_or_cls(specify_by):
+    def custom_pattern_fn(rule, element):
+        return 'Rule {0!r} has no element {1!r}'.format(rule, element)
+
+    if specify_by == 'constructor':
+        constructor_or_kwargs = {
+            '_pattern_fn': custom_pattern_fn
+        }
+
+        class CustomOr(Or):
+            pass
+    else:
+        constructor_or_kwargs = {}
+
+        class CustomOr(Or):
+            _pattern_fn = staticmethod(custom_pattern_fn)
+
+    s = CustomOr('foo', 'bar', 'baz', **constructor_or_kwargs)
+
+    with raises(SchemaError) as err:
+        s.validate('oops')
+
+    assert err.value.autos[0] == "Rule CustomOr('foo', 'bar', 'baz') has no element 'oops'"
