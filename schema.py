@@ -6,9 +6,10 @@ class SchemaError(Exception):
 
     """Error during Schema validation."""
 
-    def __init__(self, autos, errors):
+    def __init__(self, autos, errors, origin):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
+        self.origin = origin
         Exception.__init__(self, self.code)
 
     @property
@@ -44,23 +45,36 @@ class And(object):
 
 class Or(And):
 
+    _pattern_fn = staticmethod('{0!r} did not validate {1!r}'.format)
+
+    def __init__(self, *args, **kw):
+        if '_pattern_fn' in kw:
+            assert callable(kw['_pattern_fn'])
+            self._pattern_fn = kw.pop('_pattern_fn')
+        super(Or, self).__init__(*args, **kw)
+
     def validate(self, data):
-        x = SchemaError([], [])
+        x = SchemaError([], [], self)
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
             except SchemaError as _x:
                 x = _x
-        raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
-                          [self._error] + x.errors)
+        raise SchemaError([self._pattern_fn(self, data)] + x.autos,
+                          [self._error] + x.errors, self)
 
 
 class Use(object):
 
-    def __init__(self, callable_, error=None):
+    _pattern_fn = staticmethod('{0!s}({1!r}) raised {2!r}'.format)
+
+    def __init__(self, callable_, error=None, _pattern_fn=None):
         assert callable(callable_)
         self._callable = callable_
         self._error = error
+        if _pattern_fn is not None:
+            assert callable(_pattern_fn)
+            self._pattern_fn = _pattern_fn
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._callable)
@@ -69,10 +83,11 @@ class Use(object):
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error] + x.errors)
+            raise SchemaError([None] + x.autos, [self._error] + x.errors, self)
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
+            raise SchemaError(self._pattern_fn(f, data, x),
+                              self._error, self)
 
 
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
@@ -96,9 +111,29 @@ def _priority(s):
 
 class Schema(object):
 
-    def __init__(self, schema, error=None):
+    _missing_keys_pattern_fn = staticmethod(
+        'Missing keys: {0}'.format)
+    _wrong_keys_pattern_fn = staticmethod(
+        'Wrong keys {0!s} in {1!r}'.format)
+    _should_be_instance_pattern_fn = staticmethod(
+        '{0!r} should be instance of {1!r}'.format)
+    _validate_raises_pattern_fn = staticmethod(
+        '{0!r}.validate({1!r}) raised {2!r}'.format)
+    _exception_raised_pattern_fn = staticmethod(
+        '{0!s}({1!r}) raised {2!r}'.format)
+    _should_evaluate_pattern_fn = staticmethod(
+        '{0!s}({1!r}) should evaluate to True'.format)
+    _does_not_match_pattern_fn = staticmethod(
+        '{0!r} does not match {1!r}'.format)
+
+    def __init__(self, schema, error=None, **patterns):
         self._schema = schema
         self._error = error
+        for pattern_name, pattern_fn in patterns.items():
+            assert pattern_name.endswith('_pattern_fn')
+            assert hasattr(self, pattern_name)
+            assert callable(pattern_fn)
+            setattr(self, pattern_name, pattern_fn)
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
@@ -140,13 +175,12 @@ class Schema(object):
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = ", ".join(repr(k) for k in missing_keys)
-                raise SchemaError('Missing keys: ' + s_missing_keys, e)
+                raise SchemaError(self._missing_keys_pattern_fn(s_missing_keys), e, self)
             if len(new) != len(data):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
-                                                                 key=repr))
-                raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
-                                  e)
+                s_wrong_keys = ', '.join(sorted(repr(k) for k in wrong_keys))
+                raise SchemaError(self._wrong_keys_pattern_fn(s_wrong_keys, data),
+                                  e, self)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
@@ -159,31 +193,31 @@ class Schema(object):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' %
-                                  (data, s.__name__), e)
+                raise SchemaError(self._should_be_instance_pattern_fn(
+                    data, s.__name__), e, self)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise SchemaError([None] + x.autos, [e] + x.errors, x.origin)
             except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                  self._error)
+                raise SchemaError(self._validate_raises_pattern_fn(s, data, x),
+                                  self._error, self)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
                 if s(data):
                     return data
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise SchemaError([None] + x.autos, [e] + x.errors, x.origin)
             except BaseException as x:
-                raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                                  self._error)
-            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
+                raise SchemaError(self._exception_raised_pattern_fn(f, data, x),
+                                  self._error, self)
+            raise SchemaError(self._should_evaluate_pattern_fn(f, data), e, self)
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e)
+            raise SchemaError(self._does_not_match_pattern_fn(s, data), e, self)
 
 
 class Optional(Schema):
