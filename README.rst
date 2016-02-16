@@ -257,6 +257,19 @@ for the same data:
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
     3.1415
 
+Extra Keys
+~~~~~~~~~~
+
+The ``Schema(...)`` parameter ``ignore_extra_keys`` do not validate extra keys and also do not return them after validation.
+
+.. code:: python
+
+    >>> schema = Schema({'name': str}, ignore_extra_keys=True)
+    >>> schema.validate({'name': 'Sam', 'age': '42'})
+    {'name': 'Sam'}
+
+Otherwise, any extra key raise a ``SchemaError``.
+
 User-friendly error reporting
 -------------------------------------------------------------------------------
 
