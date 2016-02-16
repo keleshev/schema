@@ -153,9 +153,14 @@ def test_dict_keys():
             {1: 3.14, 3.14: 1}) == {'1': 3, '3.14': 1}
 
 
-def test_no_strict_schema():
-    assert Schema({'key': 5}, strict=False).validate(
+def test_ignore_extra_keys():
+    assert Schema({'key': 5}, ignore_extra_keys=True).validate(
             {'key': 5, 'bad': 4}) == {'key': 5}
+
+
+def test_ignore_extra_keys_validation_and_return_keys():
+    assert Schema({'key': 5, object: object}, ignore_extra_keys=True).validate(
+            {'key': 5, 'bad': 4}) == {'key': 5, 'bad': 4}
 
 
 def test_dict_optional_keys():
