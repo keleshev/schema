@@ -260,7 +260,7 @@ for the same data:
 Extra Keys
 ~~~~~~~~~~
 
-The ``Schema(...)`` parameter ``ignore_extra_keys`` do not validate extra keys and also do not return them after validation.
+The ``Schema(...)`` parameter ``ignore_extra_keys`` causes validation to ignore extra keys in a dictionary, and also to not return them after validating.
 
 .. code:: python
 
@@ -268,7 +268,8 @@ The ``Schema(...)`` parameter ``ignore_extra_keys`` do not validate extra keys a
     >>> schema.validate({'name': 'Sam', 'age': '42'})
     {'name': 'Sam'}
 
-Otherwise, any extra key raise a ``SchemaError``.
+If you would like any extra keys returned, use ``object: object`` as one of the key/value pairs, which will match any key and any value.
+Otherwise, extra keys will raise a ``SchemaError``.
 
 User-friendly error reporting
 -------------------------------------------------------------------------------
