@@ -96,9 +96,10 @@ def _priority(s):
 
 class Schema(object):
 
-    def __init__(self, schema, error=None):
+    def __init__(self, schema, error=None, ignore_extra_keys=False):
         self._schema = schema
         self._error = error
+        self._ignore_extra_keys = ignore_extra_keys
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
@@ -141,7 +142,7 @@ class Schema(object):
                 missing_keys = required - coverage
                 s_missing_keys = ", ".join(repr(k) for k in missing_keys)
                 raise SchemaError('Missing keys: ' + s_missing_keys, e)
-            if len(new) != len(data):
+            if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
                                                                  key=repr))
