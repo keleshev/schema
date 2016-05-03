@@ -1,14 +1,6 @@
 Schema validation just got Pythonic
 ===============================================================================
 
-    New in version 0.2.0:
-
-    - Allow intermix literals and other schemas in dictionary keys.
-      I.e. ``Schema({'<id>': int, str: object})`` will check ``<id>``
-      for being ``int``, and will disregard other keys of type ``<str>``.
-      See this `StackOverflow question
-      <http://stackoverflow.com/questions/14588098>`_ for more.
-
 **schema** is a library for validating Python data structures, such as those
 obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types.
