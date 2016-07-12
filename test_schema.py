@@ -78,6 +78,9 @@ def test_regex():
     assert Regex(r'^[a-z]+$').validate('letters')
     with SE: assert Regex(r'^[a-z]+$').validate('letters and spaces')
 
+    assert Schema({Regex(r'^foo'): str}).validate({'fookey': 'value'})
+    with SE: assert Schema({Regex(r'^foo'): str}).validate({'barkey': 'value'})
+
 
 def test_validate_list():
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
