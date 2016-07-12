@@ -75,6 +75,8 @@ def test_or():
 def test_regex():
     assert Regex(r'foo').validate('afoot')
     with SE: assert Regex(r'bar').validate('afoot')
+    assert Regex(r'^[a-z]+$').validate('letters')
+    with SE: assert Regex(r'^[a-z]+$').validate('letters and spaces')
 
 
 def test_validate_list():
