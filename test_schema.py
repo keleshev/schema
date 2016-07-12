@@ -5,7 +5,7 @@ import os
 
 from pytest import raises
 
-from schema import Schema, Use, And, Or, Optional, SchemaError
+from schema import Schema, Use, And, Or, Regex, Optional, SchemaError
 
 
 try:
@@ -70,6 +70,11 @@ def test_or():
     with SE: Or(int, dict).validate('hai')
     assert Or(int).validate(4)
     with SE: Or().validate(2)
+
+
+def test_regex():
+    assert Regex(r'foo').validate('afoot')
+    with SE: assert Regex(r'bar').validate('afoot')
 
 
 def test_validate_list():

@@ -1,5 +1,7 @@
-__version__ = '0.5.0'
-__all__ = ['Schema', 'And', 'Or', 'Optional', 'SchemaError']
+import re
+
+__version__ = '0.5.0-dev'
+__all__ = ['Schema', 'And', 'Or', 'Regex', 'Optional', 'SchemaError']
 
 
 class SchemaError(Exception):
@@ -53,6 +55,24 @@ class Or(And):
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
                           [self._error] + x.errors)
+
+
+class Regex(object):
+    def __init__(self, pattern, flags=0, error=None):
+        assert type(pattern) is str
+        self._pattern = re.compile(pattern, flags=flags)
+        self._error = error
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self._pattern)
+
+    def validate(self, data):
+        e = self._error
+
+        if self._pattern.search(data):
+            return data
+        else:
+            raise SchemaError('%r does not match %r' % (self, data), e)
 
 
 class Use(object):
