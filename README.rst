@@ -117,8 +117,25 @@ this method on corresponding data as ``data = obj.validate(data)``. This method
 may raise ``SchemaError`` exception, which will tell ``Schema`` that that piece
 of data is invalid, otherwise—it will continue validating.
 
-As example, you can use ``Use`` for creating such objects. ``Use`` helps to use
-a function or type to convert a value while validating it:
+An example of "validatable" is ``Regex``, that tries to match a string or a
+buffer with the given regular expression (itself as a string, buffer or
+compiled regex ``SRE_Pattern``).
+
+.. code:: python
+
+    >>> from schema import Regex
+    >>> import re
+
+    >>> Regex(r'^foo').validate('foobar')
+    'foobar'
+
+    >>> Regex(r'^[A-Z]+$', flags=re.I).validate('those-dashes-dont-match')
+    Traceback (most recent call last):
+    ...
+    SchemaError: Regex('^[A-Z]+$', flags=re.IGNORECASE) does not match 'those-dashes-dont-match'
+
+For a more general case, you can use ``Use`` for creating such objects.
+``Use`` helps to use a function or type to convert a value while validating it:
 
 .. code:: python
 
@@ -267,8 +284,8 @@ User-friendly error reporting
 -------------------------------------------------------------------------------
 
 You can pass a keyword argument ``error`` to any of validatable classes
-(such as ``Schema``, ``And``, ``Or``, ``Use``) to report this error instead of
-a built-in one.
+(such as ``Schema``, ``And``, ``Or``, ``Regex``, ``Use``) to report this error
+instead of a built-in one.
 
 .. code:: python
 
