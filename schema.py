@@ -58,13 +58,22 @@ class Or(And):
 
 
 class Regex(object):
+    # Map all flags bits to a more readable description
+    NAMES = ['re.ASCII', 're.DEBUG', 're.VERBOSE', 're.UNICODE', 're.DOTALL',
+             're.MULTILINE', 're.LOCALE', 're.IGNORECASE', 're.TEMPLATE']
 
-    def __init__(self, pattern, flags=0, error=None):
-        self._pattern = re.compile(pattern, flags=flags)
+    def __init__(self, pattern_str, flags=0, error=None):
+        self._pattern_str = pattern_str
+        self._flags_names = [Regex.NAMES[i] for i, f in  # Name for each bit
+                             enumerate('{0:09b}'.format(flags)) if f != '0']
+        self._pattern = re.compile(pattern_str, flags=flags)
         self._error = error
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._pattern)
+        return '%s(%r, flags=%s)' % (
+            self.__class__.__name__,
+            self._pattern_str,
+            ' + '.join(self._flags_names) if self._flags_names else '0')
 
     def validate(self, data):
         e = self._error
