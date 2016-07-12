@@ -2,16 +2,17 @@ from __future__ import with_statement
 from collections import defaultdict, namedtuple
 from operator import methodcaller
 import os
+import re
+import sys
 
 from pytest import raises
 
 from schema import Schema, Use, And, Or, Regex, Optional, SchemaError
 
 
-try:
-    basestring
-except NameError:
+if sys.version_info[0] == 3:
     basestring = str  # Python 3 does not have basestring
+    unicode = str  # Python 3 does not have unicode
 
 
 SE = raises(SchemaError)
@@ -73,16 +74,38 @@ def test_or():
 
 
 def test_regex():
-    assert Regex(r'foo').validate('afoot')
-    with SE: assert Regex(r'bar').validate('afoot')
-    assert Regex(r'^[a-z]+$').validate('letters')
-    with SE: assert Regex(r'^[a-z]+$').validate('letters and spaces')
+    # Simple case: validate string
+    assert Regex(r'foo').validate('afoot') == 'afoot'
+    with SE: Regex(r'bar').validate('afoot')
 
-    assert Schema({Regex(r'^foo'): str}).validate({'fookey': 'value'})
-    with SE: assert Schema({Regex(r'^foo'): str}).validate({'barkey': 'value'})
+    # More complex case: validate string
+    assert Regex(r'^[a-z]+$').validate('letters') == 'letters'
+    with SE:
+        Regex(r'^[a-z]+$').validate('letters + spaces') == 'letters + spaces'
 
-    with SE: assert Regex(r'bar').validate(1)
-    with SE: assert Regex(r'bar').validate({})
+    # Validate dict key
+    assert (Schema({Regex(r'^foo'): str})
+            .validate({'fookey': 'value'}) == {'fookey': 'value'})
+    with SE: Schema({Regex(r'^foo'): str}).validate({'barkey': 'value'})
+
+    # Validate dict value
+    assert (Schema({str: Regex(r'^foo')}).validate({'key': 'foovalue'}) ==
+            {'key': 'foovalue'})
+    with SE: Schema({str: Regex(r'^foo')}).validate({'key': 'barvalue'})
+
+    # Error if the value does not have a buffer interface
+    with SE: Regex(r'bar').validate(1)
+    with SE: Regex(r'bar').validate({})
+    with SE: Regex(r'bar').validate([])
+    with SE: Regex(r'bar').validate(None)
+
+    # Validate that the pattern has a buffer interface
+    assert Regex(re.compile(r'foo')).validate('foo') == 'foo'
+    assert Regex(unicode('foo')).validate('foo') == 'foo'
+    with raises(TypeError): Regex(1).validate('bar')
+    with raises(TypeError): Regex({}).validate('bar')
+    with raises(TypeError): Regex([]).validate('bar')
+    with raises(TypeError): Regex(None).validate('bar')
 
 
 def test_validate_list():
