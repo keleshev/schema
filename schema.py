@@ -75,7 +75,7 @@ class Regex(object):
             else:
                 raise SchemaError('%r does not match %r' % (self, data), e)
         except TypeError:
-            raise SchemaError('%r should have a buffer interface' % data, e)
+            raise SchemaError('%r is not string nor buffer' % data, e)
 
 
 class Use(object):
