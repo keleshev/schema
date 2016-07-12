@@ -58,6 +58,7 @@ class Or(And):
 
 
 class Regex(object):
+
     def __init__(self, pattern, flags=0, error=None):
         assert type(pattern) is str
         self._pattern = re.compile(pattern, flags=flags)
