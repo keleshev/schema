@@ -81,6 +81,9 @@ def test_regex():
     assert Schema({Regex(r'^foo'): str}).validate({'fookey': 'value'})
     with SE: assert Schema({Regex(r'^foo'): str}).validate({'barkey': 'value'})
 
+    with SE: assert Regex(r'bar').validate(1)
+    with SE: assert Regex(r'bar').validate({})
+
 
 def test_validate_list():
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]

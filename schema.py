@@ -70,10 +70,13 @@ class Regex(object):
     def validate(self, data):
         e = self._error
 
-        if self._pattern.search(data):
-            return data
-        else:
-            raise SchemaError('%r does not match %r' % (self, data), e)
+        try:
+            if self._pattern.search(data):
+                return data
+            else:
+                raise SchemaError('%r does not match %r' % (self, data), e)
+        except TypeError:
+            raise SchemaError('%r should have a buffer interface' % data, e)
 
 
 class Use(object):
