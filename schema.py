@@ -64,16 +64,21 @@ class Regex(object):
 
     def __init__(self, pattern_str, flags=0, error=None):
         self._pattern_str = pattern_str
-        self._flags_names = [Regex.NAMES[i] for i, f in  # Name for each bit
-                             enumerate('{0:09b}'.format(flags)) if f != '0']
+        flags_list = [Regex.NAMES[i] for i, f in  # Name for each bit
+                      enumerate('{0:09b}'.format(flags)) if f != '0']
+
+        if flags_list:
+            self._flags_names = ', flags=' + '|'.join(flags_list)
+        else:
+            self._flags_names = ''
+
         self._pattern = re.compile(pattern_str, flags=flags)
         self._error = error
 
     def __repr__(self):
-        return '%s(%r, flags=%s)' % (
-            self.__class__.__name__,
-            self._pattern_str,
-            ' + '.join(self._flags_names) if self._flags_names else '0')
+        return '%s(%r%s)' % (
+            self.__class__.__name__, self._pattern_str, self._flags_names
+        )
 
     def validate(self, data):
         e = self._error
