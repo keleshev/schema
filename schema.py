@@ -1,5 +1,7 @@
-__version__ = '0.5.0'
-__all__ = ['Schema', 'And', 'Or', 'Optional', 'SchemaError']
+import re
+
+__version__ = '0.5.0-dev'
+__all__ = ['Schema', 'And', 'Or', 'Regex', 'Optional', 'SchemaError']
 
 
 class SchemaError(Exception):
@@ -53,6 +55,41 @@ class Or(And):
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
                           [self._error] + x.errors)
+
+
+class Regex(object):
+    # Map all flags bits to a more readable description
+    NAMES = ['re.ASCII', 're.DEBUG', 're.VERBOSE', 're.UNICODE', 're.DOTALL',
+             're.MULTILINE', 're.LOCALE', 're.IGNORECASE', 're.TEMPLATE']
+
+    def __init__(self, pattern_str, flags=0, error=None):
+        self._pattern_str = pattern_str
+        flags_list = [Regex.NAMES[i] for i, f in  # Name for each bit
+                      enumerate('{0:09b}'.format(flags)) if f != '0']
+
+        if flags_list:
+            self._flags_names = ', flags=' + '|'.join(flags_list)
+        else:
+            self._flags_names = ''
+
+        self._pattern = re.compile(pattern_str, flags=flags)
+        self._error = error
+
+    def __repr__(self):
+        return '%s(%r%s)' % (
+            self.__class__.__name__, self._pattern_str, self._flags_names
+        )
+
+    def validate(self, data):
+        e = self._error
+
+        try:
+            if self._pattern.search(data):
+                return data
+            else:
+                raise SchemaError('%r does not match %r' % (self, data), e)
+        except TypeError:
+            raise SchemaError('%r is not string nor buffer' % data, e)
 
 
 class Use(object):
