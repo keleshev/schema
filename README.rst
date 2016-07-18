@@ -119,7 +119,7 @@ of data is invalid, otherwise—it will continue validating.
 
 An example of "validatable" is ``Regex``, that tries to match a string or a
 buffer with the given regular expression (itself as a string, buffer or
-compiled regex ``SRE_Pattern``).
+compiled regex ``SRE_Pattern``):
 
 .. code:: python
 
