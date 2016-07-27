@@ -69,10 +69,13 @@ class Use(object):
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error.format(data) if self._error else None] + x.errors)
+            raise SchemaError([None] + x.autos,
+                              [self._error.format(data)
+                               if self._error else None] + x.errors)
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error.format(data) if self._error else None)
+            raise SchemaError('%s(%r) raised %r' % (f, data, x),
+                              self._error.format(data) if self._error else None)
 
 
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
@@ -184,7 +187,8 @@ class Schema(object):
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e.format(data) if e else None)
+            raise SchemaError('%r does not match %r' % (s, data),
+                              e.format(data) if e else None)
 
 
 class Optional(Schema):
