@@ -77,7 +77,7 @@ otherwise it will raise ``SchemaError``.
     >>> Schema(int).validate('123')
     Traceback (most recent call last):
     ...
-    SchemaError: '123' should be instance of 'int'
+    SchemaUnexpectedTypeError: '123' should be instance of 'int'
 
     >>> Schema(object).validate('hai')
     'hai'
