@@ -1,7 +1,12 @@
 import re
 
-__version__ = '0.6.1'
-__all__ = ['Schema', 'And', 'Or', 'Regex', 'Optional', 'SchemaError']
+__version__ = '0.6.2'
+__all__ = ['Schema',
+           'And', 'Or', 'Regex', 'Optional',
+           'SchemaError',
+           'SchemaWrongKeyError',
+           'SchemaMissingKeyError',
+           'SchemaUnexpectedTypeError']
 
 
 class SchemaError(Exception):
@@ -25,6 +30,18 @@ class SchemaError(Exception):
         if e:
             return '\n'.join(e)
         return '\n'.join(a)
+
+
+class SchemaWrongKeyError(SchemaError):
+    pass
+
+
+class SchemaMissingKeyError(SchemaError):
+    pass
+
+
+class SchemaUnexpectedTypeError(SchemaError):
+    pass
 
 
 class And(object):
@@ -181,12 +198,12 @@ class Schema(object):
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = ", ".join(repr(k) for k in missing_keys)
-                raise SchemaError('Missing keys: ' + s_missing_keys, e)
+                raise SchemaMissingKeyError('Missing keys: ' + s_missing_keys, e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
                                                                  key=repr))
-                raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
+                raise SchemaWrongKeyError('Wrong keys %s in %r' % (s_wrong_keys, data),
                                   e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
@@ -200,7 +217,7 @@ class Schema(object):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaError('%r should be instance of %r' %
+                raise SchemaUnexpectedTypeError('%r should be instance of %r' %
                                   (data, s.__name__), e.format(data) if e else None)
         if flavor == VALIDATOR:
             try:
