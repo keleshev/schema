@@ -1,6 +1,6 @@
 import re
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 __all__ = ['Schema', 'And', 'Or', 'Regex', 'Optional', 'SchemaError']
 
 
