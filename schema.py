@@ -204,7 +204,7 @@ class Schema(object):
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
                                                                  key=repr))
                 raise SchemaWrongKeyError('Wrong keys %s in %r' % (s_wrong_keys, data),
-                                  e.format(data) if e else None)
+                                          e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
@@ -217,8 +217,9 @@ class Schema(object):
             if isinstance(data, s):
                 return data
             else:
-                raise SchemaUnexpectedTypeError('%r should be instance of %r' %
-                                  (data, s.__name__), e.format(data) if e else None)
+                raise SchemaUnexpectedTypeError(
+                    '%r should be instance of %r' % (data, s.__name__),
+                    e.format(data) if e else None)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
