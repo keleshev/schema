@@ -54,7 +54,7 @@ class Or(And):
             except SchemaError as _x:
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
-                          [self._error] + x.errors)
+                          [self._error.format(data) if self._error else None] + x.errors)
 
 
 class Regex(object):
@@ -106,10 +106,13 @@ class Use(object):
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error] + x.errors)
+            raise SchemaError([None] + x.autos,
+                              [self._error.format(data)
+                               if self._error else None] + x.errors)
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError('%s(%r) raised %r' % (f, data, x), self._error)
+            raise SchemaError('%s(%r) raised %r' % (f, data, x),
+                              self._error.format(data) if self._error else None)
 
 
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
@@ -184,7 +187,7 @@ class Schema(object):
                 s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
                                                                  key=repr))
                 raise SchemaError('Wrong keys %s in %r' % (s_wrong_keys, data),
-                                  e)
+                                  e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
@@ -198,7 +201,7 @@ class Schema(object):
                 return data
             else:
                 raise SchemaError('%r should be instance of %r' %
-                                  (data, s.__name__), e)
+                                  (data, s.__name__), e.format(data) if e else None)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
@@ -206,7 +209,7 @@ class Schema(object):
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                  self._error)
+                                  self._error.format(data) if self._error else None)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -216,12 +219,13 @@ class Schema(object):
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                                  self._error)
+                                  self._error.format(data) if self._error else None)
             raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data), e)
+            raise SchemaError('%r does not match %r' % (s, data),
+                              e.format(data) if e else None)
 
 
 class Optional(Schema):
