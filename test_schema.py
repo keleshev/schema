@@ -183,7 +183,7 @@ def test_dict():
 
     with SE:
         try:
-            Schema({int: int }).validate({'': ''})
+            Schema({int: int}).validate({'': ''})
         except SchemaUnexpectedTypeError as e:
             assert e.args[0] in ["'' should be instance of 'int'"]
 
