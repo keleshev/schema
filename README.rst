@@ -294,7 +294,7 @@ instead of a built-in one.
     ...
     SchemaError: Invalid year
 
-You can see all errors that occured by accessing exception's ``exc.autos``
+You can see all errors that occurred by accessing exception's ``exc.autos``
 for auto-generated error messages, and ``exc.errors`` for errors
 which had ``error`` text passed to them.
 
