@@ -1,1 +1,1 @@
-include README.rst LICENSE-MIT
+include README.rst LICENSE-MIT *.py
