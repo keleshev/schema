@@ -1,3 +1,7 @@
+"""schema is a library for validating Python data structures, such as those
+obtained from config-files, forms, external services or command-line
+parsing, converted from JSON/YAML (or something else) to Python data-types."""
+
 import re
 
 __version__ = '0.6.2'
@@ -10,7 +14,6 @@ __all__ = ['Schema',
 
 
 class SchemaError(Exception):
-
     """Error during Schema validation."""
 
     def __init__(self, autos, errors):
@@ -20,32 +23,47 @@ class SchemaError(Exception):
 
     @property
     def code(self):
+        """
+        Removes duplicates values in auto and error list.
+        parameters.
+        """
         def uniq(seq):
+            """
+            Utility function that removes duplicate.
+            """
             seen = set()
             seen_add = seen.add
             # This way removes duplicates while preserving the order.
             return [x for x in seq if x not in seen and not seen_add(x)]
-        a = uniq(i for i in self.autos if i is not None)
-        e = uniq(i for i in self.errors if i is not None)
-        if e:
-            return '\n'.join(e)
-        return '\n'.join(a)
+        data_set = uniq(i for i in self.autos if i is not None)
+        error_list = uniq(i for i in self.errors if i is not None)
+        if error_list:
+            return '\n'.join(error_list)
+        return '\n'.join(data_set)
 
 
 class SchemaWrongKeyError(SchemaError):
+    """Error Should be raised when an unexpected key is detected within the
+    data set being."""
     pass
 
 
 class SchemaMissingKeyError(SchemaError):
+    """Error should be raised when a mandatory key is not found within the
+    data set being vaidated"""
     pass
 
 
 class SchemaUnexpectedTypeError(SchemaError):
+    """Error should be raised when a type mismatch is detected within the
+    data set being validated."""
     pass
 
 
 class And(object):
-
+    """
+    Utility function to combine validation directives in AND Boolean fashion.
+    """
     def __init__(self, *args, **kw):
         self._args = args
         assert list(kw) in (['error'], [])
@@ -56,14 +74,27 @@ class And(object):
                            ', '.join(repr(a) for a in self._args))
 
     def validate(self, data):
+        """
+        Validate data using defined sub schema/expressions ensuring all
+        values are valid.
+        :param data: to be validated with sub defined schemas.
+        :return: returns validated data
+        """
         for s in [Schema(s, error=self._error) for s in self._args]:
             data = s.validate(data)
         return data
 
 
 class Or(And):
-
+    """Utility function to combine validation directives in a OR Boolean
+    fashion."""
     def validate(self, data):
+        """
+        Validate data using sub defined schema/expressions ensuring at least
+        one value is valid.
+        :param data: data to be validated by provided schema.
+        :return: return validated data if not validation
+        """
         x = SchemaError([], [])
         for s in [Schema(s, error=self._error) for s in self._args]:
             try:
@@ -71,10 +102,14 @@ class Or(And):
             except SchemaError as _x:
                 x = _x
         raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
-                          [self._error.format(data) if self._error else None] + x.errors)
+                          [self._error.format(data) if self._error else None] +
+                          x.errors)
 
 
 class Regex(object):
+    """
+    Enables schema.py to validate string using regular expressions.
+    """
     # Map all flags bits to a more readable description
     NAMES = ['re.ASCII', 're.DEBUG', 're.VERBOSE', 're.UNICODE', 're.DOTALL',
              're.MULTILINE', 're.LOCALE', 're.IGNORECASE', 're.TEMPLATE']
@@ -98,6 +133,11 @@ class Regex(object):
         )
 
     def validate(self, data):
+        """
+        Validated data using defined regex.
+        :param data: data to be validated
+        :return: return validated data.
+        """
         e = self._error
 
         try:
@@ -110,7 +150,10 @@ class Regex(object):
 
 
 class Use(object):
-
+    """
+    For more general use cases, you can use the Use class to transform
+    the data while it is being validate.
+    """
     def __init__(self, callable_, error=None):
         assert callable(callable_)
         self._callable = callable_
@@ -129,7 +172,8 @@ class Use(object):
         except BaseException as x:
             f = _callable_str(self._callable)
             raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                              self._error.format(data) if self._error else None)
+                              self._error.format(data)
+                              if self._error else None)
 
 
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
@@ -152,7 +196,10 @@ def _priority(s):
 
 
 class Schema(object):
-
+    """
+    Entry point of the library, use this class to instantiate validation
+    schema for the data that will be validated.
+    """
     def __init__(self, schema, error=None, ignore_extra_keys=False):
         self._schema = schema
         self._error = error
@@ -197,15 +244,18 @@ class Schema(object):
             required = set(k for k in s if type(k) is not Optional)
             if not required.issubset(coverage):
                 missing_keys = required - coverage
-                s_missing_keys = ', '.join(repr(k) for k in sorted(missing_keys,
-                                                                   key=repr))
-                raise SchemaMissingKeyError('Missing keys: ' + s_missing_keys, e)
+                s_missing_keys = \
+                    ', '.join(repr(k) for k in sorted(missing_keys, key=repr))
+                raise \
+                    SchemaMissingKeyError('Missing keys: ' + s_missing_keys, e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = ', '.join(repr(k) for k in sorted(wrong_keys,
-                                                                 key=repr))
-                raise SchemaWrongKeyError('Wrong keys %s in %r' % (s_wrong_keys, data),
-                                          e.format(data) if e else None)
+                s_wrong_keys = \
+                    ', '.join(repr(k) for k in sorted(wrong_keys, key=repr))
+                raise \
+                    SchemaWrongKeyError(
+                        'Wrong keys %s in %r' % (s_wrong_keys, data),
+                        e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and
@@ -227,8 +277,9 @@ class Schema(object):
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%r.validate(%r) raised %r' % (s, data, x),
-                                  self._error.format(data) if self._error else None)
+                raise SchemaError(
+                    '%r.validate(%r) raised %r' % (s, data, x),
+                    self._error.format(data) if self._error else None)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -237,8 +288,9 @@ class Schema(object):
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                                  self._error.format(data) if self._error else None)
+                raise SchemaError(
+                    '%s(%r) raised %r' % (f, data, x),
+                    self._error.format(data) if self._error else None)
             raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
         if s == data:
             return data
@@ -248,9 +300,7 @@ class Schema(object):
 
 
 class Optional(Schema):
-
-    """Marker for an optional part of Schema."""
-
+    """Marker for an optional part of the validation Schema."""
     _MARKER = object()
 
     def __init__(self, *args, **kwargs):
