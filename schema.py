@@ -4,7 +4,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
-__version__ = '0.6.3'
+__version__ = '0.6.4'
 __all__ = ['Schema',
            'And', 'Or', 'Regex', 'Optional',
            'SchemaError',
