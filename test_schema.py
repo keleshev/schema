@@ -4,6 +4,7 @@ from operator import methodcaller
 import os
 import re
 import sys
+import copy
 
 from pytest import raises
 
@@ -503,3 +504,10 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
         # (most of the time)
         assert isinstance(validated_data['created_at'], datetime.datetime)
         # assert isinstance(validated_data['created_at'], basestring)
+
+
+def test_copy():
+    s1 = SchemaError('a', None)
+    s2 = copy.deepcopy(s1)
+    assert s1 is not s2
+    assert type(s1) is type(s2)
