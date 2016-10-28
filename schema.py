@@ -6,10 +6,11 @@ import re
 
 __version__ = '0.6.6'
 __all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional', 'Use',
+           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden',
            'SchemaError',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
+           'SchemaForbiddenKeyError',
            'SchemaUnexpectedTypeError']
 
 
@@ -51,6 +52,12 @@ class SchemaWrongKeyError(SchemaError):
 class SchemaMissingKeyError(SchemaError):
     """Error should be raised when a mandatory key is not found within the
     data set being vaidated"""
+    pass
+
+
+class SchemaForbiddenKeyError(SchemaError):
+    """Error should be raised when a forbidden key is found within the
+    data set being validated, and its value matches the value that was specified"""
     pass
 
 
@@ -218,6 +225,8 @@ class Schema(object):
     @staticmethod
     def _dict_key_priority(s):
         """Return priority for a given key object."""
+        if isinstance(s, Forbidden):
+            return _priority(s._schema) - 0.5
         if isinstance(s, Optional):
             return _priority(s._schema) + 0.5
         return _priority(s)
@@ -246,17 +255,33 @@ class Schema(object):
                     except SchemaError:
                         pass
                     else:
-                        try:
-                            nvalue = Schema(svalue, error=e,
-                                            ignore_extra_keys=i).validate(value)
-                        except SchemaError as x:
-                            k = "Key '%s' error:" % nkey
-                            raise SchemaError([k] + x.autos, [e] + x.errors)
+                        if isinstance(skey, Forbidden):
+                            # As the content of the value makes little sense for
+                            # forbidden keys, we reverse its meaning:
+                            # we will only raise the SchemaErrorForbiddenKey
+                            # exception if the value does match, allowing for
+                            # excluding a key only if its value has a certain type,
+                            # and allowing Forbidden to work well in combination
+                            # with Optional.
+                            try:
+                                nvalue = Schema(svalue, error=e).validate(value)
+                            except SchemaError:
+                                continue
+                            raise SchemaForbiddenKeyError(
+                                    'Forbidden key encountered: %r in %r' %
+                                    (nkey, data), e)
                         else:
-                            new[nkey] = nvalue
-                            coverage.add(skey)
-                            break
-            required = set(k for k in s if type(k) is not Optional)
+                            try:
+                                nvalue = Schema(svalue, error=e,
+                                                ignore_extra_keys=i).validate(value)
+                            except SchemaError as x:
+                                k = "Key '%s' error:" % nkey
+                                raise SchemaError([k] + x.autos, [e] + x.errors)
+                            else:
+                                new[nkey] = nvalue
+                                coverage.add(skey)
+                                break
+            required = set(k for k in s if type(k) not in [Optional, Forbidden])
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = \
@@ -339,6 +364,12 @@ class Optional(Schema):
                 getattr(self, 'default', self._MARKER) ==
                 getattr(other, 'default', self._MARKER) and
                 self._schema == other._schema)
+
+
+class Forbidden(Schema):
+    def __init__(self, *args, **kwargs):
+        super(Forbidden, self).__init__(*args, **kwargs)
+        self.key = self._schema
 
 
 def _callable_str(callable_):
