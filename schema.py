@@ -6,7 +6,7 @@ import re
 
 __version__ = '0.6.5'
 __all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional',
+           'And', 'Or', 'Regex', 'Optional', 'Use',
            'SchemaError',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
