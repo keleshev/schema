@@ -66,8 +66,9 @@ class And(object):
     """
     def __init__(self, *args, **kw):
         self._args = args
-        assert list(kw) in (['error'], [])
+        assert sorted(list(kw)) in (['error', 'schema'], ['error'], [])
         self._error = kw.get('error')
+        self._schema = kw.get('schema', Schema)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
@@ -80,7 +81,7 @@ class And(object):
         :param data: to be validated with sub defined schemas.
         :return: returns validated data
         """
-        for s in [Schema(s, error=self._error) for s in self._args]:
+        for s in [self._schema(s, error=self._error) for s in self._args]:
             data = s.validate(data)
         return data
 
@@ -96,7 +97,7 @@ class Or(And):
         :return: return validated data if not validation
         """
         x = SchemaError([], [])
-        for s in [Schema(s, error=self._error) for s in self._args]:
+        for s in [self._schema(s, error=self._error) for s in self._args]:
             try:
                 return s.validate(data)
             except SchemaError as _x:
@@ -216,12 +217,13 @@ class Schema(object):
         return _priority(s)
 
     def validate(self, data):
+        Schema = self.__class__
         s = self._schema
         e = self._error
         flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
-            o = Or(*s, error=e)
+            o = Or(*s, error=e, schema=Schema)
             return type(data)(o.validate(d) for d in data)
         if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
