@@ -68,6 +68,7 @@ class And(object):
         self._args = args
         assert sorted(list(kw)) in (['error', 'schema'], ['error'], [])
         self._error = kw.get('error')
+        # You can pass your inherited Schema class
         self._schema = kw.get('schema', Schema)
 
     def __repr__(self):
