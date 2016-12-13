@@ -237,10 +237,15 @@ class Schema(object):
                     except SchemaError:
                         pass
                     else:
-                        nvalue = Schema(svalue, error=e).validate(value)
-                        new[nkey] = nvalue
-                        coverage.add(skey)
-                        break
+                        try:
+                            nvalue = Schema(svalue, error=e).validate(value)
+                        except SchemaError as x:
+                            k = "Key %s error:" % nkey
+                            raise SchemaError([k] + x.autos, [e] + x.errors)
+                        else:
+                            new[nkey] = nvalue
+                            coverage.add(skey)
+                            break
             required = set(k for k in s if type(k) is not Optional)
             if not required.issubset(coverage):
                 missing_keys = required - coverage

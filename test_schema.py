@@ -240,6 +240,21 @@ def test_dict_subtypes():
     # is dropped!
 
 
+def test_dict_key_error():
+    try:
+        Schema({'k': int}).validate({'k': 'x'})
+    except SchemaError as e:
+        assert e.code == "Key k error:\n'x' should be instance of 'int'"
+    try:
+        Schema({'k': {'k2': int}}).validate({'k': {'k2': 'x'}})
+    except SchemaError as e:
+        assert e.code == "Key k error:\nKey k2 error:\n'x' should be instance of 'int'"
+    try:
+        Schema({'k': {'k2': int}}, error='k2 should be int').validate({'k': {'k2': 'x'}})
+    except SchemaError as e:
+        assert e.code == 'k2 should be int'
+
+
 def test_complex():
     s = Schema({'<file>': And([Use(open)], lambda l: len(l)),
                 '<path>': os.path.exists,
