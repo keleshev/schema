@@ -244,11 +244,11 @@ def test_dict_key_error():
     try:
         Schema({'k': int}).validate({'k': 'x'})
     except SchemaError as e:
-        assert e.code == "Key k error:\n'x' should be instance of 'int'"
+        assert e.code == "Key 'k' error:\n'x' should be instance of 'int'"
     try:
         Schema({'k': {'k2': int}}).validate({'k': {'k2': 'x'}})
     except SchemaError as e:
-        assert e.code == "Key k error:\nKey k2 error:\n'x' should be instance of 'int'"
+        assert e.code == "Key 'k' error:\nKey 'k2' error:\n'x' should be instance of 'int'"
     try:
         Schema({'k': {'k2': int}}, error='k2 should be int').validate({'k': {'k2': 'x'}})
     except SchemaError as e:

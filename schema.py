@@ -240,7 +240,7 @@ class Schema(object):
                         try:
                             nvalue = Schema(svalue, error=e).validate(value)
                         except SchemaError as x:
-                            k = "Key %s error:" % nkey
+                            k = "Key '%s' error:" % nkey
                             raise SchemaError([k] + x.autos, [e] + x.errors)
                         else:
                             new[nkey] = nvalue
