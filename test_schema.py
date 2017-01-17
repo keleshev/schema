@@ -527,3 +527,19 @@ def test_copy():
     s2 = copy.deepcopy(s1)
     assert s1 is not s2
     assert type(s1) is type(s2)
+
+
+def test_inheritance():
+    def convert(data):
+        if isinstance(data, int):
+            return data + 1
+        return data
+
+    class MySchema(Schema):
+        def validate(self, data):
+            return super(MySchema, self).validate(convert(data))
+
+    s = {'k': int, 'd': {'k': int, 'l': [{'l': [int]}]}}
+    v = {'k': 1, 'd': {'k': 2, 'l': [{'l': [3, 4, 5]}]}}
+    d = MySchema(s).validate(v)
+    assert d['k'] == 2 and d['d']['k'] == 3 and d['d']['l'][0]['l'] == [4, 5, 6]
