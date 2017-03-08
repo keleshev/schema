@@ -66,8 +66,9 @@ class And(object):
     """
     def __init__(self, *args, **kw):
         self._args = args
-        assert sorted(list(kw)) in (['error', 'schema'], ['error'], [])
+        assert set(kw).issubset(['error', 'schema', 'ignore_extra_keys'])
         self._error = kw.get('error')
+        self._ignore_extra_keys = kw.get('ignore_extra_keys', False)
         # You can pass your inherited Schema class.
         self._schema = kw.get('schema', Schema)
 
@@ -82,7 +83,9 @@ class And(object):
         :param data: to be validated with sub defined schemas.
         :return: returns validated data
         """
-        for s in [self._schema(s, error=self._error) for s in self._args]:
+        for s in [self._schema(s, error=self._error,
+                               ignore_extra_keys=self._ignore_extra_keys)
+                  for s in self._args]:
             data = s.validate(data)
         return data
 
@@ -98,7 +101,9 @@ class Or(And):
         :return: return validated data if not validation
         """
         x = SchemaError([], [])
-        for s in [self._schema(s, error=self._error) for s in self._args]:
+        for s in [self._schema(s, error=self._error,
+                               ignore_extra_keys=self._ignore_extra_keys)
+                  for s in self._args]:
             try:
                 return s.validate(data)
             except SchemaError as _x:
@@ -221,10 +226,11 @@ class Schema(object):
         Schema = self.__class__
         s = self._schema
         e = self._error
+        i = self._ignore_extra_keys
         flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
-            o = Or(*s, error=e, schema=Schema)
+            o = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
             return type(data)(o.validate(d) for d in data)
         if flavor == DICT:
             data = Schema(dict, error=e).validate(data)
@@ -241,7 +247,8 @@ class Schema(object):
                         pass
                     else:
                         try:
-                            nvalue = Schema(svalue, error=e).validate(value)
+                            nvalue = Schema(svalue, error=e,
+                                            ignore_extra_keys=i).validate(value)
                         except SchemaError as x:
                             k = "Key '%s' error:" % nkey
                             raise SchemaError([k] + x.autos, [e] + x.errors)
