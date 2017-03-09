@@ -200,11 +200,22 @@ def test_dict_keys():
 def test_ignore_extra_keys():
     assert Schema({'key': 5}, ignore_extra_keys=True).validate(
             {'key': 5, 'bad': 4}) == {'key': 5}
+    assert Schema({'key': 5, 'dk': {'a': 'a'}}, ignore_extra_keys=True).validate(
+        {'key': 5, 'bad': 'b', 'dk': {'a': 'a', 'bad': 'b'}}) == \
+        {'key': 5, 'dk': {'a': 'a'}}
+    assert Schema([{'key': 'v'}], ignore_extra_keys=True).validate(
+        [{'key': 'v', 'bad': 'bad'}]) == [{'key': 'v'}]
+    assert Schema([{'key': 'v'}], ignore_extra_keys=True).validate(
+        [{'key': 'v', 'bad': 'bad'}]) == [{'key': 'v'}]
 
 
 def test_ignore_extra_keys_validation_and_return_keys():
     assert Schema({'key': 5, object: object}, ignore_extra_keys=True).validate(
             {'key': 5, 'bad': 4}) == {'key': 5, 'bad': 4}
+    assert Schema({'key': 5, 'dk': {'a': 'a', object: object}},
+                  ignore_extra_keys=True).validate(
+        {'key': 5, 'dk': {'a': 'a', 'bad': 'b'}}) == \
+        {'key': 5, 'dk': {'a': 'a', 'bad': 'b'}}
 
 
 def test_dict_optional_keys():
