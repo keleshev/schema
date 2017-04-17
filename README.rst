@@ -51,7 +51,7 @@ Use `pip <http://pip-installer.org>`_ or easy_install::
 
     pip install schema
 
-Alternatively, you can just drop ``schema.py`` file into your project—it is
+Alternatively, you can just drop ``schema.py`` file into your project--it is
 self-contained.
 
 - **schema** is tested with Python 2.6, 2.7, 3.2, 3.3 and PyPy.
@@ -87,7 +87,7 @@ Callables
 
 If ``Schema(...)`` encounters a callable (function, class, or object with
 ``__call__`` method) it will call it, and if its return value evaluates to
-``True`` it will continue validating, else—it will raise ``SchemaError``.
+``True`` it will continue validating, else--it will raise ``SchemaError``.
 
 .. code:: python
 
@@ -115,7 +115,7 @@ If ``Schema(...)`` encounters a callable (function, class, or object with
 If ``Schema(...)`` encounters an object with method ``validate`` it will run
 this method on corresponding data as ``data = obj.validate(data)``. This method
 may raise ``SchemaError`` exception, which will tell ``Schema`` that that piece
-of data is invalid, otherwise—it will continue validating.
+of data is invalid, otherwise--it will continue validating.
 
 An example of "validatable" is ``Regex``, that tries to match a string or a
 buffer with the given regular expression (itself as a string, buffer or
