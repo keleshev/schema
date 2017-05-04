@@ -336,9 +336,9 @@ class Optional(Schema):
 
     def __eq__(self, other):
         return (self.__class__ is other.__class__ and
-            getattr(self, 'default', self._MARKER) ==
+                getattr(self, 'default', self._MARKER) ==
                 getattr(other, 'default', self._MARKER) and
-            self._schema == other._schema)
+                self._schema == other._schema)
 
 
 def _callable_str(callable_):
