@@ -331,6 +331,15 @@ class Optional(Schema):
             self.default = default
             self.key = self._schema
 
+    def __hash__(self):
+        return hash(self._schema)
+
+    def __eq__(self, other):
+        return (self.__class__ is other.__class__ and
+            getattr(self, 'default', self._MARKER) ==
+                getattr(other, 'default', self._MARKER) and
+            self._schema == other._schema)
+
 
 def _callable_str(callable_):
     if hasattr(callable_, '__name__'):
