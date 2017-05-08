@@ -10,7 +10,8 @@ from pytest import raises
 
 from schema import (Schema, Use, And, Or, Regex, Optional,
                     SchemaError, SchemaWrongKeyError,
-                    SchemaMissingKeyError, SchemaUnexpectedTypeError)
+                    SchemaMissingKeyError, SchemaUnexpectedTypeError,
+                    SchemaForbiddenKeyError, Forbidden)
 
 if sys.version_info[0] == 3:
     basestring = str  # Python 3 does not have basestring
@@ -216,6 +217,18 @@ def test_ignore_extra_keys_validation_and_return_keys():
                   ignore_extra_keys=True).validate(
         {'key': 5, 'dk': {'a': 'a', 'bad': 'b'}}) == \
         {'key': 5, 'dk': {'a': 'a', 'bad': 'b'}}
+
+
+def test_dict_forbidden_keys():
+    with raises(SchemaForbiddenKeyError):
+        Schema({Forbidden('b'): object}).validate({'b': 'bye'})
+    with raises(SchemaWrongKeyError):
+        Schema({Forbidden('b'): int}).validate({'b': 'bye'})
+    assert (Schema({Forbidden('b'): int,
+                   Optional('b'): object}).validate({'b': 'bye'}) ==
+            {'b': 'bye'})
+    with raises(SchemaForbiddenKeyError):
+        Schema({Forbidden('b'): object, Optional('b'): object}).validate({'b': 'bye'})
 
 
 def test_dict_optional_keys():

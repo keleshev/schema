@@ -249,6 +249,37 @@ data matches:
 Defaults are used verbatim, not passed through any validators specified in the
 value.
 
+You can mark a key as forbidden as follows:
+
+.. code:: python
+
+    >>> from schema import Forbidden
+    >>> Schema({Forbidden('age'): object}).validate({'age': 50})
+    Traceback (most recent call last):
+    ...
+    SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
+
+A few things are worth noting. First, the value paired with the forbidden
+key determines whether it will be rejected:
+
+.. code:: python
+
+    >>> Schema({Forbidden('age'): str, 'age': int}).validate({'age': 50})
+    {'age': 50}
+
+Note: if we hadn't supplied the 'age' key here, the call would have failed too, but with
+SchemaWrongKeyError, not SchemaForbiddenKeyError.
+
+Second, Forbidden has a higher priority than standard keys, and consequently than Optional.
+This means we can do that:
+
+.. code:: python
+
+    >>> Schema({Forbidden('age'): object, Optional(str): object}).validate({'age': 50})
+    Traceback (most recent call last):
+    ...
+    SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
+
 **schema** has classes ``And`` and ``Or`` that help validating several schemas
 for the same data:
 
