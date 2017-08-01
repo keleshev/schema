@@ -24,18 +24,18 @@ entries with personal information:
 
     >>> schema = Schema([{'name': And(str, len),
     ...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
-    ...                   Optional('sex'): And(str, Use(str.lower),
-    ...                                        lambda s: s in ('male', 'female'))}])
+    ...                   Optional('gender'): And(str, Use(str.lower),
+    ...                                           lambda s: s in ('squid', 'kid'))}])
 
-    >>> data = [{'name': 'Sue', 'age': '28', 'sex': 'FEMALE'},
+    >>> data = [{'name': 'Sue', 'age': '28', 'gender': 'Squid'},
     ...         {'name': 'Sam', 'age': '42'},
-    ...         {'name': 'Sacha', 'age': '20', 'sex': 'Male'}]
+    ...         {'name': 'Sacha', 'age': '20', 'gender': 'KID'}]
 
     >>> validated = schema.validate(data)
 
-    >>> assert validated == [{'name': 'Sue', 'age': 28, 'sex': 'female'},
+    >>> assert validated == [{'name': 'Sue', 'age': 28, 'gender': 'squid'},
     ...                      {'name': 'Sam', 'age': 42},
-    ...                      {'name': 'Sacha', 'age' : 20, 'sex': 'male'}]
+    ...                      {'name': 'Sacha', 'age' : 20, 'gender': 'kid'}]
 
 
 If data is valid, ``Schema.validate`` will return the validated data
