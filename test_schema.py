@@ -78,8 +78,12 @@ def test_or():
 
 
 def test_test():
-    unique_list = lambda v: len(v) == len(set(v))
-    dict_keys = lambda key, _list: list(map(lambda d: d[key], _list))
+    def unique_list(_list):
+        return len(_list) == len(set(_list))
+
+    def dict_keys(key, _list):
+        return list(map(lambda d: d[key], _list))
+
     schema = (
         Schema(
             Const(
@@ -88,6 +92,7 @@ def test_test():
         {"index": 1, "value": "foo"},
         {"index": 2, "value": "bar"}]
     assert schema.validate(data) == data
+
     bad_data = [
         {"index": 1, "value": "foo"},
         {"index": 1, "value": "bar"}]
