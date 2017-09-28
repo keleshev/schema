@@ -6,7 +6,7 @@ import re
 
 __version__ = '0.6.6'
 __all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden',
+           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
            'SchemaError',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
@@ -370,6 +370,12 @@ class Forbidden(Schema):
     def __init__(self, *args, **kwargs):
         super(Forbidden, self).__init__(*args, **kwargs)
         self.key = self._schema
+
+
+class Const(Schema):
+    def validate(self, data):
+        super(Const, self).validate(data)
+        return data
 
 
 def _callable_str(callable_):

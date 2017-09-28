@@ -162,6 +162,23 @@ Dropping the details, ``Use`` is basically:
             except Exception as e:
                 raise SchemaError('%r raised %r' % (self._callable.__name__, e))
 
+
+Sometimes you need to transform and validate part of data, but keep original data unchanged.
+``Const`` helps to keep your data safe:
+
+.. code:: python
+
+    >> from schema import Use, Const, And, Schema
+
+    >> from datetime import datetime
+
+    >> is_future = lambda date: datetime.now() > date
+
+    >> to_json = lambda v: {"timestamp": v}
+
+    >> Schema(And(Const(And(Use(datetime.fromtimestamp), is_future)), Use(to_json))).validate(1234567890)
+    {"timestamp": 1234567890}
+
 Now you can write your own validation-aware classes and data types.
 
 Lists, similar containers

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 from collections import defaultdict, namedtuple
+from functools import partial
 from operator import methodcaller
 import os
 import re
@@ -8,7 +9,7 @@ import copy
 
 from pytest import raises
 
-from schema import (Schema, Use, And, Or, Regex, Optional,
+from schema import (Schema, Use, And, Or, Regex, Optional, Const,
                     SchemaError, SchemaWrongKeyError,
                     SchemaMissingKeyError, SchemaUnexpectedTypeError,
                     SchemaForbiddenKeyError, Forbidden)
@@ -74,6 +75,28 @@ def test_or():
     with SE: Or(int, dict).validate('hai')
     assert Or(int).validate(4)
     with SE: Or().validate(2)
+
+
+def test_test():
+    def unique_list(_list):
+        return len(_list) == len(set(_list))
+
+    def dict_keys(key, _list):
+        return list(map(lambda d: d[key], _list))
+
+    schema = (
+        Schema(
+            Const(
+                And(Use(partial(dict_keys, "index")), unique_list))))
+    data = [
+        {"index": 1, "value": "foo"},
+        {"index": 2, "value": "bar"}]
+    assert schema.validate(data) == data
+
+    bad_data = [
+        {"index": 1, "value": "foo"},
+        {"index": 1, "value": "bar"}]
+    with SE: schema.validate(bad_data)
 
 
 def test_regex():
