@@ -109,6 +109,19 @@ If ``Schema(...)`` encounters a callable (function, class, or object with
     ...
     SchemaError: <lambda>(-12) should evaluate to True
 
+.. code:: python
+
+    >>> from schema import Predicate
+    >>> @Predicate(error="Zero or negative number")
+    ... def positive(x):
+    ...     return x >= 0
+
+    >>> positive.validate(-12)
+    Traceback (most recent call last):
+    ...
+    SchemaError: Zero or negative number
+
+
 "Validatables"
 ~~~~~~~~~~~~~~
 
@@ -343,6 +356,7 @@ instead of a built-in one.
     Traceback (most recent call last):
     ...
     SchemaError: Invalid year
+
 
 You can see all errors that occurred by accessing exception's ``exc.autos``
 for auto-generated error messages, and ``exc.errors`` for errors
