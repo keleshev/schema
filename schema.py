@@ -107,17 +107,17 @@ class Or(And):
         :param data: data to be validated by provided schema.
         :return: return validated data if not validation
         """
-        x = SchemaError([], [])
+        autos, errors = [], []
         for s in [self._schema(s, error=self._error,
                                ignore_extra_keys=self._ignore_extra_keys)
                   for s in self._args]:
             try:
                 return s.validate(data)
             except SchemaError as _x:
-                x = _x
-        raise SchemaError(['%r did not validate %r' % (self, data)] + x.autos,
+                autos, errors = _x.autos, _x.errors
+        raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
                           [self._error.format(data) if self._error else None] +
-                          x.errors)
+                          errors)
 
 
 class Regex(object):
