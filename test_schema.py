@@ -509,7 +509,8 @@ def test_missing_keys_exception_with_non_str_dict_keys():
 
 
 # PyPy does have a __name__ attribute for its callables.
-@mark.skipif(platform.python_implementation() == 'PyPy')
+@mark.skipif(platform.python_implementation() == 'PyPy',
+             reason='Running on PyPy')
 def test_issue_56_cant_rely_on_callables_to_have_name():
     s = Schema(methodcaller('endswith', '.csv'))
     assert s.validate('test.csv') == 'test.csv'
