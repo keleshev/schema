@@ -231,6 +231,17 @@ class Schema(object):
             return _priority(s._schema) + 0.5
         return _priority(s)
 
+    def is_valid(self, data):
+        """Return whether the given data has passed all the validations
+        that were specified in the given schema.
+        """
+        try:
+            self.validate(data)
+        except SchemaError:
+            return False
+        else:
+            return True
+
     def validate(self, data):
         Schema = self.__class__
         s = self._schema
