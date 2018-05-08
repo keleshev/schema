@@ -237,10 +237,8 @@ class Schema(object):
         """
         try:
             self.validate(data)
-
         except SchemaError:
             return False
-
         else:
             return True
 
