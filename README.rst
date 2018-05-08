@@ -42,6 +42,8 @@ If data is valid, ``Schema.validate`` will return the validated data
 (optionally converted with `Use` calls, see below).
 
 If data is invalid, ``Schema`` will raise ``SchemaError`` exception.
+If you just want to check that the data is valid, ``schema.is_valid(data)`` will
+return ``True`` or ``False``.
 
 
 Installation
