@@ -51,7 +51,7 @@ class SchemaWrongKeyError(SchemaError):
 
 class SchemaMissingKeyError(SchemaError):
     """Error should be raised when a mandatory key is not found within the
-    data set being vaidated"""
+    data set being validated"""
     pass
 
 
