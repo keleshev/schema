@@ -4,9 +4,10 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
+
 __version__ = '0.6.7'
 __all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
+           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const', 'Predicate',
            'SchemaError',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
@@ -387,6 +388,15 @@ class Const(Schema):
     def validate(self, data):
         super(Const, self).validate(data)
         return data
+
+
+def Predicate(error=None, ignore_extra_keys=False):
+    """
+    Decorator to wrap function as Schema.
+    """
+    def _Predicate(f):
+        return Schema(f, error=error, ignore_extra_keys=ignore_extra_keys)
+    return _Predicate
 
 
 def _callable_str(callable_):

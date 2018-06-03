@@ -13,7 +13,7 @@ from pytest import raises, mark
 from schema import (Schema, Use, And, Or, Regex, Optional, Const,
                     SchemaError, SchemaWrongKeyError,
                     SchemaMissingKeyError, SchemaUnexpectedTypeError,
-                    SchemaForbiddenKeyError, Forbidden)
+                    SchemaForbiddenKeyError, Forbidden, Predicate)
 
 if sys.version_info[0] == 3:
     basestring = str  # Python 3 does not have basestring
@@ -596,3 +596,25 @@ def test_inheritance():
     v = {'k': 1, 'd': {'k': 2, 'l': [{'l': [3, 4, 5]}]}}
     d = MySchema(s).validate(v)
     assert d['k'] == 2 and d['d']['k'] == 3 and d['d']['l'][0]['l'] == [4, 5, 6]
+
+
+def test_predicate():
+    @Predicate()
+    def p1(x):
+        return x == 1
+    assert p1._error is None and not p1._ignore_extra_keys
+
+    @Predicate("ERROR2", ignore_extra_keys=True)
+    def p2(x):
+        return x == 2
+    assert p2._error is "ERROR2" and p2._ignore_extra_keys
+
+    p2.validate(2)  # success
+
+    with SE:
+        try:
+            p2.validate(0)  # failure
+        except SchemaError as e:
+            assert e.autos == ['p2(0) should evaluate to True']
+            assert e.errors == ["ERROR2"]
+            raise
