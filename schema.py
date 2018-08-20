@@ -4,7 +4,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
-__version__ = '0.7.0.dev0'
+__version__ = '0.7.0.dev1'
 __all__ = ['Schema',
            'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
            'SchemaError',
@@ -215,10 +215,47 @@ def _priority(s):
     return COMPARABLE
 
 
+def _flattable(schema):
+    """Return if a schema can be flattened."""
+    return isinstance(schema, Base)\
+        or schema.__class__ in (Schema, Optional, Forbidden, Const)
+
+
+def schemify(schema, error=None, ignore_extra_keys=False):
+    # try to avoid unnecessary wrappings
+    if isinstance(schema, Schema):
+        if hasattr(schema, '_worker'):
+            schema = schema._worker
+        else:
+            return _Wrapper(schema, error=error)
+    if isinstance(schema, Base):
+        if error is None:
+            return schema
+        if schema._error is None:
+            schema._error = error
+            return schema
+        return _Wrapper(schema, error=error)
+
+    flavor = _priority(schema)
+    if flavor == ITERABLE:
+        return _Iterable(schema, schema=schemify, error=error,
+                         ignore_extra_keys=ignore_extra_keys)
+    if flavor == DICT:
+        return _Dict(schema, schema=schemify, error=error,
+                     ignore_extra_keys=ignore_extra_keys)
+    if flavor == TYPE:
+        return Type(schema, error=error)
+    if flavor == CALLABLE:
+        return _Check(schema, error=error)
+    return Value(schema, error=error)
+
+
 def _schema_args(kwargs):
     """Parse `schema`, `error` and `ignore_extra_keys`."""
     assert set(kwargs).issubset(['error', 'schema', 'ignore_extra_keys'])
-    schema = kwargs.get('schema', Schema)
+    schema = kwargs.get('schema', schemify)
+    if _flattable(schema):
+        schema = schemify
     error = kwargs.get('error', None)
     ignore = kwargs.get('ignore_extra_keys', False)
     return schema, error, ignore
@@ -389,7 +426,7 @@ class Schema(object):
     """
     def __init__(self, schema, error=None, ignore_extra_keys=False):
         self._schema = schema
-        constr = self.__class__
+        constr = schemify if _flattable(self) else self.__class__
         flavor = _priority(schema)
         if flavor == ITERABLE:
             self._worker = _Iterable(schema, schema=constr, error=error,
