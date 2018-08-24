@@ -4,7 +4,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
-__version__ = '0.7.0.dev1'
+__version__ = '0.7.0.dev2'
 __all__ = ['Schema',
            'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
            'SchemaError',
@@ -221,18 +221,27 @@ def _flattable(schema):
         or schema.__class__ in (Schema, Optional, Forbidden, Const)
 
 
+def _empty(schema):
+    """Return if a schema can be ommitted."""
+    return schema.__class__ in (Schema, Optional, Forbidden) or (
+        isinstance(schema, _Wrapper) and schema._error is None)
+
+
 def schemify(schema, error=None, ignore_extra_keys=False):
     # try to avoid unnecessary wrappings
     if isinstance(schema, Schema):
-        if hasattr(schema, '_worker'):
+        if _empty(schema):
             schema = schema._worker
         else:
-            return _Wrapper(schema, error=error)
+            return _Wrapper(schema, error=error) if error else schema
     if isinstance(schema, Base):
-        if error is None:
-            return schema
-        if schema._error is None:
-            schema._error = error
+        if error is None or schema._error is None:
+            schema._error = error or schema._error
+            while _empty(schema):
+                if isinstance(schema, _Wrapper):
+                    schema = schema._validator
+                else:
+                    schema = schema._worker
             return schema
         return _Wrapper(schema, error=error)
 
