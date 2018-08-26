@@ -596,3 +596,88 @@ def test_inheritance():
     v = {'k': 1, 'd': {'k': 2, 'l': [{'l': [3, 4, 5]}]}}
     d = MySchema(s).validate(v)
     assert d['k'] == 2 and d['d']['k'] == 3 and d['d']['l'][0]['l'] == [4, 5, 6]
+
+
+def test_empty():
+    from schema import _empty
+    v = Or('a', 'b')
+    assert not _empty(v)
+    assert not _empty(And(int, 1))
+    assert not _empty(Use(str))
+    assert not _empty(Regex('[0-9]+'))
+    assert _empty(Schema(v))
+    assert _empty(Schema(v, error='something'))
+    assert _empty(Optional('a'))
+    assert _empty(Forbidden('a'))
+    assert not _empty(Const(v))
+
+    class MySchema(Schema):
+        pass
+
+    assert _empty(MySchema(v))
+
+    class MyOtherSchema(Schema):
+        def validate(self, data):
+            return super(MyOtherSchema, self).validate(data)
+
+    assert not _empty(MyOtherSchema(v))
+
+
+def test_schemify():
+    from schema import schemify
+
+    v = Or(int, float)
+    s = Schema(Schema(Schema(v)))
+    assert schemify(s) is v
+    s = Schema(v, error='test error')
+    assert schemify(Schema(Schema(s))) is s._worker
+
+    o = schemify(Schema(Schema(s)), error='test error #2')
+    assert o._error == 'test error #2'
+    assert o._worker is s._worker
+
+    s = Const(Use(lambda x: x[:1]))
+    assert schemify(Schema(Schema(s))) is s
+
+    s = Optional(int)
+    assert schemify(Schema(s)) is s._worker
+
+    s = Forbidden('k')
+    assert schemify(Schema(s)) is s._worker
+
+    class MySchema(Schema):
+        pass
+
+    assert schemify(Schema(MySchema(v))) is v
+    assert schemify(Schema(MySchema(v, error='something')))._worker is v
+
+    class MyOtherSchema(Schema):
+        def validate(self, data):
+            return super(MyOtherSchema, self).validate(data)
+
+    s = MyOtherSchema(v)
+    assert schemify(Schema(s)) is s
+
+
+def test_schemify_use():
+    v = Or(int, float)
+
+    s = Schema(Schema(Schema(Schema(Schema(v)))))
+    assert s._worker._worker is v
+
+    s = Schema({Schema('k'): Schema(Schema(v))})
+    k, ks, w = s._worker._sorted[0]
+    assert w is v
+    assert not isinstance(ks, Schema)
+
+    s = Or(int, Schema(Schema(v)))
+    assert s._schema_seq[1] is v
+    assert not isinstance(s._schema_seq[1], Schema)
+
+    s = And(Schema(Schema(v)), Schema(1.0))
+    assert s._schema_seq[0] is v
+    assert not isinstance(s._schema_seq[1], Schema)
+
+    oth = Schema([Schema(v), Schema(Schema(v))])
+    w1, w2 = oth._worker._schema._schema_seq
+    assert w1 is w2 is v
