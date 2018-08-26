@@ -68,15 +68,16 @@ class SchemaUnexpectedTypeError(SchemaError):
 
 
 class Base(object):
+    """Base class for all schemas."""
     def __init__(self, error=None):
         self._error = error
 
 
 # Atomic schemas
 
-class Type(Base):
+class _Type(Base):
     def __init__(self, typ, error=None):
-        super(Type, self).__init__(error=error)
+        super(_Type, self).__init__(error=error)
         self._type = typ
 
     def validate(self, data):
@@ -88,9 +89,9 @@ class Type(Base):
             error.format(data) if error else None)
 
 
-class Value(Base):
+class _Value(Base):
     def __init__(self, value, error=None):
-        super(Value, self).__init__(error=error)
+        super(_Value, self).__init__(error=error)
         self._value = value
 
     def validate(self, data):
@@ -149,6 +150,7 @@ def _callable_str(callable_):
 
 
 class _Check(Base):
+    """Validation for callables."""
     def __init__(self, callable_, error=None):
         super(_Check, self).__init__(error=error)
         self._callable = callable_
@@ -230,6 +232,7 @@ def _empty(schema):
 
 
 def schemify(schema, error=None, ignore_extra_keys=False):
+    """Create a minimalistic schema (instance of ``Base``)."""
     # try to avoid unnecessary wrappings
     if isinstance(schema, Base):
         while _empty(schema):
@@ -245,10 +248,10 @@ def schemify(schema, error=None, ignore_extra_keys=False):
         return _Dict(schema, schema=schemify, error=error,
                      ignore_extra_keys=ignore_extra_keys)
     if flavor == TYPE:
-        return Type(schema, error=error)
+        return _Type(schema, error=error)
     if flavor == CALLABLE:
         return _Check(schema, error=error)
-    return Value(schema, error=error)
+    return _Value(schema, error=error)
 
 
 def _schema_args(kwargs):
@@ -405,6 +408,7 @@ class _Dict(Base):
 
 
 class _Wrapper(Base):
+    """Helper class to wrap a error around a validator."""
     def __init__(self, validator, error=None):
         super(_Wrapper, self).__init__(error=error)
         self._worker = schemify(validator)
@@ -437,13 +441,13 @@ class Schema(Base):
             self._worker = _Dict(schema, schema=constr, error=error,
                                  ignore_extra_keys=ignore_extra_keys)
         elif flavor == TYPE:
-            self._worker = Type(schema, error=error)
+            self._worker = _Type(schema, error=error)
         elif flavor == VALIDATOR:
             self._worker = _Wrapper(schema, error=error)
         elif flavor == CALLABLE:
             self._worker = _Check(schema, error=error)
         else:
-            self._worker = Value(schema, error=error)
+            self._worker = _Value(schema, error=error)
 
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._schema)
