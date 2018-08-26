@@ -217,33 +217,25 @@ def _priority(s):
 
 def _flattable(schema):
     """Return if a schema can be flattened."""
-    return isinstance(schema, Base)\
-        or schema.__class__ in (Schema, Optional, Forbidden, Const)
+    if isinstance(schema, Schema):
+        return type(schema) in (Schema, Optional, Forbidden, Const)
+    return isinstance(schema, Base)
 
 
 def _empty(schema):
     """Return if a schema can be ommitted."""
-    return schema.__class__ in (Schema, Optional, Forbidden) or (
-        isinstance(schema, _Wrapper) and schema._error is None)
+    if isinstance(schema, Schema):
+        return type(schema).validate == Schema.validate
+    return isinstance(schema, _Wrapper) and schema._error is None
 
 
 def schemify(schema, error=None, ignore_extra_keys=False):
     # try to avoid unnecessary wrappings
-    if isinstance(schema, Schema):
-        if _empty(schema):
-            schema = schema._worker
-        else:
-            return _Wrapper(schema, error=error) if error else schema
     if isinstance(schema, Base):
-        if error is None or schema._error is None:
-            schema._error = error or schema._error
-            while _empty(schema):
-                if isinstance(schema, _Wrapper):
-                    schema = schema._validator
-                else:
-                    schema = schema._worker
-            return schema
-        return _Wrapper(schema, error=error)
+        while _empty(schema):
+            schema = schema._worker
+    if hasattr(schema, 'validate'):
+        return _Wrapper(schema, error=error) if error else schema
 
     flavor = _priority(schema)
     if flavor == ITERABLE:
@@ -415,25 +407,26 @@ class _Dict(Base):
 class _Wrapper(Base):
     def __init__(self, validator, error=None):
         super(_Wrapper, self).__init__(error=error)
-        self._validator = validator
+        self._worker = schemify(validator)
 
     def validate(self, data):
         try:
-            return self._validator.validate(data)
+            return self._worker.validate(data)
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
             raise SchemaError(
-                '%r.validate(%r) raised %r' % (self._validator, data, x),
+                '%r.validate(%r) raised %r' % (self._worker, data, x),
                 self._error.format(data) if self._error else None)
 
 
-class Schema(object):
+class Schema(Base):
     """
     Entry point of the library, use this class to instantiate validation
     schema for the data that will be validated.
     """
     def __init__(self, schema, error=None, ignore_extra_keys=False):
+        super(Schema, self).__init__(error=error)
         self._schema = schema
         constr = schemify if _flattable(self) else self.__class__
         flavor = _priority(schema)
