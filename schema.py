@@ -218,10 +218,8 @@ def _priority(s):
 
 
 def _flattable(schema):
-    """Return if a schema can be flattened."""
-    if isinstance(schema, Schema):
-        return type(schema) in (Schema, Optional, Forbidden, Const)
-    return isinstance(schema, Base)
+    """Return if the wrapping can be ommitted."""
+    return schema in (schemify, Schema, Forbidden, Optional)
 
 
 def _empty(schema):
@@ -432,13 +430,12 @@ class Schema(Base):
     def __init__(self, schema, error=None, ignore_extra_keys=False):
         super(Schema, self).__init__(error=error)
         self._schema = schema
-        constr = schemify if _flattable(self) else self.__class__
         flavor = _priority(schema)
         if flavor == ITERABLE:
-            self._worker = _Iterable(schema, schema=constr, error=error,
+            self._worker = _Iterable(schema, schema=type(self), error=error,
                                      ignore_extra_keys=ignore_extra_keys)
         elif flavor == DICT:
-            self._worker = _Dict(schema, schema=constr, error=error,
+            self._worker = _Dict(schema, schema=type(self), error=error,
                                  ignore_extra_keys=ignore_extra_keys)
         elif flavor == TYPE:
             self._worker = _Type(schema, error=error)
