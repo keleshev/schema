@@ -10,6 +10,7 @@ addons:
     packages:
       - python3.5
       - python3.6
+      - python3.7
 
 cache:
   pip: true
@@ -23,6 +24,7 @@ env:
   - TOX_ENV=py34
   - TOX_ENV=py35
   - TOX_ENV=py36
+  - TOX_ENV=py37
   - TOX_ENV=coverage
   - TOX_ENV=pep8
 
