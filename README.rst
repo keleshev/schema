@@ -299,6 +299,17 @@ This means we can do that:
     ...
     SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
 
+Also, a caveat: If you specify types, **schema** won't validate the empty dict:
+
+.. code:: python
+
+    >>> Schema({int:int}).is_valid({})
+    False
+
+To do that, you need ``Schema(Or({int:int}, {}))``. This is unlike what happens with
+lists, where ``Schema([int]).is_valid([])`` will return True.
+
+
 **schema** has classes ``And`` and ``Or`` that help validating several schemas
 for the same data:
 
