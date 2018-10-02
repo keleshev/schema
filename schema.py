@@ -55,16 +55,20 @@ def compose(*schemas, **kwargs):
 
     1. All are dictionaries.
 
-       * The schemas are merged together into one dictionary schema where shared keys are recursively composed.
+       * The schemas are merged together into one dictionary schema where shared keys
+       are recursively composed.
 
     2. All are iterables.
 
-       * All schemas are merged into a single iterable schema in the order they were passed into ``compose``.
+       * All schemas are merged into a single iterable schema in the order they were
+       passed into ``compose``.
 
     3. There is a combination of different schema types.
 
        * A type error is raised if dictionary and iterable type schemas are composed.
-       * Any other combination of schema types are joined using a ``function(*schemas)`` (defaults to ``And``).
+
+       * Any other combination of schema types are joined using a ``function(*schemas)``
+       (defaults to ``And``).
     """
     join = kwargs.get("join", And)
     schemas = [s._schema if isinstance(s, Schema) else s for s in schemas]
