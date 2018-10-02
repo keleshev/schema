@@ -51,7 +51,7 @@ def compose(*schemas, **kwargs):
 
     Notes
     -----
-    The composition of schema types is handled in four cases:
+    The composition of schema types is handled in three cases:
 
     1. All are dictionaries.
 
@@ -61,10 +61,10 @@ def compose(*schemas, **kwargs):
 
        * All schemas are merged into a single iterable schema in the order they were passed into ``compose``.
 
-    4. There is a combination of different schema types.
+    3. There is a combination of different schema types.
 
        * A type error is raised if dictionary and iterable type schemas are composed.
-       * Any other combination of schema types are merged under one ``And`` validator.
+       * Any other combination of schema types are joined using a ``function(*schemas)`` (defaults to ``And``).
     """
     join = kwargs.get("join", And)
     schemas = [s._schema if isinstance(s, Schema) else s for s in schemas]
