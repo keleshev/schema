@@ -30,7 +30,7 @@ def compose(*schemas, **kwargs):
     >>> s1 = Schema({"x": {"a": int}})
     >>> s2 = Schema({"x": {"b": str}})
     >>> s1_and_s2 = compose(s1, s2)
-    assert s1_and_s2.is_valid({"x": {"a": 3, "b": "hello!"}})
+    >>> assert s1_and_s2.is_valid({"x": {"a": 3, "b": "hello!"}})
 
     >>> s1 = Schema([int, str])
     >>> s2 = Schema([float])
