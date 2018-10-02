@@ -14,6 +14,83 @@ __all__ = ['Schema',
            'SchemaUnexpectedTypeError']
 
 
+def compose(*schemas, **kwargs):
+    """Compose two or more schemas into one.
+
+    Parameters
+    ----------
+    *schemas: any
+        A series of values to be interpreted as Schemas.
+    join: callable (default: ``And``)
+        A keyword argument accepting a callable with the signature ``function(*args)``.
+        This callable should join schemas of disperate types into a single schema.
+
+    Examples
+    --------
+    >>> s1 = Schema({"x": {"a": int}})
+    >>> s2 = Schema({"x": {"b": str}})
+    >>> s1_and_s2 = compose(s1, s2)
+    assert s1_and_s2.is_valid({"x": {"a": 3, "b": "hello!"}})
+
+    >>> s1 = Schema([int, str])
+    >>> s2 = Schema([float])
+    >>> s1_and_s2 = compose(s1, s2)
+    >>> assert s1_and_s2.is_valid([1, "2", 3.0])
+
+    >>> s1 = Schema(int)
+    >>> s2 = Schema(float)
+    >>> s1_or_s2 = compose(s1, s2, join=Or)
+    >>> assert s1_or_s2.is_valid(1)
+    >>> assert s1_or_s2.is_valid(1.0)
+
+    >>> s1 = Schema(str)
+    >>> s2 = Schema(lambda string: string.title() == string)
+    >>> s3 = Schema(lambda string: string.endswith("!"))
+    >>> s1_and_s2_and_s3 = compose(s1, s2, s3)
+    >>> assert s1_and_s2_and_s3.is_valid("Hello World!")
+
+    Notes
+    -----
+    The composition of schema types is handled in four cases:
+
+    1. All are dictionaries.
+
+       * The schemas are merged together into one dictionary schema where shared keys are recursively composed.
+
+    2. All are iterables.
+
+       * All schemas are merged into a single iterable schema in the order they were passed into ``compose``.
+
+    4. There is a combination of different schema types.
+
+       * A type error is raised if dictionary and iterable type schemas are composed.
+       * Any other combination of schema types are merged under one ``And`` validator.
+    """
+    join = kwargs.get("join", And)
+    schemas = [s._schema if isinstance(s, Schema) else s for s in schemas]
+    priorities = set(map(_priority, schemas))
+    if not {ITERABLE, DICT}.difference(priorities):
+        raise TypeError("Cannot compose iterable a dict type schemas")
+    elif priorities == {ITERABLE}:
+        return Schema([value for s in schemas for value in s])
+    elif priorities == {DICT}:
+        to_compose = {}
+        for s in schemas:
+            for k in s:
+                v = s[k]
+                comp = to_compose.setdefault(k, [])
+                comp.append(v)
+        new = {}
+        for k, v in to_compose.items():
+            if len(v) > 1:
+                new[k] = compose(*v, join=join)
+            else:
+                new[k] = v[0]
+        return Schema(new)
+    else:
+        return Schema(join(*schemas))
+
+
 class SchemaError(Exception):
     """Error during Schema validation."""
 
