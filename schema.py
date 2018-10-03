@@ -73,7 +73,9 @@ class And(object):
     """
     def __init__(self, *args, **kw):
         self._args = args
-        assert set(kw).issubset(['error', 'schema', 'ignore_extra_keys'])
+        if not set(kw).issubset({'error', 'schema', 'ignore_extra_keys'}):
+            diff = {'error', 'schema', 'ignore_extra_keys'}.difference(kw)
+            raise TypeError('Unknown keyword arguments %r' % list(diff))
         self._error = kw.get('error')
         self._ignore_extra_keys = kw.get('ignore_extra_keys', False)
         # You can pass your inherited Schema class.
@@ -169,7 +171,8 @@ class Use(object):
     the data while it is being validate.
     """
     def __init__(self, callable_, error=None):
-        assert callable(callable_)
+        if not callable(callable_):
+            raise TypeError('Expected a callable, not %r' % callable_)
         self._callable = callable_
         self._error = error
 
