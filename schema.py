@@ -7,6 +7,7 @@ import re
 __version__ = '0.6.8'
 __all__ = ['Schema',
            'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
+           'ConstrainedContainer',
            'SchemaError',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
@@ -396,3 +397,47 @@ def _callable_str(callable_):
     if hasattr(callable_, '__name__'):
         return callable_.__name__
     return str(callable_)
+
+
+class ConstrainedContainer(object):
+    """A simple "constrained" container schema validator"""
+
+    def __init__(self, container_def, min_items=None, max_items=None, additionals=None):
+        assert min_items is None or isinstance(min_items, int)
+        assert max_items is None or isinstance(max_items, int)
+        self.container_def = container_def
+        self.min_items = min_items
+        self.max_items = max_items
+        self.additionals = additionals
+
+    def validate(self, data):
+        if not isinstance(data, type(self.container_def)):
+            raise SchemaUnexpectedTypeError("not good type: %s" % type(data))
+        ld = len(data)
+        lcd = len(self.container_def)
+        if ld < lcd:
+            raise SchemaError("not enough items: %s" % ld)
+        if self.additionals is None:
+            if ld > lcd:
+                raise SchemaError("too many items: %s" % ld)
+        else:
+            min_i = self.min_items
+            if min_i is not None:
+                if ld < min_i:
+                    raise SchemaError("not enough additionals items: %s" % ld)
+            max_i = self.max_items
+            if max_i is not None:
+                if ld > max_i:
+                    raise SchemaError("too many additionals items: %s" % ld)
+
+        def gen_schemas():
+            for item in self.container_def:
+                yield Schema(item)
+            s = Schema(self.additionals)
+            for _ in range(ld - lcd):
+                yield s
+
+        return type(self.container_def)(
+            schema.validate(data[idx])
+            for idx, schema in enumerate(gen_schemas())
+        )
