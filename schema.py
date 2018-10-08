@@ -21,78 +21,80 @@ def compose(*schemas, **kwargs):
     ----------
     *schemas: any
         A series of values to be interpreted as Schemas.
-    join: callable (default: ``And``)
-        A keyword argument accepting a callable with the signature ``function(*args)``.
-        This callable should join schemas of disperate types into a single schema.
+    reduce: callable or validator
+        Defines a "reducer" which will merge ``*schemas`` together. This operation is
+        performed recursively on the values dictionary schemas. Reducers can be a
+        callable or validator either of which will return a merged schema. The default
+        reducer simply returns the first given schema given in the list of ``*schemas``.
+        A callable reducer should have a signature of the form ``reducer(schemas)``
+        where ``schemas`` is a list of schemas. A validator reducer is an object which
+        has a callable attribute "validate" which gets used just like a callable reducer.
 
     Examples
     --------
-    >>> s1 = Schema({"x": {"a": int}})
-    >>> s2 = Schema({"x": {"b": str}})
-    >>> s1_and_s2 = compose(s1, s2)
-    >>> assert s1_and_s2.is_valid({"x": {"a": 3, "b": "hello!"}})
 
-    >>> s1 = Schema([int, str])
-    >>> s2 = Schema([float])
-    >>> s1_and_s2 = compose(s1, s2)
-    >>> assert s1_and_s2.is_valid([1, "2", 3.0])
+    Compose two schemas together using the default reducer.
 
-    >>> s1 = Schema(int)
-    >>> s2 = Schema(float)
-    >>> s1_or_s2 = compose(s1, s2, join=Or)
-    >>> assert s1_or_s2.is_valid(1)
-    >>> assert s1_or_s2.is_valid(1.0)
+    >>> s1 = Schema({"a": int, "b": int})
+    >>> s2 = Schema({"b": float})
+    >>> s3 = compose(s2, s1) # note choice of order
+    >>> assert s3.is_valid({"a": 1, "b":, 2.0})
+
+    Compose two schemas using a "validator" reducer where the resulting schema
+    requires all conditions from the given schemas to be true. In this particular
+    case the merged schema validates when given a string that is lowercase.
 
     >>> s1 = Schema(str)
-    >>> s2 = Schema(lambda string: string.title() == string)
-    >>> s3 = Schema(lambda string: string.endswith("!"))
-    >>> s1_and_s2_and_s3 = compose(s1, s2, s3)
-    >>> assert s1_and_s2_and_s3.is_valid("Hello World!")
+    >>> s2 = Schema(lambda s: s.lower() == s)
+    >>> and_reducer = Use(lambda schemas: And(*schemas))
+    >>> s3 = compose(s1, s2, reduce=and_reducer)
+    >>> assert s3.is_valid("hello world!")
+    >>> assert not s3.is_valid("Hello World!")
 
-    Notes
-    -----
-    The composition of schema types is handled in three cases:
+    The following example demonstrates how to form more complex reducers by using an
+    ``Or`` validator to combine to combine others (including the ``and_reducer``) from
+    the example above.
 
-    1. All are dictionaries.
-
-       * The schemas are merged together into one dictionary schema where shared keys
-       are recursively composed.
-
-    2. All are iterables.
-
-       * All schemas are merged into a single iterable schema in the order they were
-       passed into ``compose``.
-
-    3. There is a combination of different schema types.
-
-       * A type error is raised if dictionary and iterable type schemas are composed.
-
-       * Any other combination of schema types are joined using a ``function(*schemas)``
-       (defaults to ``And``).
+    >>> import functools, operator
+    >>> s1 = Schema({"a": [int], "b": str})
+    >>> s2 = Schema({"a": [float], "b": lambda s: s.lower() == s})
+    >>> join_lists = lambda schemas: functools.reduce(operator.add, schemas, [])
+    >>> list_reducer = And([list], Use(join_lists))
+    >>> reducer = Or(list_reducer, and_reducer)
+    >>> s3 = compose(s1, s2, reduce=reducer)
+    >>> assert s3.is_valid({"a": [1, 2.0], "b": "hello world"})
     """
-    join = kwargs.get("join", And)
+    reduce = kwargs.pop("reduce", lambda schemas: schemas[0])
+    if not callable(reduce):
+        if callable(getattr(reduce, "validate", None)):
+            reduce = reduce.validate
+        else:
+            msg = "Expected a callabled or validator, not %r"
+            raise TypeError(msg % reduce)
     schemas = [s._schema if isinstance(s, Schema) else s for s in schemas]
     priorities = set(map(_priority, schemas))
-    if not {ITERABLE, DICT}.difference(priorities):
-        raise TypeError("Cannot compose iterable a dict type schemas")
-    elif priorities == {ITERABLE}:
-        return Schema([value for s in schemas for value in s])
-    elif priorities == {DICT}:
+    if priorities == {DICT}:
+        optionals = set()
         to_compose = {}
         for s in schemas:
-            for k in s:
-                v = s[k]
-                comp = to_compose.setdefault(k, [])
-                comp.append(v)
+            for k, v in ((k, s[k]) for k in s):
+                if isinstance(k, Optional):
+                    if k.key in to_compose:
+                        continue
+                    else:
+                        optionals.add(k.key)
+                elif k not in optionals:
+                    comp = to_compose.setdefault(k, [])
+                    comp.append(v)
         new = {}
         for k, v in to_compose.items():
             if len(v) > 1:
-                new[k] = compose(*v, join=join)
+                new[k] = compose(*v, reduce=reduce)
             else:
                 new[k] = v[0]
-        return Schema(new)
+        return Schema(new, **kwargs)
     else:
-        return Schema(join(*schemas))
+        return Schema(reduce(schemas), **kwargs)
 
 
 class SchemaError(Exception):
