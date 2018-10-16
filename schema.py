@@ -177,7 +177,8 @@ class Use(Base):
     """
     def __init__(self, callable_, error=None):
         super(Use, self).__init__(error=error)
-        assert callable(callable_)
+        if not callable(callable_):
+            raise TypeError('Expected a callable, not %r' % callable_)
         self._callable = callable_
 
     def __repr__(self):
@@ -254,7 +255,9 @@ def schemify(schema, error=None, ignore_extra_keys=False):
 
 def _schema_args(kwargs):
     """Parse `schema`, `error` and `ignore_extra_keys`."""
-    assert set(kwargs).issubset(['error', 'schema', 'ignore_extra_keys'])
+    if not set(kwargs).issubset({'error', 'schema', 'ignore_extra_keys'}):
+        diff = {'error', 'schema', 'ignore_extra_keys'}.difference(kwargs)
+        raise TypeError('Unknown keyword arguments %r' % list(diff))
     schema = kwargs.get('schema', schemify)
     if _flattable(schema):
         schema = schemify
