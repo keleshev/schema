@@ -78,6 +78,16 @@ def test_or():
     with SE: Or().validate(2)
 
 
+def test_or_only_one():
+    schema = Schema({
+        Or("test1", "test2", only_one=True): str
+    })
+    assert schema.validate({"test1": "value"})
+    assert schema.validate({"test2": "other_value"})
+    with SE: schema.validate({"test1": "value", "test2": "other_value"})
+    with SE: schema.validate({"othertest": "value"})
+
+
 def test_test():
     def unique_list(_list):
         return len(_list) == len(set(_list))
