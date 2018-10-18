@@ -393,7 +393,8 @@ class Forbidden(Hook):
 
     @staticmethod
     def _default_function(nkey, data, error):
-        raise SchemaForbiddenKeyError('Forbidden key encountered: %r in %r' % (nkey, data), error)
+        raise SchemaForbiddenKeyError('Forbidden key encountered: %r in %r' %
+                                      (nkey, data), error)
 
 
 class Const(Schema):

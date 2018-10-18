@@ -7,7 +7,7 @@ import re
 import sys
 import copy
 import platform
-from unittest.mock import Mock
+from mock import Mock
 
 from pytest import raises, mark
 
@@ -260,10 +260,12 @@ def test_dict_hook():
     function_mock = Mock(return_value=None)
     hook = Hook('b', handler=function_mock)
 
-    assert Schema({hook: str, Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
+    assert Schema({hook: str,
+                   Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
     function_mock.assert_called_once()
 
-    assert Schema({hook: int, Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
+    assert Schema({hook: int,
+                   Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
     function_mock.assert_called_once()
 
     assert Schema({hook: str, 'b': object}).validate({'b': 'bye'}) == {'b': 'bye'}
