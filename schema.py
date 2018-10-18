@@ -234,6 +234,11 @@ class Schema(object):
             return _priority(s._schema) + 0.5
         return _priority(s)
 
+    @staticmethod
+    def _is_optional_type(s):
+        """Return True if the given key is optional (does not have to be found"""
+        return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
+
     def is_valid(self, data):
         """Return whether the given data has passed all the validations
         that were specified in the given schema.
@@ -294,7 +299,7 @@ class Schema(object):
                                 new[nkey] = nvalue
                                 coverage.add(skey)
                                 break
-            required = set(k for k in s if type(k) not in [Optional, Forbidden, Hook])
+            required = set(k for k in s if not self._is_optional_type(k))
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = \
