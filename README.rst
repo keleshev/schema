@@ -268,6 +268,41 @@ data matches:
 Defaults are used verbatim, not passed through any validators specified in the
 value.
 
+Also, a caveat: If you specify types, **schema** won't validate the empty dict:
+
+.. code:: python
+
+    >>> Schema({int:int}).is_valid({})
+    False
+
+To do that, you need ``Schema(Or({int:int}, {}))``. This is unlike what happens with
+lists, where ``Schema([int]).is_valid([])`` will return True.
+
+
+**schema** has classes ``And`` and ``Or`` that help validating several schemas
+for the same data:
+
+.. code:: python
+
+    >>> from schema import And, Or
+
+    >>> Schema({'age': And(int, lambda n: 0 < n < 99)}).validate({'age': 7})
+    {'age': 7}
+
+    >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
+    Traceback (most recent call last):
+    ...
+    SchemaError: Key 'password' error:
+    <lambda>('hai') should evaluate to True
+
+    >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
+    3.1415
+
+Hooks
+~~~~~~~~~~
+You can define hooks which are functions that are executed whenever a valid key:value is found. 
+The `Forbidden` class is an example of this.
+
 You can mark a key as forbidden as follows:
 
 .. code:: python
@@ -299,35 +334,29 @@ This means we can do that:
     ...
     SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
 
-Also, a caveat: If you specify types, **schema** won't validate the empty dict:
+You can also define your own hooks. The following hook will call `_my_function` if `key` is encountered.
 
 .. code:: python
 
-    >>> Schema({int:int}).is_valid({})
-    False
+    from schema import Hook
+    def _my_function(key, scope, error):
+        print(key, scope, error)
 
-To do that, you need ``Schema(Or({int:int}, {}))``. This is unlike what happens with
-lists, where ``Schema([int]).is_valid([])`` will return True.
+    Hook("key", handler=_my_function)
 
-
-**schema** has classes ``And`` and ``Or`` that help validating several schemas
-for the same data:
+Here's an example where a `Deprecated` class is added to log warnings whenever a key is encountered:
 
 .. code:: python
 
-    >>> from schema import And, Or
+    from schema import Hook, Schema
+    class Deprecated(Hook):
+        def __init__(self, *args, **kwargs):
+            kwargs["handler"] = lambda key, *args: logging.warn(f"`{key}` is deprecated. " + (self._error or ""))
+            super(Deprecated, self).__init__(*args, **kwargs)
 
-    >>> Schema({'age': And(int, lambda n: 0 < n < 99)}).validate({'age': 7})
-    {'age': 7}
-
-    >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
-    Traceback (most recent call last):
+    Schema({Deprecated("test", "custom error message."): object}, ignore_extra_keys=True).validate({"test": "value"})
     ...
-    SchemaError: Key 'password' error:
-    <lambda>('hai') should evaluate to True
-
-    >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
-    3.1415
+    >>> WARNING: `test` is deprecated. custom error message.
 
 Extra Keys
 ~~~~~~~~~~
