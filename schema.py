@@ -319,7 +319,7 @@ class Schema(object):
 
             return new
         if flavor == TYPE:
-            if isinstance(data, s):
+            if isinstance(data, s) and not (isinstance(data, bool) and s == int):
                 return data
             else:
                 raise SchemaUnexpectedTypeError(

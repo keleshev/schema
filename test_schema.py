@@ -40,6 +40,8 @@ def test_schema():
     with SE: Schema(int).validate('1')
     assert Schema(Use(int)).validate('1') == 1
     with SE: Schema(int).validate(int)
+    with SE: Schema(int).validate(True)
+    with SE: Schema(int).validate(False)
 
     assert Schema(str).validate('hai') == 'hai'
     with SE: Schema(str).validate(1)
