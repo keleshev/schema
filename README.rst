@@ -356,7 +356,7 @@ Here's an example where a `Deprecated` class is added to log warnings whenever a
 
     Schema({Deprecated("test", "custom error message."): object}, ignore_extra_keys=True).validate({"test": "value"})
     ...
-    >>> WARNING: `test` is deprecated. custom error message.
+    WARNING: `test` is deprecated. custom error message.
 
 Extra Keys
 ~~~~~~~~~~
