@@ -7,13 +7,14 @@ import re
 import sys
 import copy
 import platform
+from mock import Mock
 
 from pytest import raises, mark
 
 from schema import (Schema, Use, And, Or, Regex, Optional, Const,
                     SchemaError, SchemaWrongKeyError,
                     SchemaMissingKeyError, SchemaUnexpectedTypeError,
-                    SchemaForbiddenKeyError, Forbidden)
+                    SchemaForbiddenKeyError, Forbidden, Hook)
 
 if sys.version_info[0] == 3:
     basestring = str  # Python 3 does not have basestring
@@ -40,6 +41,8 @@ def test_schema():
     with SE: Schema(int).validate('1')
     assert Schema(Use(int)).validate('1') == 1
     with SE: Schema(int).validate(int)
+    with SE: Schema(int).validate(True)
+    with SE: Schema(int).validate(False)
 
     assert Schema(str).validate('hai') == 'hai'
     with SE: Schema(str).validate(1)
@@ -263,6 +266,22 @@ def test_dict_forbidden_keys():
             {'b': 'bye'})
     with raises(SchemaForbiddenKeyError):
         Schema({Forbidden('b'): object, Optional('b'): object}).validate({'b': 'bye'})
+
+
+def test_dict_hook():
+    function_mock = Mock(return_value=None)
+    hook = Hook('b', handler=function_mock)
+
+    assert Schema({hook: str,
+                   Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
+    function_mock.assert_called_once()
+
+    assert Schema({hook: int,
+                   Optional('b'): object}).validate({'b': 'bye'}) == {'b': 'bye'}
+    function_mock.assert_called_once()
+
+    assert Schema({hook: str, 'b': object}).validate({'b': 'bye'}) == {'b': 'bye'}
+    assert function_mock.call_count == 2
 
 
 def test_dict_optional_keys():

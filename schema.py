@@ -244,11 +244,16 @@ class Schema(object):
     @staticmethod
     def _dict_key_priority(s):
         """Return priority for a given key object."""
-        if isinstance(s, Forbidden):
+        if isinstance(s, Hook):
             return _priority(s._schema) - 0.5
         if isinstance(s, Optional):
             return _priority(s._schema) + 0.5
         return _priority(s)
+
+    @staticmethod
+    def _is_optional_type(s):
+        """Return True if the given key is optional (does not have to be found"""
+        return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
     def is_valid(self, data):
         """Return whether the given data has passed all the validations
@@ -289,21 +294,20 @@ class Schema(object):
                     except SchemaError:
                         pass
                     else:
-                        if isinstance(skey, Forbidden):
+                        if isinstance(skey, Hook):
                             # As the content of the value makes little sense for
-                            # forbidden keys, we reverse its meaning:
-                            # we will only raise the SchemaErrorForbiddenKey
-                            # exception if the value does match, allowing for
-                            # excluding a key only if its value has a certain type,
-                            # and allowing Forbidden to work well in combination
-                            # with Optional.
+                            # keys with a hook, we reverse its meaning:
+                            # we will only call the handler if the value does match
+                            # In the case of the forbidden key hook,
+                            # we will raise the SchemaErrorForbiddenKey exception
+                            # on match, allowing for excluding a key only if its
+                            # value has a certain type, and allowing Forbidden to
+                            # work well in combination with Optional.
                             try:
                                 nvalue = Schema(svalue, error=e).validate(value)
                             except SchemaError:
                                 continue
-                            raise SchemaForbiddenKeyError(
-                                'Forbidden key encountered: %r in %r' %
-                                (nkey, data), e)
+                            skey.handler(nkey, data, e)
                         else:
                             try:
                                 nvalue = Schema(svalue, error=e,
@@ -315,7 +319,7 @@ class Schema(object):
                                 new[nkey] = nvalue
                                 coverage.add(skey)
                                 break
-            required = set(k for k in s if type(k) not in [Optional, Forbidden])
+            required = set(k for k in s if not self._is_optional_type(k))
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = \
@@ -339,7 +343,7 @@ class Schema(object):
 
             return new
         if flavor == TYPE:
-            if isinstance(data, s):
+            if isinstance(data, s) and not (isinstance(data, bool) and s == int):
                 return data
             else:
                 raise SchemaUnexpectedTypeError(
@@ -400,10 +404,22 @@ class Optional(Schema):
                 self._schema == other._schema)
 
 
-class Forbidden(Schema):
+class Hook(Schema):
     def __init__(self, *args, **kwargs):
-        super(Forbidden, self).__init__(*args, **kwargs)
+        self.handler = kwargs.pop('handler', lambda *args: None)
+        super(Hook, self).__init__(*args, **kwargs)
         self.key = self._schema
+
+
+class Forbidden(Hook):
+    def __init__(self, *args, **kwargs):
+        kwargs["handler"] = self._default_function
+        super(Forbidden, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _default_function(nkey, data, error):
+        raise SchemaForbiddenKeyError('Forbidden key encountered: %r in %r' %
+                                      (nkey, data), error)
 
 
 class Const(Schema):
