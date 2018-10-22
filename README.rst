@@ -298,6 +298,18 @@ for the same data:
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
     3.1415
 
+In a dictionary, you can also combine two keys in a "one or the other" manner. To do
+so, use the `Or` class as a key:
+
+.. code:: python
+    from schema import Or, Schema
+    schema = Schema({
+        Or("key1", "key2", only_one=True): str
+    })
+
+    schema.validate({"key1": "test"}) # Ok
+    schema.validate({"key1": "test", "key2": "test"}) # SchemaWrongKeyError
+
 Hooks
 ~~~~~~~~~~
 You can define hooks which are functions that are executed whenever a valid key:value is found. 

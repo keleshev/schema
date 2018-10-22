@@ -71,6 +71,7 @@ class And(object):
     """
     Utility function to combine validation directives in AND Boolean fashion.
     """
+
     def __init__(self, *args, **kw):
         self._args = args
         if not set(kw).issubset({'error', 'schema', 'ignore_extra_keys'}):
@@ -102,6 +103,15 @@ class And(object):
 class Or(And):
     """Utility function to combine validation directives in a OR Boolean
     fashion."""
+
+    def __init__(self, *args, **kwargs):
+        self.only_one = kwargs.pop('only_one', False)
+        self.reset()
+        super(Or, self).__init__(*args, **kwargs)
+
+    def reset(self):
+        self.got_one = False
+
     def validate(self, data):
         """
         Validate data using sub defined schema/expressions ensuring at least
@@ -114,7 +124,11 @@ class Or(And):
                                ignore_extra_keys=self._ignore_extra_keys)
                   for s in self._args]:
             try:
-                return s.validate(data)
+                validation = s.validate(data)
+                if self.got_one and self.only_one:
+                    break
+                self.got_one = True
+                return validation
             except SchemaError as _x:
                 autos, errors = _x.autos, _x.errors
         raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
@@ -170,6 +184,7 @@ class Use(object):
     For more general use cases, you can use the Use class to transform
     the data while it is being validate.
     """
+
     def __init__(self, callable_, error=None):
         if not callable(callable_):
             raise TypeError('Expected a callable, not %r' % callable_)
@@ -217,6 +232,7 @@ class Schema(object):
     Entry point of the library, use this class to instantiate validation
     schema for the data that will be validated.
     """
+
     def __init__(self, schema, error=None, ignore_extra_keys=False):
         self._schema = schema
         self._error = error
@@ -266,6 +282,10 @@ class Schema(object):
             coverage = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
+            for skey in sorted_skeys:
+                if isinstance(skey, Or):
+                    skey.reset()
+
             for key, value in data.items():
                 for skey in sorted_skeys:
                     svalue = s[skey]
