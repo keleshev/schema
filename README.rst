@@ -268,6 +268,20 @@ data matches:
 Defaults are used verbatim, not passed through any validators specified in the
 value.
 
+In a dictionary, you can also combine two keys in a "one or the other" manner. To do
+so, use the `Or` class as a key:
+
+.. code:: python
+    from schema import Or, Schema
+    schema = Schema({
+        Or("key1", "key2", only_one=True): str
+    })
+
+    schema.validate({"key1": "test"}) # Ok
+    schema.validate({"key1": "test", "key2": "test"}) # SchemaWrongKeyError
+
+    
+
 You can mark a key as forbidden as follows:
 
 .. code:: python
