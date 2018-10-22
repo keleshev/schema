@@ -233,7 +233,7 @@ You can specify keys as schemas too:
     None does not match 'not None here'
 
 This is useful if you want to check certain key-values, but don't care
-about other:
+about others:
 
 .. code:: python
 
