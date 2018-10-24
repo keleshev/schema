@@ -93,7 +93,11 @@ def test_or_only_one():
     assert schema.validate({"test1": "value", "sub_schema": {"test2": "value"}})
     assert schema.validate({"test2": "other_value"})
     with SE: schema.validate({"test1": "value", "test2": "other_value"})
-    with SE: schema.validate({"test1": "value", "sub_schema": {"test1": "value", "test2": "value"}})
+    with SE:
+        schema.validate({
+            "test1": "value",
+            "sub_schema": {"test1": "value", "test2": "value"}
+        })
     with SE: schema.validate({"othertest": "value"})
 
 
