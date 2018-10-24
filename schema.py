@@ -287,7 +287,8 @@ class Schema(object):
                     skey.reset()
 
             # Evaluate dictionaries last
-            data_items = sorted(data.items(), key=lambda value: isinstance(value[1], dict))
+            data_items = sorted(data.items(),
+                                key=lambda value: isinstance(value[1], dict))
             for key, value in data_items:
                 for skey in sorted_skeys:
                     svalue = s[skey]
