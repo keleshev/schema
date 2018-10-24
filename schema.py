@@ -283,10 +283,13 @@ class Schema(object):
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for skey in sorted_skeys:
-                if isinstance(skey, Or):
+                if hasattr(skey, "reset"):
                     skey.reset()
 
-            for key, value in data.items():
+            # Evaluate dictionaries last
+            data_items = sorted(data.items(),
+                                key=lambda value: isinstance(value[1], dict))
+            for key, value in data_items:
                 for skey in sorted_skeys:
                     svalue = s[skey]
                     try:
@@ -402,6 +405,10 @@ class Optional(Schema):
                 getattr(self, 'default', self._MARKER) ==
                 getattr(other, 'default', self._MARKER) and
                 self._schema == other._schema)
+
+    def reset(self):
+        if hasattr(self._schema, "reset"):
+            self._schema.reset()
 
 
 class Hook(Schema):
