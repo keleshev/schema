@@ -82,12 +82,18 @@ def test_or():
 
 
 def test_or_only_one():
+    or_rule = Or("test1", "test2", only_one=True)
     schema = Schema({
-        Or("test1", "test2", only_one=True): str
+        or_rule: str,
+        Optional("sub_schema"): {
+            Optional(or_rule): str
+        }
     })
     assert schema.validate({"test1": "value"})
+    assert schema.validate({"test1": "value", "sub_schema": {"test2": "value"}})
     assert schema.validate({"test2": "other_value"})
     with SE: schema.validate({"test1": "value", "test2": "other_value"})
+    with SE: schema.validate({"test1": "value", "sub_schema": {"test1": "value", "test2": "value"}})
     with SE: schema.validate({"othertest": "value"})
 
 
