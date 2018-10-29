@@ -3,14 +3,22 @@ sudo: false
 
 language: python
 
-addons:
-  apt:
-    sources:
-      - deadsnakes
-    packages:
-      - python3.5
-      - python3.6
-      - python3.7
+matrix:
+  include:
+    - env: TOXENV=py27
+      python: 2.7
+    - env: TOXENV=py34
+      python: 3.4
+    - env: TOXENV=py35
+      python: 3.5
+    - env: TOXENV=py36
+      python: 3.6
+    - env: TOXENV=py37
+      python: 3.7
+      dist: xenial
+      sudo: true
+    - env: TOXENV=coverage
+    - env: TOXENV=pep8
 
 cache:
   pip: true
@@ -19,16 +27,8 @@ cache:
 
 install: pip install codecov tox
 
-env:
-  - TOX_ENV=py27
-  - TOX_ENV=py34
-  - TOX_ENV=py35
-  - TOX_ENV=py36
-  - TOX_ENV=coverage
-  - TOX_ENV=pep8
-
 script:
-  - tox -e $TOX_ENV
+  - tox
 
 # publish coverage only after a successful build
 after_success:
