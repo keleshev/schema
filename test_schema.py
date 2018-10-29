@@ -650,7 +650,10 @@ def test_json_schema():
 
 
 def test_json_schema_types():
-    s = Schema({"test_str": str, "test_int": int, "test_float": float, "test_bool": bool})
+    s = Schema({Optional("test_str"): str,
+                Optional("test_int"): int,
+                Optional("test_float"): float,
+                Optional("test_bool"): bool})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
@@ -660,7 +663,7 @@ def test_json_schema_types():
             "test_float": {"type": "number"},
             "test_bool": {"type": "boolean"}
         },
-        "required": ['test_str', 'test_int', 'test_float', 'test_bool'],
+        "required": [],
         "additionalProperties": False,
         "type": "object"
     }
@@ -771,20 +774,20 @@ def test_json_schema_and_types():
 
 def test_json_schema_object_or_array_of_object():
     # Complex test where "test" accepts either an object or an array of that object
-    o = {"param1": "test1", "param2": "test2"}
+    o = {"param1": "test1", Optional("param2"): "test2"}
     s = Schema({"test": Or(o, [o])})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
         "properties": {"test": {"anyOf": [{'additionalProperties': False,
                                            'properties': {'param1': {}, 'param2': {}},
-                                           'required': ['param1', 'param2'],
+                                           'required': ['param1'],
                                            'type': 'object'
                                            }, {"type": "array",
                                                "items": {'additionalProperties': False,
                                                          'properties': {'param1': {},
                                                                         'param2': {}},
-                                                         'required': ['param1', 'param2'],
+                                                         'required': ['param1'],
                                                          'type': 'object'}
                                                }
                                           ]
