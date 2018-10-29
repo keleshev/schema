@@ -383,42 +383,58 @@ class Schema(object):
     def json_schema(self, schema_id=None, is_main_schema=True):
         Schema = self.__class__
         s = self._schema
-        e = self._error
         i = self._ignore_extra_keys
         flavor = _priority(s)
         if flavor == TYPE:
+            # Handle type
             return {"type": {
                 int: "integer",
                 float: "number",
+                bool: "boolean"
             }.get(s, "string")}
+        elif flavor == ITERABLE and len(s) == 1:
+            # Handle arrays of a single type or dict schema
+            return {"type": "array", "items": Schema(s[0]).json_schema(is_main_schema=False)}
         elif isinstance(s, Or):
-            values = [Schema(and_key).json_schema(is_main_schema=False) for and_key in s._args]
-            return {"type": [v["type"] for v in values if v]}
+            # Handle Or values
+            values = [Schema(or_key).json_schema(is_main_schema=False) for or_key in s._args]
+            any_of = []
+            for value in values:
+                if value not in any_of:
+                    any_of.append(value)
+            return {"anyOf": any_of}
 
         if flavor != DICT:
+            # If not handled, do not check
             return {}
 
         if is_main_schema and not schema_id:
             raise ValueError("schema_id is required.")
 
+        # Handle dict
         required_keys = []
         expanded_schema = {}
         for key in s:
-            sub_schema = Schema(s[key]).json_schema(is_main_schema=False)
+            sub_schema = s[key] if isinstance(s[key], Schema) else Schema(s[key], ignore_extra_keys=i)
+            sub_schema_json = sub_schema.json_schema(is_main_schema=False)
+            is_optional = False
+            if isinstance(key, Optional):
+                key = key._schema
+                is_optional = True
             if isinstance(key, Hook):
                 continue
             if isinstance(key, str):
-                required_keys.append(key)
-                expanded_schema[key] = sub_schema
+                if not is_optional:
+                    required_keys.append(key)
+                expanded_schema[key] = sub_schema_json
             elif isinstance(key, Or):
-                for and_key in key._args:
-                    expanded_schema[and_key] = sub_schema
-            elif isinstance(key, Optional):
-                expanded_schema[key._schema] = sub_schema
+                for or_key in key._args:
+                    expanded_schema[or_key] = sub_schema_json
         schema_dict = {
             "type": "object",
             "properties": expanded_schema,
             "required": required_keys,
+            "additionalProperties": i
         }
         if is_main_schema:
             schema_dict.update({

@@ -644,22 +644,60 @@ def test_json_schema():
         "id": "my-id",
         "properties": {"test": {"type": "string"}},
         "required": ["test"],
+        "additionalProperties": False,
+        "type": "object"
+    }
+
+
+def test_json_schema_types():
+    s = Schema({"test_str": str, "test_int": int, "test_float": float, "test_bool": bool})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {
+            "test_str": {"type": "string"},
+            "test_int": {"type": "integer"},
+            "test_float": {"type": "number"},
+            "test_bool": {"type": "boolean"}
+        },
+        "required": ['test_str', 'test_int', 'test_float', 'test_bool'],
+        "additionalProperties": False,
         "type": "object"
     }
 
 
 def test_json_schema_nested():
-    s = Schema({"test": {"other": str}})
+    s = Schema({"test": {"other": str}}, ignore_extra_keys=True)
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
         "properties": {"test": {
                                 "type": "object",
                                 "properties": {"other": {"type": "string"}},
+                                "additionalProperties": True,
                                 "required": ["other"]
                                }
                        },
         "required": ["test"],
+        "additionalProperties": True,
+        "type": "object"
+    }
+
+
+def test_json_schema_nested_schema():
+    s = Schema({"test": Schema({"other": str}, ignore_extra_keys=True)})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {"test": {
+                                "type": "object",
+                                "properties": {"other": {"type": "string"}},
+                                "additionalProperties": True,
+                                "required": ["other"]
+                               }
+                       },
+        "required": ["test"],
+        "additionalProperties": False,
         "type": "object"
     }
 
@@ -671,6 +709,7 @@ def test_json_schema_optional_key():
         "id": "my-id",
         "properties": {"test": {"type": "string"}},
         "required": [],
+        "additionalProperties": False,
         "type": "object"
     }
 
@@ -683,10 +722,12 @@ def test_json_schema_optional_key_nested():
         "properties": {"test": {
                                 "type": "object",
                                 "properties": {"other": {"type": "string"}},
+                                "additionalProperties": False,
                                 "required": []
                                }
                        },
         "required": ["test"],
+        "additionalProperties": False,
         "type": "object"
     }
 
@@ -698,6 +739,7 @@ def test_json_schema_or_key():
         "id": "my-id",
         "properties": {"test1": {"type": "string"}, "test2": {"type": "string"}},
         "required": [],
+        "additionalProperties": False,
         "type": "object"
     }
 
@@ -707,8 +749,9 @@ def test_json_schema_or_types():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {"test": {"type": ["string", "integer"]}},
+        "properties": {"test": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
         "required": ["test"],
+        "additionalProperties": False,
         "type": "object"
     }
 
@@ -721,5 +764,32 @@ def test_json_schema_and_types():
         "id": "my-id",
         "properties": {"test": {}},
         "required": ["test"],
+        "additionalProperties": False,
+        "type": "object"
+    }
+
+
+def test_json_schema_object_or_array_of_object():
+    # Complex test where "test" accepts either an object or an array of that object
+    o = {"param1": "test1", "param2": "test2"}
+    s = Schema({"test": Or(o, [o])})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {"test": {"anyOf": [{'additionalProperties': False,
+                                           'properties': {'param1': {}, 'param2': {}},
+                                           'required': ['param1', 'param2'],
+                                           'type': 'object'
+                                           }, {"type": "array",
+                                               "items": {'additionalProperties': False,
+                                                         'properties': {'param1': {}, 'param2': {}},
+                                                         'required': ['param1', 'param2'],
+                                                         'type': 'object'}
+                                               }
+                                          ]
+                                }
+                       },
+        "required": ["test"],
+        "additionalProperties": False,
         "type": "object"
     }
