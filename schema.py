@@ -3,6 +3,7 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
+import json
 
 __version__ = '0.6.8'
 __all__ = ['Schema',
@@ -378,6 +379,53 @@ class Schema(object):
         else:
             raise SchemaError('%r does not match %r' % (s, data),
                               e.format(data) if e else None)
+
+    def json_schema(self, schema_id=None, is_main_schema=True):
+        Schema = self.__class__
+        s = self._schema
+        e = self._error
+        i = self._ignore_extra_keys
+        flavor = _priority(s)
+        if flavor == TYPE:
+            return {"type": {
+                int: "integer",
+                float: "number",
+            }.get(s, "string")}
+        elif isinstance(s, Or):
+            values = [Schema(and_key).json_schema(is_main_schema=False) for and_key in s._args]
+            return {"type": [v["type"] for v in values if v]}
+
+        if flavor != DICT:
+            return {}
+
+        if is_main_schema and not schema_id:
+            raise ValueError("schema_id is required.")
+
+        required_keys = []
+        expanded_schema = {}
+        for key in s:
+            sub_schema = Schema(s[key]).json_schema(is_main_schema=False)
+            if isinstance(key, Hook):
+                continue
+            if isinstance(key, str):
+                required_keys.append(key)
+                expanded_schema[key] = sub_schema
+            elif isinstance(key, Or):
+                for and_key in key._args:
+                    expanded_schema[and_key] = sub_schema
+            elif isinstance(key, Optional):
+                expanded_schema[key._schema] = sub_schema
+        schema_dict = {
+            "type": "object",
+            "properties": expanded_schema,
+            "required": required_keys,
+        }
+        if is_main_schema:
+            schema_dict.update({
+                "id": schema_id,
+                "$schema": "http://json-schema.org/draft-07/schema#",
+            })
+        return schema_dict
 
 
 class Optional(Schema):
