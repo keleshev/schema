@@ -29,7 +29,7 @@ cache:
 install: pip install codecov tox
 
 script:
-  - tox -e $TOX_ENV
+  - tox
 
 # publish coverage only after a successful build
 after_success:
