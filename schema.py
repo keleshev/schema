@@ -3,7 +3,6 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
-import json
 
 __version__ = '0.6.8'
 __all__ = ['Schema',
@@ -394,10 +393,12 @@ class Schema(object):
             }.get(s, "string")}
         elif flavor == ITERABLE and len(s) == 1:
             # Handle arrays of a single type or dict schema
-            return {"type": "array", "items": Schema(s[0]).json_schema(is_main_schema=False)}
+            return {"type": "array",
+                    "items": Schema(s[0]).json_schema(is_main_schema=False)}
         elif isinstance(s, Or):
             # Handle Or values
-            values = [Schema(or_key).json_schema(is_main_schema=False) for or_key in s._args]
+            values = [Schema(or_key).json_schema(is_main_schema=False)
+                      for or_key in s._args]
             any_of = []
             for value in values:
                 if value not in any_of:
@@ -415,14 +416,20 @@ class Schema(object):
         required_keys = []
         expanded_schema = {}
         for key in s:
-            sub_schema = s[key] if isinstance(s[key], Schema) else Schema(s[key], ignore_extra_keys=i)
+            if isinstance(key, Hook):
+                continue
+
+            if isinstance(s[key], Schema):
+                sub_schema = s[key]
+            else:
+                sub_schema = Schema(s[key], ignore_extra_keys=i)
             sub_schema_json = sub_schema.json_schema(is_main_schema=False)
+
             is_optional = False
             if isinstance(key, Optional):
                 key = key._schema
                 is_optional = True
-            if isinstance(key, Hook):
-                continue
+
             if isinstance(key, str):
                 if not is_optional:
                     required_keys.append(key)

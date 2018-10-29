@@ -782,7 +782,8 @@ def test_json_schema_object_or_array_of_object():
                                            'type': 'object'
                                            }, {"type": "array",
                                                "items": {'additionalProperties': False,
-                                                         'properties': {'param1': {}, 'param2': {}},
+                                                         'properties': {'param1': {},
+                                                                        'param2': {}},
                                                          'required': ['param1', 'param2'],
                                                          'type': 'object'}
                                                }
