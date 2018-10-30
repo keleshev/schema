@@ -797,3 +797,21 @@ def test_json_schema_object_or_array_of_object():
         "additionalProperties": False,
         "type": "object"
     }
+
+
+def test_json_schema_forbidden_key_ignored():
+    s = Schema({Forbidden("forbidden"): str, "test": str})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {"test": {"type": "string"}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object"
+    }
+
+
+def test_json_schema_no_id():
+    s = Schema({"test": int})
+    with raises(ValueError):
+        s.json_schema()
