@@ -815,3 +815,9 @@ def test_json_schema_no_id():
     s = Schema({"test": int})
     with raises(ValueError):
         s.json_schema()
+
+
+def test_json_schema_not_a_dict():
+    s = Schema(int)
+    with raises(ValueError):
+        s.json_schema()

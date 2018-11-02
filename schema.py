@@ -380,10 +380,18 @@ class Schema(object):
                               e.format(data) if e else None)
 
     def json_schema(self, schema_id=None, is_main_schema=True):
+        """Generate a draft-07 JSON schema dict representing the Schema.
+        This method can only be called when the Schema's value is a dict.
+        This method must be called with a schema_id. Calling it without one
+        is used in a recursive context for sub schemas."""
         Schema = self.__class__
         s = self._schema
         i = self._ignore_extra_keys
         flavor = _priority(s)
+
+        if flavor != DICT and is_main_schema:
+            raise ValueError("The main schema must be a dict.")
+
         if flavor == TYPE:
             # Handle type
             return {"type": {
