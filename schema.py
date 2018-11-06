@@ -15,9 +15,11 @@ __all__ = ['Schema',
 
 
 class SchemaError(Exception):
-    """Error during Schema validation."""
+    """Error during Schema validation.
+    If the Error should stop the execution immediately, set should_stop to True"""
 
-    def __init__(self, autos, errors=None):
+    def __init__(self, autos, errors=None, should_stop=False):
+        self.should_stop = should_stop
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
         Exception.__init__(self, self.code)
@@ -53,6 +55,12 @@ class SchemaMissingKeyError(SchemaError):
     """Error should be raised when a mandatory key is not found within the
     data set being validated"""
     pass
+
+
+class SchemaOnlyOneAllowedError(SchemaError):
+    """Error should be raised when an only_one Or key has multiple matching candidates"""
+    def __init__(self, autos, errors=None):
+        SchemaError.__init__(self, autos, errors, should_stop=True)
 
 
 class SchemaForbiddenKeyError(SchemaError):
@@ -110,7 +118,7 @@ class Or(And):
         super(Or, self).__init__(*args, **kwargs)
 
     def reset(self):
-        self.got_one = False
+        self.match_count = 0
 
     def validate(self, data):
         """
@@ -125,12 +133,15 @@ class Or(And):
                   for s in self._args]:
             try:
                 validation = s.validate(data)
-                if self.got_one and self.only_one:
+                self.match_count += 1
+                if self.match_count > 1 and self.only_one:
                     break
-                self.got_one = True
                 return validation
             except SchemaError as _x:
                 autos, errors = _x.autos, _x.errors
+        if self.match_count > 1 and self.only_one:
+            raise SchemaOnlyOneAllowedError(['There are multiple keys present ' +
+                                             'from the %r condition' % self])
         raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
                           [self._error.format(data) if self._error else None] +
                           errors)
@@ -294,8 +305,9 @@ class Schema(object):
                     svalue = s[skey]
                     try:
                         nkey = Schema(skey, error=e).validate(key)
-                    except SchemaError:
-                        pass
+                    except SchemaError as x:
+                        if x.should_stop:
+                            raise x
                     else:
                         if isinstance(skey, Hook):
                             # As the content of the value makes little sense for
@@ -356,7 +368,8 @@ class Schema(object):
             try:
                 return s.validate(data)
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise SchemaError([None] + x.autos, [e] + x.errors,
+                                  should_stop=x.should_stop)
             except BaseException as x:
                 raise SchemaError(
                     '%r.validate(%r) raised %r' % (s, data, x),

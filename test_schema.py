@@ -100,6 +100,11 @@ def test_or_only_one():
         })
     with SE: schema.validate({"othertest": "value"})
 
+    extra_keys_schema = Schema({or_rule: str}, ignore_extra_keys=True)
+    assert extra_keys_schema.validate({"test1": "value", "other-key": "value"})
+    assert extra_keys_schema.validate({"test2": "other_value"})
+    with SE: extra_keys_schema.validate({"test1": "value", "test2": "other_value"})
+
 
 def test_test():
     def unique_list(_list):
