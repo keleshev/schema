@@ -4,6 +4,15 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
+# The setup.py (which installs dependencies) needs access to the __version__
+# and __all__ attributes. Therefore, external dependencies and their global
+# usage need to be wrapped in a try/except.
+try:
+    from contextlib2 import ExitStack
+    exitstack = ExitStack()
+except Exception:
+    pass
+
 __version__ = '0.6.8'
 __all__ = ['Schema',
            'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
@@ -11,15 +20,14 @@ __all__ = ['Schema',
            'SchemaWrongKeyError',
            'SchemaMissingKeyError',
            'SchemaForbiddenKeyError',
-           'SchemaUnexpectedTypeError']
+           'SchemaUnexpectedTypeError',
+           'SchemaOnlyOneAllowedError']
 
 
 class SchemaError(Exception):
-    """Error during Schema validation.
-    If the Error should stop the execution immediately, set should_stop to True"""
+    """Error during Schema validation."""
 
-    def __init__(self, autos, errors=None, should_stop=False):
-        self.should_stop = should_stop
+    def __init__(self, autos, errors=None):
         self.autos = autos if type(autos) is list else [autos]
         self.errors = errors if type(errors) is list else [errors]
         Exception.__init__(self, self.code)
@@ -59,8 +67,7 @@ class SchemaMissingKeyError(SchemaError):
 
 class SchemaOnlyOneAllowedError(SchemaError):
     """Error should be raised when an only_one Or key has multiple matching candidates"""
-    def __init__(self, autos, errors=None):
-        SchemaError.__init__(self, autos, errors, should_stop=True)
+    pass
 
 
 class SchemaForbiddenKeyError(SchemaError):
@@ -114,11 +121,15 @@ class Or(And):
 
     def __init__(self, *args, **kwargs):
         self.only_one = kwargs.pop('only_one', False)
-        self.reset()
+        self.match_count = 0
         super(Or, self).__init__(*args, **kwargs)
 
     def reset(self):
+        failed = self.match_count > 1 and self.only_one
         self.match_count = 0
+        if failed:
+            raise SchemaOnlyOneAllowedError(['There are multiple keys present ' +
+                                             'from the %r condition' % self])
 
     def validate(self, data):
         """
@@ -139,9 +150,6 @@ class Or(And):
                 return validation
             except SchemaError as _x:
                 autos, errors = _x.autos, _x.errors
-        if self.match_count > 1 and self.only_one:
-            raise SchemaOnlyOneAllowedError(['There are multiple keys present ' +
-                                             'from the %r condition' % self])
         raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
                           [self._error.format(data) if self._error else None] +
                           errors)
@@ -295,45 +303,45 @@ class Schema(object):
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for skey in sorted_skeys:
                 if hasattr(skey, "reset"):
-                    skey.reset()
+                    exitstack.callback(skey.reset)
 
-            # Evaluate dictionaries last
-            data_items = sorted(data.items(),
-                                key=lambda value: isinstance(value[1], dict))
-            for key, value in data_items:
-                for skey in sorted_skeys:
-                    svalue = s[skey]
-                    try:
-                        nkey = Schema(skey, error=e).validate(key)
-                    except SchemaError as x:
-                        if x.should_stop:
-                            raise x
-                    else:
-                        if isinstance(skey, Hook):
-                            # As the content of the value makes little sense for
-                            # keys with a hook, we reverse its meaning:
-                            # we will only call the handler if the value does match
-                            # In the case of the forbidden key hook,
-                            # we will raise the SchemaErrorForbiddenKey exception
-                            # on match, allowing for excluding a key only if its
-                            # value has a certain type, and allowing Forbidden to
-                            # work well in combination with Optional.
-                            try:
-                                nvalue = Schema(svalue, error=e).validate(value)
-                            except SchemaError:
-                                continue
-                            skey.handler(nkey, data, e)
+            with exitstack:
+                # Evaluate dictionaries last
+                data_items = sorted(data.items(),
+                                    key=lambda value: isinstance(value[1], dict))
+                for key, value in data_items:
+                    for skey in sorted_skeys:
+                        svalue = s[skey]
+                        try:
+                            nkey = Schema(skey, error=e).validate(key)
+                        except SchemaError:
+                            pass
                         else:
-                            try:
-                                nvalue = Schema(svalue, error=e,
-                                                ignore_extra_keys=i).validate(value)
-                            except SchemaError as x:
-                                k = "Key '%s' error:" % nkey
-                                raise SchemaError([k] + x.autos, [e] + x.errors)
+                            if isinstance(skey, Hook):
+                                # As the content of the value makes little sense for
+                                # keys with a hook, we reverse its meaning:
+                                # we will only call the handler if the value does match
+                                # In the case of the forbidden key hook,
+                                # we will raise the SchemaErrorForbiddenKey exception
+                                # on match, allowing for excluding a key only if its
+                                # value has a certain type, and allowing Forbidden to
+                                # work well in combination with Optional.
+                                try:
+                                    nvalue = Schema(svalue, error=e).validate(value)
+                                except SchemaError:
+                                    continue
+                                skey.handler(nkey, data, e)
                             else:
-                                new[nkey] = nvalue
-                                coverage.add(skey)
-                                break
+                                try:
+                                    nvalue = Schema(svalue, error=e,
+                                                    ignore_extra_keys=i).validate(value)
+                                except SchemaError as x:
+                                    k = "Key '%s' error:" % nkey
+                                    raise SchemaError([k] + x.autos, [e] + x.errors)
+                                else:
+                                    new[nkey] = nvalue
+                                    coverage.add(skey)
+                                    break
             required = set(k for k in s if not self._is_optional_type(k))
             if not required.issubset(coverage):
                 missing_keys = required - coverage
@@ -368,8 +376,7 @@ class Schema(object):
             try:
                 return s.validate(data)
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors,
-                                  should_stop=x.should_stop)
+                raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaError(
                     '%r.validate(%r) raised %r' % (s, data, x),

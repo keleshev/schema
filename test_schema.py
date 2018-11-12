@@ -86,7 +86,7 @@ def test_or_only_one():
     schema = Schema({
         or_rule: str,
         Optional("sub_schema"): {
-            Optional(or_rule): str
+            Optional(copy.deepcopy(or_rule)): str
         }
     })
     assert schema.validate({"test1": "value"})

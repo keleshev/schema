@@ -313,7 +313,7 @@ so, use the `Or` class as a key:
     >>> schema.validate({"key1": "test", "key2": "test"}) # SchemaError
     Traceback (most recent call last):
     ...
-    SchemaError: There are multiple keys present from the Or('key1', 'key2') condition
+    SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
 Hooks
 ~~~~~~~~~~
