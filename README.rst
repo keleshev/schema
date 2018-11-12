@@ -482,3 +482,49 @@ this is how you validate it using ``schema``:
 
 As you can see, **schema** validated data successfully, opened files and
 converted ``'3'`` to ``int``.
+
+(Beta feature) Generating JSON schema
+-------------------------------------------------------------------------------
+You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict `Schema`.
+This can be used to add word completion and validation directly in code editors.
+Here's an example: 
+
+.. code:: python
+
+    >>> from schema import Optional, Schema
+    >>> import json
+    >>> s = Schema({"test": str,
+    ...             "nested": {Optional("other"): str}
+    ...             })
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"))
+
+    # json_schema
+    {
+        "type":"object",
+        "properties": {
+            "test": {"type": "string"},
+            "nested": {
+                "type":"object",
+                "properties": {
+                    "other": {"type": "string"}
+                },
+                "required": [],
+                "additionalProperties":false
+            }
+        },
+        "required":[
+            "test",
+            "nested"
+        ],
+        "additionalProperties":false,
+        "id":"https://example.com/my-schema.json",
+        "$schema":"http://json-schema.org/draft-07/schema#"
+    }
+
+Please note that this is a beta feature. Some JSON schema features are not implemented. Some caveats:
+
+- There are no object references, items of type `object` are always fully rendered
+- Some JSON schema types are not implemented. In those cases, an empty dict will be rendered.
+  This disables all validation for the item.
+- Validations other than type are not implemented. This includes features such as integers'
+  minimum and maximum or arrays' minItems

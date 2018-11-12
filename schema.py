@@ -379,6 +379,85 @@ class Schema(object):
             raise SchemaError('%r does not match %r' % (s, data),
                               e.format(data) if e else None)
 
+    def json_schema(self, schema_id=None, is_main_schema=True):
+        """Generate a draft-07 JSON schema dict representing the Schema.
+        This method can only be called when the Schema's value is a dict.
+        This method must be called with a schema_id. Calling it without one
+        is used in a recursive context for sub schemas."""
+        Schema = self.__class__
+        s = self._schema
+        i = self._ignore_extra_keys
+        flavor = _priority(s)
+
+        if flavor != DICT and is_main_schema:
+            raise ValueError("The main schema must be a dict.")
+
+        if flavor == TYPE:
+            # Handle type
+            return {"type": {
+                int: "integer",
+                float: "number",
+                bool: "boolean"
+            }.get(s, "string")}
+        elif flavor == ITERABLE and len(s) == 1:
+            # Handle arrays of a single type or dict schema
+            return {"type": "array",
+                    "items": Schema(s[0]).json_schema(is_main_schema=False)}
+        elif isinstance(s, Or):
+            # Handle Or values
+            values = [Schema(or_key).json_schema(is_main_schema=False)
+                      for or_key in s._args]
+            any_of = []
+            for value in values:
+                if value not in any_of:
+                    any_of.append(value)
+            return {"anyOf": any_of}
+
+        if flavor != DICT:
+            # If not handled, do not check
+            return {}
+
+        if is_main_schema and not schema_id:
+            raise ValueError("schema_id is required.")
+
+        # Handle dict
+        required_keys = []
+        expanded_schema = {}
+        for key in s:
+            if isinstance(key, Hook):
+                continue
+
+            if isinstance(s[key], Schema):
+                sub_schema = s[key]
+            else:
+                sub_schema = Schema(s[key], ignore_extra_keys=i)
+            sub_schema_json = sub_schema.json_schema(is_main_schema=False)
+
+            is_optional = False
+            if isinstance(key, Optional):
+                key = key._schema
+                is_optional = True
+
+            if isinstance(key, str):
+                if not is_optional:
+                    required_keys.append(key)
+                expanded_schema[key] = sub_schema_json
+            elif isinstance(key, Or):
+                for or_key in key._args:
+                    expanded_schema[or_key] = sub_schema_json
+        schema_dict = {
+            "type": "object",
+            "properties": expanded_schema,
+            "required": required_keys,
+            "additionalProperties": i
+        }
+        if is_main_schema:
+            schema_dict.update({
+                "id": schema_id,
+                "$schema": "http://json-schema.org/draft-07/schema#",
+            })
+        return schema_dict
+
 
 class Optional(Schema):
     """Marker for an optional part of the validation Schema."""
