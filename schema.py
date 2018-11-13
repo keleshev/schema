@@ -3,15 +3,10 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
-
-# The setup.py (which installs dependencies) needs access to the __version__
-# and __all__ attributes. Therefore, external dependencies and their global
-# usage need to be wrapped in a try/except.
 try:
+    from contextlib import ExitStack
+except ImportError:
     from contextlib2 import ExitStack
-    exitstack = ExitStack()
-except Exception:
-    pass
 
 __version__ = '0.6.8'
 __all__ = ['Schema',
@@ -296,6 +291,7 @@ class Schema(object):
             o = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
             return type(data)(o.validate(d) for d in data)
         if flavor == DICT:
+            exitstack = ExitStack()
             data = Schema(dict, error=e).validate(data)
             new = type(data)()  # new - is a dict of the validated values
             coverage = set()  # matched schema keys
