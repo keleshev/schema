@@ -302,13 +302,18 @@ In a dictionary, you can also combine two keys in a "one or the other" manner. T
 so, use the `Or` class as a key:
 
 .. code:: python
-    from schema import Or, Schema
-    schema = Schema({
-        Or("key1", "key2", only_one=True): str
-    })
+    >>> from schema import Or, Schema
+    >>> schema = Schema({
+    ...    Or("key1", "key2", only_one=True): str
+    ... })
 
-    schema.validate({"key1": "test"}) # Ok
-    schema.validate({"key1": "test", "key2": "test"}) # SchemaWrongKeyError
+    >>> schema.validate({"key1": "test"}) # Ok
+    {'key1': 'test'}
+
+    >>> schema.validate({"key1": "test", "key2": "test"}) # SchemaError
+    Traceback (most recent call last):
+    ...
+    SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
 Hooks
 ~~~~~~~~~~

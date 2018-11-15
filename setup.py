@@ -1,12 +1,21 @@
+import codecs
+import sys
+
 from setuptools import setup
 
-import codecs
-import schema
-
+version_file = "schema.py"
+with open(version_file) as f:
+    for line in f.read().split("\n"):
+        if line.startswith("__version__ ="):
+            version = eval(line.split("=", 1)[1])
+            break
+    else:
+        print("No __version__ attribute found in %r" % version_file)
+        sys.exit(1)
 
 setup(
-    name=schema.__name__,
-    version=schema.__version__,
+    name="schema",
+    version=version,
     author="Vladimir Keleshev",
     author_email="vladimir@keleshev.com",
     description="Simple data validation library",
@@ -15,6 +24,7 @@ setup(
     url="https://github.com/keleshev/schema",
     py_modules=['schema'],
     long_description=codecs.open('README.rst', 'r', 'utf-8').read(),
+    install_requires=open('requirements.txt', 'r').read().split("\n"),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
