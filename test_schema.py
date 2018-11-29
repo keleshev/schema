@@ -206,26 +206,32 @@ def test_dict():
         try:
             Schema({'key': 5}).validate({})
         except SchemaMissingKeyError as e:
-            assert e.args[0] == "Missing keys: 'key'"
+            assert e.args[0] == "Missing key: 'key'"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'n': 5})
         except SchemaMissingKeyError as e:
-            assert e.args[0] == "Missing keys: 'key'"
+            assert e.args[0] == "Missing key: 'key'"
+            raise
+    with SE:
+        try:
+            Schema({'key': 5, 'key2': 5}).validate({'n': 5})
+        except SchemaMissingKeyError as e:
+            assert e.args[0] == "Missing keys: 'key', 'key2'"
             raise
     with SE:
         try:
             Schema({}).validate({'n': 5})
         except SchemaWrongKeyError as e:
-            assert e.args[0] == "Wrong keys 'n' in {'n': 5}"
+            assert e.args[0] == "Wrong key 'n' in {'n': 5}"
             raise
     with SE:
         try:
             Schema({'key': 5}).validate({'key': 5, 'bad': 5})
         except SchemaWrongKeyError as e:
-            assert e.args[0] in ["Wrong keys 'bad' in {'key': 5, 'bad': 5}",
-                                 "Wrong keys 'bad' in {'bad': 5, 'key': 5}"]
+            assert e.args[0] in ["Wrong key 'bad' in {'key': 5, 'bad': 5}",
+                                 "Wrong key 'bad' in {'bad': 5, 'key': 5}"]
             raise
     with SE:
         try:
@@ -548,7 +554,7 @@ def test_missing_keys_exception_with_non_str_dict_keys():
         try:
             Schema({1: 'x'}).validate(dict())
         except SchemaMissingKeyError as e:
-            assert e.args[0] == "Missing keys: 1"
+            assert e.args[0] == "Missing key: 1"
             raise
 
 

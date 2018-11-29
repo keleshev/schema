@@ -344,14 +344,17 @@ class Schema(object):
                 s_missing_keys = \
                     ', '.join(repr(k) for k in sorted(missing_keys, key=repr))
                 raise \
-                    SchemaMissingKeyError('Missing keys: ' + s_missing_keys, e)
+                    SchemaMissingKeyError(
+                        'Missing key%s: %s' % (_plural_s(missing_keys), s_missing_keys),
+                        e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = \
                     ', '.join(repr(k) for k in sorted(wrong_keys, key=repr))
                 raise \
                     SchemaWrongKeyError(
-                        'Wrong keys %s in %r' % (s_wrong_keys, data),
+                        'Wrong key%s %s in %r' % (
+                            _plural_s(wrong_keys), s_wrong_keys, data),
                         e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
@@ -534,3 +537,7 @@ def _callable_str(callable_):
     if hasattr(callable_, '__name__'):
         return callable_.__name__
     return str(callable_)
+
+
+def _plural_s(sized):
+    return "s" if len(sized) > 1 else ""
