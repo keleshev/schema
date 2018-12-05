@@ -268,6 +268,14 @@ data matches:
 Defaults are used verbatim, not passed through any validators specified in the
 value.
 
+default can also be a callable:
+
+.. code:: python
+
+    >>> from schema import Schema, Optional
+    >>> Schema({Optional('data', default=dict): {}}).validate({}) == {'data': {}}
+    True
+
 Also, a caveat: If you specify types, **schema** won't validate the empty dict:
 
 .. code:: python
