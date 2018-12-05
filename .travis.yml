@@ -19,6 +19,7 @@ matrix:
       sudo: true
     - env: TOXENV=coverage
     - env: TOXENV=checks
+      python: 3.7
 
 cache:
   pip: true
