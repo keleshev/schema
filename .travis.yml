@@ -18,7 +18,7 @@ matrix:
       dist: xenial
       sudo: true
     - env: TOXENV=coverage
-    - env: TOXENV=pep8
+    - env: TOXENV=checks
 
 cache:
   pip: true
