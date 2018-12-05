@@ -3,20 +3,29 @@ obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
+
 try:
     from contextlib import ExitStack
 except ImportError:
     from contextlib2 import ExitStack
 
-__version__ = '0.6.8'
-__all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
-           'SchemaError',
-           'SchemaWrongKeyError',
-           'SchemaMissingKeyError',
-           'SchemaForbiddenKeyError',
-           'SchemaUnexpectedTypeError',
-           'SchemaOnlyOneAllowedError']
+__version__ = "0.6.8"
+__all__ = [
+    "Schema",
+    "And",
+    "Or",
+    "Regex",
+    "Optional",
+    "Use",
+    "Forbidden",
+    "Const",
+    "SchemaError",
+    "SchemaWrongKeyError",
+    "SchemaMissingKeyError",
+    "SchemaForbiddenKeyError",
+    "SchemaUnexpectedTypeError",
+    "SchemaOnlyOneAllowedError",
+]
 
 
 class SchemaError(Exception):
@@ -33,6 +42,7 @@ class SchemaError(Exception):
         Removes duplicates values in auto and error list.
         parameters.
         """
+
         def uniq(seq):
             """
             Utility function that removes duplicate.
@@ -41,39 +51,45 @@ class SchemaError(Exception):
             seen_add = seen.add
             # This way removes duplicates while preserving the order.
             return [x for x in seq if x not in seen and not seen_add(x)]
+
         data_set = uniq(i for i in self.autos if i is not None)
         error_list = uniq(i for i in self.errors if i is not None)
         if error_list:
-            return '\n'.join(error_list)
-        return '\n'.join(data_set)
+            return "\n".join(error_list)
+        return "\n".join(data_set)
 
 
 class SchemaWrongKeyError(SchemaError):
     """Error Should be raised when an unexpected key is detected within the
     data set being."""
+
     pass
 
 
 class SchemaMissingKeyError(SchemaError):
     """Error should be raised when a mandatory key is not found within the
     data set being validated"""
+
     pass
 
 
 class SchemaOnlyOneAllowedError(SchemaError):
     """Error should be raised when an only_one Or key has multiple matching candidates"""
+
     pass
 
 
 class SchemaForbiddenKeyError(SchemaError):
     """Error should be raised when a forbidden key is found within the
     data set being validated, and its value matches the value that was specified"""
+
     pass
 
 
 class SchemaUnexpectedTypeError(SchemaError):
     """Error should be raised when a type mismatch is detected within the
     data set being validated."""
+
     pass
 
 
@@ -84,17 +100,16 @@ class And(object):
 
     def __init__(self, *args, **kw):
         self._args = args
-        if not set(kw).issubset({'error', 'schema', 'ignore_extra_keys'}):
-            diff = {'error', 'schema', 'ignore_extra_keys'}.difference(kw)
-            raise TypeError('Unknown keyword arguments %r' % list(diff))
-        self._error = kw.get('error')
-        self._ignore_extra_keys = kw.get('ignore_extra_keys', False)
+        if not set(kw).issubset({"error", "schema", "ignore_extra_keys"}):
+            diff = {"error", "schema", "ignore_extra_keys"}.difference(kw)
+            raise TypeError("Unknown keyword arguments %r" % list(diff))
+        self._error = kw.get("error")
+        self._ignore_extra_keys = kw.get("ignore_extra_keys", False)
         # You can pass your inherited Schema class.
-        self._schema = kw.get('schema', Schema)
+        self._schema = kw.get("schema", Schema)
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,
-                           ', '.join(repr(a) for a in self._args))
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
 
     def validate(self, data):
         """
@@ -103,9 +118,7 @@ class And(object):
         :param data: to be validated with sub defined schemas.
         :return: returns validated data
         """
-        for s in [self._schema(s, error=self._error,
-                               ignore_extra_keys=self._ignore_extra_keys)
-                  for s in self._args]:
+        for s in [self._schema(s, error=self._error, ignore_extra_keys=self._ignore_extra_keys) for s in self._args]:
             data = s.validate(data)
         return data
 
@@ -115,7 +128,7 @@ class Or(And):
     fashion."""
 
     def __init__(self, *args, **kwargs):
-        self.only_one = kwargs.pop('only_one', False)
+        self.only_one = kwargs.pop("only_one", False)
         self.match_count = 0
         super(Or, self).__init__(*args, **kwargs)
 
@@ -123,8 +136,7 @@ class Or(And):
         failed = self.match_count > 1 and self.only_one
         self.match_count = 0
         if failed:
-            raise SchemaOnlyOneAllowedError(['There are multiple keys present ' +
-                                             'from the %r condition' % self])
+            raise SchemaOnlyOneAllowedError(["There are multiple keys present " + "from the %r condition" % self])
 
     def validate(self, data):
         """
@@ -134,9 +146,7 @@ class Or(And):
         :return: return validated data if not validation
         """
         autos, errors = [], []
-        for s in [self._schema(s, error=self._error,
-                               ignore_extra_keys=self._ignore_extra_keys)
-                  for s in self._args]:
+        for s in [self._schema(s, error=self._error, ignore_extra_keys=self._ignore_extra_keys) for s in self._args]:
             try:
                 validation = s.validate(data)
                 self.match_count += 1
@@ -145,36 +155,44 @@ class Or(And):
                 return validation
             except SchemaError as _x:
                 autos, errors = _x.autos, _x.errors
-        raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
-                          [self._error.format(data) if self._error else None] +
-                          errors)
+        raise SchemaError(
+            ["%r did not validate %r" % (self, data)] + autos,
+            [self._error.format(data) if self._error else None] + errors,
+        )
 
 
 class Regex(object):
     """
     Enables schema.py to validate string using regular expressions.
     """
+
     # Map all flags bits to a more readable description
-    NAMES = ['re.ASCII', 're.DEBUG', 're.VERBOSE', 're.UNICODE', 're.DOTALL',
-             're.MULTILINE', 're.LOCALE', 're.IGNORECASE', 're.TEMPLATE']
+    NAMES = [
+        "re.ASCII",
+        "re.DEBUG",
+        "re.VERBOSE",
+        "re.UNICODE",
+        "re.DOTALL",
+        "re.MULTILINE",
+        "re.LOCALE",
+        "re.IGNORECASE",
+        "re.TEMPLATE",
+    ]
 
     def __init__(self, pattern_str, flags=0, error=None):
         self._pattern_str = pattern_str
-        flags_list = [Regex.NAMES[i] for i, f in  # Name for each bit
-                      enumerate('{0:09b}'.format(flags)) if f != '0']
+        flags_list = [Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(flags)) if f != "0"]  # Name for each bit
 
         if flags_list:
-            self._flags_names = ', flags=' + '|'.join(flags_list)
+            self._flags_names = ", flags=" + "|".join(flags_list)
         else:
-            self._flags_names = ''
+            self._flags_names = ""
 
         self._pattern = re.compile(pattern_str, flags=flags)
         self._error = error
 
     def __repr__(self):
-        return '%s(%r%s)' % (
-            self.__class__.__name__, self._pattern_str, self._flags_names
-        )
+        return "%s(%r%s)" % (self.__class__.__name__, self._pattern_str, self._flags_names)
 
     def validate(self, data):
         """
@@ -188,9 +206,9 @@ class Regex(object):
             if self._pattern.search(data):
                 return data
             else:
-                raise SchemaError('%r does not match %r' % (self, data), e)
+                raise SchemaError("%r does not match %r" % (self, data), e)
         except TypeError:
-            raise SchemaError('%r is not string nor buffer' % data, e)
+            raise SchemaError("%r is not string nor buffer" % data, e)
 
 
 class Use(object):
@@ -201,25 +219,21 @@ class Use(object):
 
     def __init__(self, callable_, error=None):
         if not callable(callable_):
-            raise TypeError('Expected a callable, not %r' % callable_)
+            raise TypeError("Expected a callable, not %r" % callable_)
         self._callable = callable_
         self._error = error
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._callable)
+        return "%s(%r)" % (self.__class__.__name__, self._callable)
 
     def validate(self, data):
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos,
-                              [self._error.format(data)
-                               if self._error else None] + x.errors)
+            raise SchemaError([None] + x.autos, [self._error.format(data) if self._error else None] + x.errors)
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                              self._error.format(data)
-                              if self._error else None)
+            raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
 
 
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
@@ -233,7 +247,7 @@ def _priority(s):
         return DICT
     if issubclass(type(s), type):
         return TYPE
-    if hasattr(s, 'validate'):
+    if hasattr(s, "validate"):
         return VALIDATOR
     if callable(s):
         return CALLABLE
@@ -253,7 +267,7 @@ class Schema(object):
         self._ignore_extra_keys = ignore_extra_keys
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._schema)
+        return "%s(%r)" % (self.__class__.__name__, self._schema)
 
     @staticmethod
     def _dict_key_priority(s):
@@ -303,8 +317,7 @@ class Schema(object):
 
             with exitstack:
                 # Evaluate dictionaries last
-                data_items = sorted(data.items(),
-                                    key=lambda value: isinstance(value[1], dict))
+                data_items = sorted(data.items(), key=lambda value: isinstance(value[1], dict))
                 for key, value in data_items:
                     for skey in sorted_skeys:
                         svalue = s[skey]
@@ -329,8 +342,7 @@ class Schema(object):
                                 skey.handler(nkey, data, e)
                             else:
                                 try:
-                                    nvalue = Schema(svalue, error=e,
-                                                    ignore_extra_keys=i).validate(value)
+                                    nvalue = Schema(svalue, error=e, ignore_extra_keys=i).validate(value)
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     raise SchemaError([k] + x.autos, [e] + x.errors)
@@ -341,28 +353,19 @@ class Schema(object):
             required = set(k for k in s if not self._is_optional_type(k))
             if not required.issubset(coverage):
                 missing_keys = required - coverage
-                s_missing_keys = \
-                    ', '.join(repr(k) for k in sorted(missing_keys, key=repr))
-                raise \
-                    SchemaMissingKeyError(
-                        'Missing key%s: %s' % (_plural_s(missing_keys), s_missing_keys),
-                        e)
+                s_missing_keys = ", ".join(repr(k) for k in sorted(missing_keys, key=repr))
+                raise SchemaMissingKeyError("Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys), e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
-                s_wrong_keys = \
-                    ', '.join(repr(k) for k in sorted(wrong_keys, key=repr))
-                raise \
-                    SchemaWrongKeyError(
-                        'Wrong key%s %s in %r' % (
-                            _plural_s(wrong_keys), s_wrong_keys, data),
-                        e.format(data) if e else None)
+                s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
+                raise SchemaWrongKeyError(
+                    "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data), e.format(data) if e else None
+                )
 
             # Apply default-having optionals that haven't been used:
-            defaults = set(k for k in s if type(k) is Optional and
-                           hasattr(k, 'default')) - coverage
+            defaults = set(k for k in s if type(k) is Optional and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = default.default() if callable(default.default) \
-                                                     else default.default
+                new[default.key] = default.default() if callable(default.default) else default.default
 
             return new
         if flavor == TYPE:
@@ -370,8 +373,8 @@ class Schema(object):
                 return data
             else:
                 raise SchemaUnexpectedTypeError(
-                    '%r should be instance of %r' % (data, s.__name__),
-                    e.format(data) if e else None)
+                    "%r should be instance of %r" % (data, s.__name__), e.format(data) if e else None
+                )
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
@@ -379,8 +382,8 @@ class Schema(object):
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
                 raise SchemaError(
-                    '%r.validate(%r) raised %r' % (s, data, x),
-                    self._error.format(data) if self._error else None)
+                    "%r.validate(%r) raised %r" % (s, data, x), self._error.format(data) if self._error else None
+                )
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -389,15 +392,12 @@ class Schema(object):
             except SchemaError as x:
                 raise SchemaError([None] + x.autos, [e] + x.errors)
             except BaseException as x:
-                raise SchemaError(
-                    '%s(%r) raised %r' % (f, data, x),
-                    self._error.format(data) if self._error else None)
-            raise SchemaError('%s(%r) should evaluate to True' % (f, data), e)
+                raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
+            raise SchemaError("%s(%r) should evaluate to True" % (f, data), e)
         if s == data:
             return data
         else:
-            raise SchemaError('%r does not match %r' % (s, data),
-                              e.format(data) if e else None)
+            raise SchemaError("%r does not match %r" % (s, data), e.format(data) if e else None)
 
     def json_schema(self, schema_id=None, is_main_schema=True):
         """Generate a draft-07 JSON schema dict representing the Schema.
@@ -414,19 +414,13 @@ class Schema(object):
 
         if flavor == TYPE:
             # Handle type
-            return {"type": {
-                int: "integer",
-                float: "number",
-                bool: "boolean"
-            }.get(s, "string")}
+            return {"type": {int: "integer", float: "number", bool: "boolean"}.get(s, "string")}
         elif flavor == ITERABLE and len(s) == 1:
             # Handle arrays of a single type or dict schema
-            return {"type": "array",
-                    "items": Schema(s[0]).json_schema(is_main_schema=False)}
+            return {"type": "array", "items": Schema(s[0]).json_schema(is_main_schema=False)}
         elif isinstance(s, Or):
             # Handle Or values
-            values = [Schema(or_key).json_schema(is_main_schema=False)
-                      for or_key in s._args]
+            values = [Schema(or_key).json_schema(is_main_schema=False) for or_key in s._args]
             any_of = []
             for value in values:
                 if value not in any_of:
@@ -469,30 +463,29 @@ class Schema(object):
             "type": "object",
             "properties": expanded_schema,
             "required": required_keys,
-            "additionalProperties": i
+            "additionalProperties": i,
         }
         if is_main_schema:
-            schema_dict.update({
-                "id": schema_id,
-                "$schema": "http://json-schema.org/draft-07/schema#",
-            })
+            schema_dict.update({"id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
         return schema_dict
 
 
 class Optional(Schema):
     """Marker for an optional part of the validation Schema."""
+
     _MARKER = object()
 
     def __init__(self, *args, **kwargs):
-        default = kwargs.pop('default', self._MARKER)
+        default = kwargs.pop("default", self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not self._MARKER:
             # See if I can come up with a static key to use for myself:
             if _priority(self._schema) != COMPARABLE:
                 raise TypeError(
-                    'Optional keys with defaults must have simple, '
-                    'predictable values, like literal strings or ints. '
-                    '"%r" is too complex.' % (self._schema,))
+                    "Optional keys with defaults must have simple, "
+                    "predictable values, like literal strings or ints. "
+                    '"%r" is too complex.' % (self._schema,)
+                )
             self.default = default
             self.key = self._schema
 
@@ -500,10 +493,11 @@ class Optional(Schema):
         return hash(self._schema)
 
     def __eq__(self, other):
-        return (self.__class__ is other.__class__ and
-                getattr(self, 'default', self._MARKER) ==
-                getattr(other, 'default', self._MARKER) and
-                self._schema == other._schema)
+        return (
+            self.__class__ is other.__class__
+            and getattr(self, "default", self._MARKER) == getattr(other, "default", self._MARKER)
+            and self._schema == other._schema
+        )
 
     def reset(self):
         if hasattr(self._schema, "reset"):
@@ -512,7 +506,7 @@ class Optional(Schema):
 
 class Hook(Schema):
     def __init__(self, *args, **kwargs):
-        self.handler = kwargs.pop('handler', lambda *args: None)
+        self.handler = kwargs.pop("handler", lambda *args: None)
         super(Hook, self).__init__(*args, **kwargs)
         self.key = self._schema
 
@@ -524,8 +518,7 @@ class Forbidden(Hook):
 
     @staticmethod
     def _default_function(nkey, data, error):
-        raise SchemaForbiddenKeyError('Forbidden key encountered: %r in %r' %
-                                      (nkey, data), error)
+        raise SchemaForbiddenKeyError("Forbidden key encountered: %r in %r" % (nkey, data), error)
 
 
 class Const(Schema):
@@ -535,7 +528,7 @@ class Const(Schema):
 
 
 def _callable_str(callable_):
-    if hasattr(callable_, '__name__'):
+    if hasattr(callable_, "__name__"):
         return callable_.__name__
     return str(callable_)
 
