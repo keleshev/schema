@@ -4,14 +4,28 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import re
 
-__version__ = '0.6.8'
-__all__ = ['Schema',
-           'And', 'Or', 'Regex', 'Optional', 'Use', 'Forbidden', 'Const',
-           'SchemaError',
-           'SchemaWrongKeyError',
-           'SchemaMissingKeyError',
-           'SchemaForbiddenKeyError',
-           'SchemaUnexpectedTypeError']
+try:
+    from contextlib import ExitStack
+except ImportError:
+    from contextlib2 import ExitStack
+
+__version__ = "0.6.8"
+__all__ = [
+    "Schema",
+    "And",
+    "Or",
+    "Regex",
+    "Optional",
+    "Use",
+    "Forbidden",
+    "Const",
+    "SchemaError",
+    "SchemaWrongKeyError",
+    "SchemaMissingKeyError",
+    "SchemaForbiddenKeyError",
+    "SchemaUnexpectedTypeError",
+    "SchemaOnlyOneAllowedError",
+]
 
 
 class SchemaError(Exception):
@@ -28,6 +42,7 @@ class SchemaError(Exception):
         Removes duplicates values in auto and error list.
         parameters.
         """
+
         def uniq(seq):
             """
             Utility function that removes duplicate.
@@ -36,34 +51,45 @@ class SchemaError(Exception):
             seen_add = seen.add
             # This way removes duplicates while preserving the order.
             return [x for x in seq if x not in seen and not seen_add(x)]
+
         data_set = uniq(i for i in self.autos if i is not None)
         error_list = uniq(i for i in self.errors if i is not None)
         if error_list:
-            return '\n'.join(error_list)
-        return '\n'.join(data_set)
+            return "\n".join(error_list)
+        return "\n".join(data_set)
 
 
 class SchemaWrongKeyError(SchemaError):
     """Error Should be raised when an unexpected key is detected within the
     data set being."""
+
     pass
 
 
 class SchemaMissingKeyError(SchemaError):
     """Error should be raised when a mandatory key is not found within the
     data set being validated"""
+
+    pass
+
+
+class SchemaOnlyOneAllowedError(SchemaError):
+    """Error should be raised when an only_one Or key has multiple matching candidates"""
+
     pass
 
 
 class SchemaForbiddenKeyError(SchemaError):
     """Error should be raised when a forbidden key is found within the
     data set being validated, and its value matches the value that was specified"""
+
     pass
 
 
 class SchemaUnexpectedTypeError(SchemaError):
     """Error should be raised when a type mismatch is detected within the
     data set being validated."""
+
     pass
 
 
@@ -105,27 +131,34 @@ class Regex(Base):
     """
     Enables schema.py to validate string using regular expressions.
     """
+
     # Map all flags bits to a more readable description
-    NAMES = ['re.ASCII', 're.DEBUG', 're.VERBOSE', 're.UNICODE', 're.DOTALL',
-             're.MULTILINE', 're.LOCALE', 're.IGNORECASE', 're.TEMPLATE']
+    NAMES = [
+        "re.ASCII",
+        "re.DEBUG",
+        "re.VERBOSE",
+        "re.UNICODE",
+        "re.DOTALL",
+        "re.MULTILINE",
+        "re.LOCALE",
+        "re.IGNORECASE",
+        "re.TEMPLATE",
+    ]
 
     def __init__(self, pattern_str, flags=0, error=None):
         super(Regex, self).__init__(error=error)
         self._pattern_str = pattern_str
-        flags_list = [Regex.NAMES[i] for i, f in  # Name for each bit
-                      enumerate('{0:09b}'.format(flags)) if f != '0']
+        flags_list = [Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(flags)) if f != "0"]  # Name for each bit
 
         if flags_list:
-            self._flags_names = ', flags=' + '|'.join(flags_list)
+            self._flags_names = ", flags=" + "|".join(flags_list)
         else:
-            self._flags_names = ''
+            self._flags_names = ""
 
         self._pattern = re.compile(pattern_str, flags=flags)
 
     def __repr__(self):
-        return '%s(%r%s)' % (
-            self.__class__.__name__, self._pattern_str, self._flags_names
-        )
+        return "%s(%r%s)" % (self.__class__.__name__, self._pattern_str, self._flags_names)
 
     def validate(self, data):
         """
@@ -138,9 +171,9 @@ class Regex(Base):
         try:
             if self._pattern.search(data):
                 return data
-            raise SchemaError('%r does not match %r' % (self, data), e)
+            raise SchemaError("%r does not match %r" % (self, data), e)
         except TypeError:
-            raise SchemaError('%r is not string nor buffer' % data, e)
+            raise SchemaError("%r is not string nor buffer" % data, e)
 
 
 def _callable_str(callable_):
@@ -175,27 +208,24 @@ class Use(Base):
     For more general use cases, you can use the Use class to transform
     the data while it is being validate.
     """
+
     def __init__(self, callable_, error=None):
         super(Use, self).__init__(error=error)
         if not callable(callable_):
-            raise TypeError('Expected a callable, not %r' % callable_)
+            raise TypeError("Expected a callable, not %r" % callable_)
         self._callable = callable_
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._callable)
+        return "%s(%r)" % (self.__class__.__name__, self._callable)
 
     def validate(self, data):
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos,
-                              [self._error.format(data)
-                               if self._error else None] + x.errors)
+            raise SchemaError([None] + x.autos, [self._error.format(data) if self._error else None] + x.errors)
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError('%s(%r) raised %r' % (f, data, x),
-                              self._error.format(data)
-                              if self._error else None)
+            raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
 
 
 # Mixin schemas
@@ -211,7 +241,7 @@ def _priority(s):
         return DICT
     if issubclass(type(s), type):
         return TYPE
-    if hasattr(s, 'validate'):
+    if hasattr(s, "validate"):
         return VALIDATOR
     if callable(s):
         return CALLABLE
@@ -468,18 +498,20 @@ class Schema(Base):
 
 class Optional(Schema):
     """Marker for an optional part of the validation Schema."""
+
     _MARKER = object()
 
     def __init__(self, *args, **kwargs):
-        default = kwargs.pop('default', self._MARKER)
+        default = kwargs.pop("default", self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not self._MARKER:
             # See if I can come up with a static key to use for myself:
             if _priority(self._schema) != COMPARABLE:
                 raise TypeError(
-                    'Optional keys with defaults must have simple, '
-                    'predictable values, like literal strings or ints. '
-                    '"%r" is too complex.' % (self._schema,))
+                    "Optional keys with defaults must have simple, "
+                    "predictable values, like literal strings or ints. "
+                    '"%r" is too complex.' % (self._schema,)
+                )
             self.default = default
             self.key = self._schema
 
@@ -487,16 +519,32 @@ class Optional(Schema):
         return hash(self._schema)
 
     def __eq__(self, other):
-        return (self.__class__ is other.__class__ and
-                getattr(self, 'default', self._MARKER) ==
-                getattr(other, 'default', self._MARKER) and
-                self._schema == other._schema)
+        return (
+            self.__class__ is other.__class__
+            and getattr(self, "default", self._MARKER) == getattr(other, "default", self._MARKER)
+            and self._schema == other._schema
+        )
+
+    def reset(self):
+        if hasattr(self._schema, "reset"):
+            self._schema.reset()
 
 
-class Forbidden(Schema):
+class Hook(Schema):
     def __init__(self, *args, **kwargs):
-        super(Forbidden, self).__init__(*args, **kwargs)
+        self.handler = kwargs.pop("handler", lambda *args: None)
+        super(Hook, self).__init__(*args, **kwargs)
         self.key = self._schema
+
+
+class Forbidden(Hook):
+    def __init__(self, *args, **kwargs):
+        kwargs["handler"] = self._default_function
+        super(Forbidden, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _default_function(nkey, data, error):
+        raise SchemaForbiddenKeyError("Forbidden key encountered: %r in %r" % (nkey, data), error)
 
 
 class Const(Schema):
