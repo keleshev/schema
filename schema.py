@@ -107,8 +107,8 @@ class Base(object):
 
 # Atomic schemas
 
-class _Type(Base):
 
+class _Type(Base):
     def __init__(self, typ, error=None):
         super(_Type, self).__init__(error=error)
         self._type = typ
@@ -123,7 +123,6 @@ class _Type(Base):
 
 
 class _Value(Base):
-
     def __init__(self, value, error=None):
         super(_Value, self).__init__(error=error)
         self._value = value
@@ -131,7 +130,9 @@ class _Value(Base):
     def validate(self, data):
         if self._value == data:
             return data
-        raise SchemaError("%r does not match %r" % (self._value, data), self._error.format(data) if self._error else None)
+        raise SchemaError(
+            "%r does not match %r" % (self._value, data), self._error.format(data) if self._error else None
+        )
 
 
 class Regex(Base):
@@ -184,7 +185,7 @@ class Regex(Base):
 
 
 def _callable_str(callable_):
-    if hasattr(callable_, '__name__'):
+    if hasattr(callable_, "__name__"):
         return callable_.__name__
     return str(callable_)
 
@@ -271,16 +272,14 @@ def schemify(schema, error=None, ignore_extra_keys=False):
     if isinstance(schema, Base):
         while _empty(schema):
             schema = schema._worker
-    if hasattr(schema, 'validate'):
+    if hasattr(schema, "validate"):
         return _Wrapper(schema, error=error) if error else schema
 
     flavor = _priority(schema)
     if flavor == ITERABLE:
-        return _Iterable(schema, schema=schemify, error=error,
-                         ignore_extra_keys=ignore_extra_keys)
+        return _Iterable(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys)
     if flavor == DICT:
-        return _Dict(schema, schema=schemify, error=error,
-                     ignore_extra_keys=ignore_extra_keys)
+        return _Dict(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys)
     if flavor == TYPE:
         return _Type(schema, error=error)
     if flavor == CALLABLE:
@@ -367,13 +366,11 @@ class Or(And):
 
 
 class _Iterable(Base):
-
     def __init__(self, iterable, **kwargs):
         schema, error, ignore = _schema_args(kwargs)
         super(_Iterable, self).__init__(error=error)
         self._type_check = schema(type(iterable), error=error)
-        self._schema = Or(*iterable, error=error, schema=schema,
-                          ignore_extra_keys=ignore)
+        self._schema = Or(*iterable, error=error, schema=schema, ignore_extra_keys=ignore)
 
     def validate(self, data):
         data = self._type_check.validate(data)
@@ -381,14 +378,14 @@ class _Iterable(Base):
 
 
 class _Dict(Base):
-
     def __init__(self, dct, **kwargs):
         schema, error, ignore = _schema_args(kwargs)
         super(_Dict, self).__init__(error=error)
         self._ignore_extra_keys = ignore
         sorted_keys = sorted(dct, key=self._dict_key_priority)
-        self._sorted = [(k, schema(k, error=error), schema(dct[k], error=error, ignore_extra_keys=ignore))
-                        for k in sorted_keys]
+        self._sorted = [
+            (k, schema(k, error=error), schema(dct[k], error=error, ignore_extra_keys=ignore)) for k in sorted_keys
+        ]
         self._casting = schema(dict, error=error)
         self._required = set(k for k in dct if not self._is_optional_type(k))
         self._defaults = set(k for k in dct if type(k) is Optional and hasattr(k, "default"))
@@ -508,11 +505,9 @@ class Schema(Base):
         self._schema = schema
         flavor = _priority(schema)
         if flavor == ITERABLE:
-            self._worker = _Iterable(schema, schema=type(self), error=error,
-                                     ignore_extra_keys=ignore_extra_keys)
+            self._worker = _Iterable(schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys)
         elif flavor == DICT:
-            self._worker = _Dict(schema, schema=type(self), error=error,
-                                 ignore_extra_keys=ignore_extra_keys)
+            self._worker = _Dict(schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys)
         elif flavor == TYPE:
             self._worker = _Type(schema, error=error)
         elif flavor == VALIDATOR:

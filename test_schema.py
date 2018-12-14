@@ -685,15 +685,16 @@ def test_inheritance():
 
 def test_empty():
     from schema import _empty
-    v = Or('a', 'b')
+
+    v = Or("a", "b")
     assert not _empty(v)
     assert not _empty(And(int, 1))
     assert not _empty(Use(str))
-    assert not _empty(Regex('[0-9]+'))
+    assert not _empty(Regex("[0-9]+"))
     assert _empty(Schema(v))
-    assert _empty(Schema(v, error='something'))
-    assert _empty(Optional('a'))
-    assert _empty(Forbidden('a'))
+    assert _empty(Schema(v, error="something"))
+    assert _empty(Optional("a"))
+    assert _empty(Forbidden("a"))
     assert not _empty(Const(v))
 
     class MySchema(Schema):
@@ -714,11 +715,11 @@ def test_schemify():
     v = Or(int, float)
     s = Schema(Schema(Schema(v)))
     assert schemify(s) is v
-    s = Schema(v, error='test error')
+    s = Schema(v, error="test error")
     assert schemify(Schema(Schema(s))) is s._worker
 
-    o = schemify(Schema(Schema(s)), error='test error #2')
-    assert o._error == 'test error #2'
+    o = schemify(Schema(Schema(s)), error="test error #2")
+    assert o._error == "test error #2"
     assert o._worker is s._worker
 
     s = Const(Use(lambda x: x[:1]))
@@ -727,14 +728,14 @@ def test_schemify():
     s = Optional(int)
     assert schemify(Schema(s)) is s._worker
 
-    s = Forbidden('k')
+    s = Forbidden("k")
     assert schemify(Schema(s)) is s._worker
 
     class MySchema(Schema):
         pass
 
     assert schemify(Schema(MySchema(v))) is v
-    assert schemify(Schema(MySchema(v, error='something')))._worker is v
+    assert schemify(Schema(MySchema(v, error="something")))._worker is v
 
     class MyOtherSchema(Schema):
         def validate(self, data):
@@ -750,7 +751,7 @@ def test_schemify_use():
     s = Schema(Schema(Schema(Schema(Schema(v)))))
     assert s._worker._worker is v
 
-    s = Schema({Schema('k'): Schema(Schema(v))})
+    s = Schema({Schema("k"): Schema(Schema(v))})
     k, ks, w = s._worker._sorted[0]
     assert w is v
     assert not isinstance(ks, Schema)
