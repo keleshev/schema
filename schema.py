@@ -131,7 +131,7 @@ class _Value(Base):
     def validate(self, data):
         if self._value == data:
             return data
-        raise SchemaError("%r does not match %r" % (self._value, data), e.format(data) if e else None)
+        raise SchemaError("%r does not match %r" % (self._value, data), self._error.format(data) if self._error else None)
 
 
 class Regex(Base):
@@ -197,15 +197,15 @@ class _Check(Base):
         self._callable = callable_
 
     def validate(self, data):
-        f = _callable_str(s)
+        f = _callable_str(self._callable)
         try:
             if self._callable(data):
                 return data
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [e] + x.errors)
+            raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
             raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
-        raise SchemaError("%s(%r) should evaluate to True" % (f, data), e)
+        raise SchemaError("%s(%r) should evaluate to True" % (f, data), self._error)
 
 
 class Use(Base):
@@ -353,7 +353,7 @@ class Or(And):
         autos, errors = [], []
         for schema in self._schema_seq:
             try:
-                validation = s.validate(data)
+                validation = schema.validate(data)
                 self.match_count += 1
                 if self.match_count > 1 and self.only_one:
                     break
@@ -453,7 +453,7 @@ class _Dict(Base):
                                 skey.handler(nkey, data, e)
                             else:
                                 try:
-                                    nvalue = Schema(svalue, error=e, ignore_extra_keys=i).validate(value)
+                                    nvalue = val_sc.validate(value)
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     raise SchemaError([k] + x.autos, [e] + x.errors)
@@ -490,7 +490,7 @@ class _Wrapper(Base):
         try:
             return self._worker.validate(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [e] + x.errors)
+            raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
             raise SchemaError(
                 "%r.validate(%r) raised %r" % (self._worker, data, x), self._error.format(data) if self._error else None
