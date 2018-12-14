@@ -233,7 +233,7 @@ You can specify keys as schemas too:
     None does not match 'not None here'
 
 This is useful if you want to check certain key-values, but don't care
-about other:
+about others:
 
 .. code:: python
 
@@ -268,6 +268,66 @@ data matches:
 Defaults are used verbatim, not passed through any validators specified in the
 value.
 
+default can also be a callable:
+
+.. code:: python
+
+    >>> from schema import Schema, Optional
+    >>> Schema({Optional('data', default=dict): {}}).validate({}) == {'data': {}}
+    True
+
+Also, a caveat: If you specify types, **schema** won't validate the empty dict:
+
+.. code:: python
+
+    >>> Schema({int:int}).is_valid({})
+    False
+
+To do that, you need ``Schema(Or({int:int}, {}))``. This is unlike what happens with
+lists, where ``Schema([int]).is_valid([])`` will return True.
+
+
+**schema** has classes ``And`` and ``Or`` that help validating several schemas
+for the same data:
+
+.. code:: python
+
+    >>> from schema import And, Or
+
+    >>> Schema({'age': And(int, lambda n: 0 < n < 99)}).validate({'age': 7})
+    {'age': 7}
+
+    >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
+    Traceback (most recent call last):
+    ...
+    SchemaError: Key 'password' error:
+    <lambda>('hai') should evaluate to True
+
+    >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
+    3.1415
+
+In a dictionary, you can also combine two keys in a "one or the other" manner. To do
+so, use the `Or` class as a key:
+
+.. code:: python
+    >>> from schema import Or, Schema
+    >>> schema = Schema({
+    ...    Or("key1", "key2", only_one=True): str
+    ... })
+
+    >>> schema.validate({"key1": "test"}) # Ok
+    {'key1': 'test'}
+
+    >>> schema.validate({"key1": "test", "key2": "test"}) # SchemaError
+    Traceback (most recent call last):
+    ...
+    SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
+
+Hooks
+~~~~~~~~~~
+You can define hooks which are functions that are executed whenever a valid key:value is found. 
+The `Forbidden` class is an example of this.
+
 You can mark a key as forbidden as follows:
 
 .. code:: python
@@ -299,35 +359,29 @@ This means we can do that:
     ...
     SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
 
-Also, a caveat: If you specify types, **schema** won't validate the empty dict:
+You can also define your own hooks. The following hook will call `_my_function` if `key` is encountered.
 
 .. code:: python
 
-    >>> Schema({int:int}).is_valid({})
-    False
+    from schema import Hook
+    def _my_function(key, scope, error):
+        print(key, scope, error)
 
-To do that, you need ``Schema(Or({int:int}, {}))``. This is unlike what happens with
-lists, where ``Schema([int]).is_valid([])`` will return True.
+    Hook("key", handler=_my_function)
 
-
-**schema** has classes ``And`` and ``Or`` that help validating several schemas
-for the same data:
+Here's an example where a `Deprecated` class is added to log warnings whenever a key is encountered:
 
 .. code:: python
 
-    >>> from schema import And, Or
+    from schema import Hook, Schema
+    class Deprecated(Hook):
+        def __init__(self, *args, **kwargs):
+            kwargs["handler"] = lambda key, *args: logging.warn(f"`{key}` is deprecated. " + (self._error or ""))
+            super(Deprecated, self).__init__(*args, **kwargs)
 
-    >>> Schema({'age': And(int, lambda n: 0 < n < 99)}).validate({'age': 7})
-    {'age': 7}
-
-    >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
-    Traceback (most recent call last):
+    Schema({Deprecated("test", "custom error message."): object}, ignore_extra_keys=True).validate({"test": "value"})
     ...
-    SchemaError: Key 'password' error:
-    <lambda>('hai') should evaluate to True
-
-    >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
-    3.1415
+    WARNING: `test` is deprecated. custom error message.
 
 Extra Keys
 ~~~~~~~~~~
@@ -441,3 +495,49 @@ this is how you validate it using ``schema``:
 
 As you can see, **schema** validated data successfully, opened files and
 converted ``'3'`` to ``int``.
+
+(Beta feature) Generating JSON schema
+-------------------------------------------------------------------------------
+You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict `Schema`.
+This can be used to add word completion and validation directly in code editors.
+Here's an example: 
+
+.. code:: python
+
+    >>> from schema import Optional, Schema
+    >>> import json
+    >>> s = Schema({"test": str,
+    ...             "nested": {Optional("other"): str}
+    ...             })
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"))
+
+    # json_schema
+    {
+        "type":"object",
+        "properties": {
+            "test": {"type": "string"},
+            "nested": {
+                "type":"object",
+                "properties": {
+                    "other": {"type": "string"}
+                },
+                "required": [],
+                "additionalProperties":false
+            }
+        },
+        "required":[
+            "test",
+            "nested"
+        ],
+        "additionalProperties":false,
+        "id":"https://example.com/my-schema.json",
+        "$schema":"http://json-schema.org/draft-07/schema#"
+    }
+
+Please note that this is a beta feature. Some JSON schema features are not implemented. Some caveats:
+
+- There are no object references, items of type `object` are always fully rendered
+- Some JSON schema types are not implemented. In those cases, an empty dict will be rendered.
+  This disables all validation for the item.
+- Validations other than type are not implemented. This includes features such as integers'
+  minimum and maximum or arrays' minItems

@@ -95,27 +95,35 @@ class SchemaUnexpectedTypeError(SchemaError):
 
 class Base(object):
     """Base class for all schemas."""
+
     def __init__(self, error=None):
         self._error = error
+
+    @staticmethod
+    def _is_optional_type(s):
+        """Return True if the given key is optional (does not have to be found"""
+        return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
 
 # Atomic schemas
 
 class _Type(Base):
+
     def __init__(self, typ, error=None):
         super(_Type, self).__init__(error=error)
         self._type = typ
 
     def validate(self, data):
-        if isinstance(data, self._type):
+        if isinstance(data, self._type) and not (isinstance(data, bool) and self._type == int):
             return data
-        error = self._error
+        err = self._error
         raise SchemaUnexpectedTypeError(
-            '%r should be instance of %r' % (data, self._type.__name__),
-            error.format(data) if error else None)
+            "%r should be instance of %r" % (data, self._type.__name__), err.format(data) if err else None
+        )
 
 
 class _Value(Base):
+
     def __init__(self, value, error=None):
         super(_Value, self).__init__(error=error)
         self._value = value
@@ -123,8 +131,7 @@ class _Value(Base):
     def validate(self, data):
         if self._value == data:
             return data
-        raise SchemaError('%r does not match %r' % (self._value, data),
-                          self._error.format(data) if self._error else None)
+        raise SchemaError("%r does not match %r" % (self._value, data), e.format(data) if e else None)
 
 
 class Regex(Base):
@@ -184,23 +191,21 @@ def _callable_str(callable_):
 
 class _Check(Base):
     """Validation for callables."""
+
     def __init__(self, callable_, error=None):
         super(_Check, self).__init__(error=error)
         self._callable = callable_
 
     def validate(self, data):
-        f = _callable_str(self._callable)
+        f = _callable_str(s)
         try:
             if self._callable(data):
                 return data
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error] + x.errors)
+            raise SchemaError([None] + x.autos, [e] + x.errors)
         except BaseException as x:
-            raise SchemaError(
-                '%s(%r) raised %r' % (f, data, x),
-                self._error.format(data) if self._error else None)
-        raise SchemaError('%s(%r) should evaluate to True' % (f, data),
-                          self._error)
+            raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
+        raise SchemaError("%s(%r) should evaluate to True" % (f, data), e)
 
 
 class Use(Base):
@@ -283,16 +288,16 @@ def schemify(schema, error=None, ignore_extra_keys=False):
     return _Value(schema, error=error)
 
 
-def _schema_args(kwargs):
+def _schema_args(kw):
     """Parse `schema`, `error` and `ignore_extra_keys`."""
-    if not set(kwargs).issubset({'error', 'schema', 'ignore_extra_keys'}):
-        diff = {'error', 'schema', 'ignore_extra_keys'}.difference(kwargs)
-        raise TypeError('Unknown keyword arguments %r' % list(diff))
-    schema = kwargs.get('schema', schemify)
+    if not set(kw).issubset({"error", "schema", "ignore_extra_keys"}):
+        diff = {"error", "schema", "ignore_extra_keys"}.difference(kw)
+        raise TypeError("Unknown keyword arguments %r" % list(diff))
+    schema = kw.get("schema", schemify)
     if _flattable(schema):
         schema = schemify
-    error = kwargs.get('error', None)
-    ignore = kwargs.get('ignore_extra_keys', False)
+    error = kw.get("error")
+    ignore = kw.get("ignore_extra_keys", False)
     return schema, error, ignore
 
 
@@ -300,17 +305,16 @@ class And(Base):
     """
     Utility function to combine validation directives in AND Boolean fashion.
     """
-    def __init__(self, *args, **kwargs):
+
+    def __init__(self, *args, **kw):
         self._args = args
-        schema, error, ignore = _schema_args(kwargs)
+        schema, error, ignore = _schema_args(kw)
         super(And, self).__init__(error=error)
         # You can pass your inherited Schema class.
-        self._schema_seq = [schema(s, error=error, ignore_extra_keys=ignore)
-                            for s in args]
+        self._schema_seq = [schema(s, error=error, ignore_extra_keys=ignore) for s in args]
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,
-                           ', '.join(repr(a) for a in self._args))
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
 
     def validate(self, data):
         """
@@ -327,6 +331,18 @@ class And(Base):
 class Or(And):
     """Utility function to combine validation directives in a OR Boolean
     fashion."""
+
+    def __init__(self, *args, **kwargs):
+        self.only_one = kwargs.pop("only_one", False)
+        self.match_count = 0
+        super(Or, self).__init__(*args, **kwargs)
+
+    def reset(self):
+        failed = self.match_count > 1 and self.only_one
+        self.match_count = 0
+        if failed:
+            raise SchemaOnlyOneAllowedError(["There are multiple keys present " + "from the %r condition" % self])
+
     def validate(self, data):
         """
         Validate data using sub defined schema/expressions ensuring at least
@@ -337,15 +353,21 @@ class Or(And):
         autos, errors = [], []
         for schema in self._schema_seq:
             try:
-                return schema.validate(data)
+                validation = s.validate(data)
+                self.match_count += 1
+                if self.match_count > 1 and self.only_one:
+                    break
+                return validation
             except SchemaError as _x:
                 autos, errors = _x.autos, _x.errors
-        raise SchemaError(['%r did not validate %r' % (self, data)] + autos,
-                          [self._error.format(data) if self._error else None] +
-                          errors)
+        raise SchemaError(
+            ["%r did not validate %r" % (self, data)] + autos,
+            [self._error.format(data) if self._error else None] + errors,
+        )
 
 
 class _Iterable(Base):
+
     def __init__(self, iterable, **kwargs):
         schema, error, ignore = _schema_args(kwargs)
         super(_Iterable, self).__init__(error=error)
@@ -359,87 +381,107 @@ class _Iterable(Base):
 
 
 class _Dict(Base):
+
     def __init__(self, dct, **kwargs):
         schema, error, ignore = _schema_args(kwargs)
         super(_Dict, self).__init__(error=error)
         self._ignore_extra_keys = ignore
         sorted_keys = sorted(dct, key=self._dict_key_priority)
-        self._sorted = [(k, schema(k, error=error),
-                         schema(dct[k], error=error, ignore_extra_keys=ignore))
+        self._sorted = [(k, schema(k, error=error), schema(dct[k], error=error, ignore_extra_keys=ignore))
                         for k in sorted_keys]
         self._casting = schema(dict, error=error)
-        self._required = set(k for k in dct
-                             if type(k) not in [Optional, Forbidden])
-        self._defaults = set(k for k in dct
-                             if type(k) is Optional and hasattr(k, 'default'))
+        self._required = set(k for k in dct if not self._is_optional_type(k))
+        self._defaults = set(k for k in dct if type(k) is Optional and hasattr(k, "default"))
+        self._resets = tuple(k for k in sorted_keys if hasattr(k, "reset"))
 
     @staticmethod
     def _dict_key_priority(s):
         """Return priority for a given key object."""
-        if isinstance(s, Forbidden):
+        if isinstance(s, Hook):
             return _priority(s._schema) - 0.5
         if isinstance(s, Optional):
             return _priority(s._schema) + 0.5
         return _priority(s)
 
     def validate(self, data):
+        exitstack = ExitStack()
         e = self._error
         data = self._casting.validate(data)
         new = type(data)()  # new - is a dict of the validated values
         coverage = set()  # matched schema keys
         # for each key and value find a schema entry matching them, if any
-        for key, value in data.items():
-            for skey, key_sc, val_sc in self._sorted:
-                try:
-                    nkey = key_sc.validate(key)
-                except SchemaError:
-                    pass
-                else:
-                    if isinstance(skey, Forbidden):
-                        # As the content of the value makes little sense for
-                        # forbidden keys, we reverse its meaning:
-                        # we will only raise the SchemaErrorForbiddenKey
-                        # exception if the value does match, allowing for
-                        # excluding a key only if its value has a certain type,
-                        # and allowing Forbidden to work well in combination
-                        # with Optional.
-                        try:
-                            nvalue = val_sc.validate(value)
-                        except SchemaError:
-                            continue
-                        raise SchemaForbiddenKeyError(
-                            'Forbidden key encountered: %r in %r' %
-                            (nkey, data), e)
+        for skey in self._resets:
+            exitstack.callback(skey.reset)
+        with exitstack:
+            # Evaluate dictionaries last
+            data_items = sorted(data.items(), key=lambda value: isinstance(value[1], dict))
+            for key, value in data_items:
+                for skey, key_sc, val_sc in self._sorted:
+                    try:
+                        nkey = key_sc.validate(key)
+                    except SchemaError:
+                        pass
                     else:
-                        try:
-                            nvalue = val_sc.validate(value)
-                        except SchemaError as x:
-                            k = "Key '%s' error:" % nkey
-                            raise SchemaError([k] + x.autos, [e] + x.errors)
+                        if isinstance(skey, Hook):
+                            # As the content of the value makes little sense for
+                            # keys with a hook, we reverse its meaning:
+                            # we will only call the handler if the value does match
+                            # In the case of the forbidden key hook,
+                            # we will raise the SchemaErrorForbiddenKey exception
+                            # on match, allowing for excluding a key only if its
+                            # value has a certain type, and allowing Forbidden to
+                            # work well in combination with Optional.
+                            try:
+                                nvalue = val_sc.validate(value)
+                            except SchemaError:
+                                continue
+                            skey.handler(nkey, data, e)
                         else:
-                            new[nkey] = nvalue
-                            coverage.add(skey)
-                            break
-        if not self._required.issubset(coverage):
-            missing_keys = (repr(k) for k in self._required - coverage)
-            s_missing_keys = ', '.join(sorted(missing_keys))
-            raise SchemaMissingKeyError('Missing keys: ' + s_missing_keys, e)
-        if not self._ignore_extra_keys and (len(new) != len(data)):
-            wrong_keys = set(data.keys()) - set(new.keys())
-            s_wrong_keys = ', '.join(sorted(repr(k) for k in wrong_keys))
-            raise SchemaWrongKeyError(
-                'Wrong keys %s in %r' % (s_wrong_keys, data),
-                e.format(data) if e else None)
+                            if isinstance(skey, Hook):
+                                # As the content of the value makes little sense for
+                                # keys with a hook, we reverse its meaning:
+                                # we will only call the handler if the value does match
+                                # In the case of the forbidden key hook,
+                                # we will raise the SchemaErrorForbiddenKey exception
+                                # on match, allowing for excluding a key only if its
+                                # value has a certain type, and allowing Forbidden to
+                                # work well in combination with Optional.
+                                try:
+                                    nvalue = val_sc.validate(value)
+                                except SchemaError:
+                                    continue
+                                skey.handler(nkey, data, e)
+                            else:
+                                try:
+                                    nvalue = Schema(svalue, error=e, ignore_extra_keys=i).validate(value)
+                                except SchemaError as x:
+                                    k = "Key '%s' error:" % nkey
+                                    raise SchemaError([k] + x.autos, [e] + x.errors)
+                                else:
+                                    new[nkey] = nvalue
+                                    coverage.add(skey)
+                                    break
 
-        # Apply default-having optionals that haven't been used:
-        for default in self._defaults - coverage:
-            new[default.key] = default.default
+            if not self._required.issubset(coverage):
+                missing_keys = self._required - coverage
+                s_missing_keys = ", ".join(sorted(repr(k) for k in missing_keys))
+                raise SchemaMissingKeyError("Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys), e)
+            if not self._ignore_extra_keys and (len(new) != len(data)):
+                wrong_keys = set(data.keys()) - set(new.keys())
+                s_wrong_keys = ", ".join(sorted(repr(k) for k in wrong_keys))
+                raise SchemaWrongKeyError(
+                    "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data), e.format(data) if e else None
+                )
+            # Apply default-having optionals that haven't been used:
+            for default in self._defaults - coverage:
+                new[default.key] = default.default() if callable(default.default) else default.default
 
-        return new
+            return new
 
 
 class _Wrapper(Base):
     """Helper class to wrap a error around a validator."""
+
     def __init__(self, validator, error=None):
         super(_Wrapper, self).__init__(error=error)
         self._worker = schemify(validator)
@@ -448,11 +490,11 @@ class _Wrapper(Base):
         try:
             return self._worker.validate(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error] + x.errors)
+            raise SchemaError([None] + x.autos, [e] + x.errors)
         except BaseException as x:
             raise SchemaError(
-                '%r.validate(%r) raised %r' % (self._worker, data, x),
-                self._error.format(data) if self._error else None)
+                "%r.validate(%r) raised %r" % (self._worker, data, x), self._error.format(data) if self._error else None
+            )
 
 
 class Schema(Base):
@@ -460,6 +502,7 @@ class Schema(Base):
     Entry point of the library, use this class to instantiate validation
     schema for the data that will be validated.
     """
+
     def __init__(self, schema, error=None, ignore_extra_keys=False):
         super(Schema, self).__init__(error=error)
         self._schema = schema
@@ -478,9 +521,10 @@ class Schema(Base):
             self._worker = _Check(schema, error=error)
         else:
             self._worker = _Value(schema, error=error)
+        self._ignore_extra_keys = ignore_extra_keys
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._schema)
+        return "%s(%r)" % (self.__class__.__name__, self._schema)
 
     def is_valid(self, data):
         """Return whether the given data has passed all the validations
@@ -494,6 +538,76 @@ class Schema(Base):
 
     def validate(self, data):
         return self._worker.validate(data)
+
+    def json_schema(self, schema_id=None, is_main_schema=True):
+        """Generate a draft-07 JSON schema dict representing the Schema.
+        This method can only be called when the Schema's value is a dict.
+        This method must be called with a schema_id. Calling it without one
+        is used in a recursive context for sub schemas."""
+        Schema = self.__class__
+        s = self._schema
+        i = self._ignore_extra_keys
+        flavor = _priority(s)
+
+        if flavor != DICT and is_main_schema:
+            raise ValueError("The main schema must be a dict.")
+
+        if flavor == TYPE:
+            # Handle type
+            return {"type": {int: "integer", float: "number", bool: "boolean"}.get(s, "string")}
+        elif flavor == ITERABLE and len(s) == 1:
+            # Handle arrays of a single type or dict schema
+            return {"type": "array", "items": Schema(s[0]).json_schema(is_main_schema=False)}
+        elif isinstance(s, Or):
+            # Handle Or values
+            values = [Schema(or_key).json_schema(is_main_schema=False) for or_key in s._args]
+            any_of = []
+            for value in values:
+                if value not in any_of:
+                    any_of.append(value)
+            return {"anyOf": any_of}
+
+        if flavor != DICT:
+            # If not handled, do not check
+            return {}
+
+        if is_main_schema and not schema_id:
+            raise ValueError("schema_id is required.")
+
+        # Handle dict
+        required_keys = []
+        expanded_schema = {}
+        for key in s:
+            if isinstance(key, Hook):
+                continue
+
+            if isinstance(s[key], Schema):
+                sub_schema = s[key]
+            else:
+                sub_schema = Schema(s[key], ignore_extra_keys=i)
+            sub_schema_json = sub_schema.json_schema(is_main_schema=False)
+
+            is_optional = False
+            if isinstance(key, Optional):
+                key = key._schema
+                is_optional = True
+
+            if isinstance(key, str):
+                if not is_optional:
+                    required_keys.append(key)
+                expanded_schema[key] = sub_schema_json
+            elif isinstance(key, Or):
+                for or_key in key._args:
+                    expanded_schema[or_key] = sub_schema_json
+        schema_dict = {
+            "type": "object",
+            "properties": expanded_schema,
+            "required": required_keys,
+            "additionalProperties": i,
+        }
+        if is_main_schema:
+            schema_dict.update({"id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
+        return schema_dict
 
 
 class Optional(Schema):
@@ -551,3 +665,7 @@ class Const(Schema):
     def validate(self, data):
         super(Const, self).validate(data)
         return data
+
+
+def _plural_s(sized):
+    return "s" if len(sized) > 1 else ""
