@@ -261,10 +261,11 @@ class Schema(object):
     schema for the data that will be validated.
     """
 
-    def __init__(self, schema, error=None, ignore_extra_keys=False):
+    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None):
         self._schema = schema
         self._error = error
         self._ignore_extra_keys = ignore_extra_keys
+        self._name = name
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self._schema)
