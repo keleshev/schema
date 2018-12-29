@@ -300,7 +300,6 @@ class Schema(object):
             message = "{0!r} {1!s}".format(self._name, message)
         return message
 
-
     def validate(self, data):
         Schema = self.__class__
         s = self._schema
@@ -353,8 +352,7 @@ class Schema(object):
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     message = self._prepend_schema_name(k)
-                                    raise SchemaError([message] + x.autos,
-                                                      [e] + x.errors)
+                                    raise SchemaError([message] + x.autos, [e] + x.errors)
                                 else:
                                     new[nkey] = nvalue
                                     coverage.add(skey)
@@ -363,18 +361,15 @@ class Schema(object):
             if not required.issubset(coverage):
                 missing_keys = required - coverage
                 s_missing_keys = ", ".join(repr(k) for k in sorted(missing_keys, key=repr))
-                message = "Missing key%s: %s" % (_plural_s(missing_keys),
-                                                 s_missing_keys)
+                message = "Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys)
                 message = self._prepend_schema_name(message)
                 raise SchemaMissingKeyError(message, e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
-                message = "Wrong key%s %s in %r" % (_plural_s(wrong_keys),
-                                                    s_wrong_keys, data)
+                message = "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data)
                 message = self._prepend_schema_name(message)
-                raise SchemaWrongKeyError(message,
-                                          e.format(data) if e else None)
+                raise SchemaWrongKeyError(message, e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and hasattr(k, "default")) - coverage
@@ -388,8 +383,7 @@ class Schema(object):
             else:
                 message = "%r should be instance of %r" % (data, s.__name__)
                 message = self._prepend_schema_name(message)
-                raise SchemaUnexpectedTypeError(message,
-                                                e.format(data) if e else None)
+                raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
@@ -398,8 +392,7 @@ class Schema(object):
             except BaseException as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message,
-                                  self._error.format(data) if self._error else None)
+                raise SchemaError(message, self._error.format(data) if self._error else None)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -410,8 +403,7 @@ class Schema(object):
             except BaseException as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message,
-                                  self._error.format(data) if self._error else None)
+                raise SchemaError(message, self._error.format(data) if self._error else None)
             message = "%s(%r) should evaluate to True" % (f, data)
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e)
