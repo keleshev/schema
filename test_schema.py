@@ -881,3 +881,10 @@ def test_json_schema_not_a_dict():
     s = Schema(int)
     with raises(ValueError):
         s.json_schema()
+
+
+def test_prepend_schema_name():
+    try:
+        Schema({"key1": int}, name="custom_schemaname").validate({"key1": "a"})
+    except SchemaError as e:
+        assert str(e) == "'custom_schemaname' Key 'key1' error:\n'a' should be instance of 'int'"
