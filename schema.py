@@ -296,6 +296,10 @@ class Schema(object):
             return True
 
     def _prepend_schema_name(self, message):
+        """
+        If a custom schema name has been defined, prepends it to the error
+        message that gets raised when a schema error occurs.
+        """
         if self._name:
             message = "{0!r} {1!s}".format(self._name, message)
         return message
