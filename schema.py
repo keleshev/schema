@@ -96,43 +96,53 @@ class SchemaUnexpectedTypeError(SchemaError):
 class Base(object):
     """Base class for all schemas."""
 
-    def __init__(self, error=None):
+    def __init__(self, error=None, name=None):
         self._error = error
+        self._name = name
 
     @staticmethod
     def _is_optional_type(s):
         """Return True if the given key is optional (does not have to be found"""
         return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
+    def _prepend_schema_name(self, message):
+        """
+        If a custom schema name has been defined, prepends it to the error
+        message that gets raised when a schema error occurs.
+        """
+        if self._name:
+            message = "{0!r} {1!s}".format(self._name, message)
+        return message
+
 
 # Atomic schemas
 
 
 class _Type(Base):
-    def __init__(self, typ, error=None):
-        super(_Type, self).__init__(error=error)
+    def __init__(self, typ, **kwargs):
+        super(_Type, self).__init__(**kwargs)
         self._type = typ
 
     def validate(self, data):
         if isinstance(data, self._type) and not (isinstance(data, bool) and self._type == int):
             return data
         err = self._error
-        raise SchemaUnexpectedTypeError(
-            "%r should be instance of %r" % (data, self._type.__name__), err.format(data) if err else None
-        )
+        message = "%r should be instance of %r" % (data, self._type.__name__)
+        message = self._prepend_schema_name(message)
+        raise SchemaUnexpectedTypeError(message, err.format(data) if err else None)
 
 
 class _Value(Base):
-    def __init__(self, value, error=None):
-        super(_Value, self).__init__(error=error)
+    def __init__(self, value, **kwargs):
+        super(_Value, self).__init__(**kwargs)
         self._value = value
 
     def validate(self, data):
         if self._value == data:
             return data
-        raise SchemaError(
-            "%r does not match %r" % (self._value, data), self._error.format(data) if self._error else None
-        )
+        message = "%r does not match %r" % (self._value, data)
+        message = self._prepend_schema_name(message)
+        raise SchemaError(message, self._error.format(data) if self._error else None)
 
 
 class Regex(Base):
@@ -193,8 +203,8 @@ def _callable_str(callable_):
 class _Check(Base):
     """Validation for callables."""
 
-    def __init__(self, callable_, error=None):
-        super(_Check, self).__init__(error=error)
+    def __init__(self, callable_, **kwargs):
+        super(_Check, self).__init__(**kwargs)
         self._callable = callable_
 
     def validate(self, data):
@@ -205,8 +215,12 @@ class _Check(Base):
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
-            raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
-        raise SchemaError("%s(%r) should evaluate to True" % (f, data), self._error)
+            message = "%s(%r) raised %r" % (f, data, x)
+            message = self._prepend_schema_name(message)
+            raise SchemaError(message, self._error.format(data) if self._error else None)
+        message = "%s(%r) should evaluate to True" % (f, data)
+        message = self._prepend_schema_name(message)
+        raise SchemaError(message, self._error)
 
 
 class Use(Base):
@@ -266,38 +280,39 @@ def _empty(schema):
     return isinstance(schema, _Wrapper) and schema._error is None
 
 
-def schemify(schema, error=None, ignore_extra_keys=False):
+def schemify(schema, error=None, ignore_extra_keys=False, name=None):
     """Create a minimalistic schema (instance of ``Base``)."""
     # try to avoid unnecessary wrappings
     if isinstance(schema, Base):
         while _empty(schema):
             schema = schema._worker
     if hasattr(schema, "validate"):
-        return _Wrapper(schema, error=error) if error else schema
+        return _Wrapper(schema, error=error, name=name) if error else schema
 
     flavor = _priority(schema)
     if flavor == ITERABLE:
-        return _Iterable(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys)
+        return _Iterable(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys, name=name)
     if flavor == DICT:
-        return _Dict(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys)
+        return _Dict(schema, schema=schemify, error=error, ignore_extra_keys=ignore_extra_keys, name=name)
     if flavor == TYPE:
-        return _Type(schema, error=error)
+        return _Type(schema, error=error, name=name)
     if flavor == CALLABLE:
-        return _Check(schema, error=error)
-    return _Value(schema, error=error)
+        return _Check(schema, error=error, name=name)
+    return _Value(schema, error=error, name=name)
 
 
 def _schema_args(kw):
     """Parse `schema`, `error` and `ignore_extra_keys`."""
-    if not set(kw).issubset({"error", "schema", "ignore_extra_keys"}):
-        diff = {"error", "schema", "ignore_extra_keys"}.difference(kw)
+    if not set(kw).issubset({"error", "schema", "ignore_extra_keys", "name"}):
+        diff = {"error", "schema", "ignore_extra_keys", "name"}.difference(kw)
         raise TypeError("Unknown keyword arguments %r" % list(diff))
     schema = kw.get("schema", schemify)
     if _flattable(schema):
         schema = schemify
     error = kw.get("error")
     ignore = kw.get("ignore_extra_keys", False)
-    return schema, error, ignore
+    name = kw.get("name", None)
+    return schema, error, ignore, name
 
 
 class And(Base):
@@ -307,8 +322,8 @@ class And(Base):
 
     def __init__(self, *args, **kw):
         self._args = args
-        schema, error, ignore = _schema_args(kw)
-        super(And, self).__init__(error=error)
+        schema, error, ignore, name = _schema_args(kw)
+        super(And, self).__init__(error=error, name=name)
         # You can pass your inherited Schema class.
         self._schema_seq = [schema(s, error=error, ignore_extra_keys=ignore) for s in args]
 
@@ -367,8 +382,8 @@ class Or(And):
 
 class _Iterable(Base):
     def __init__(self, iterable, **kwargs):
-        schema, error, ignore = _schema_args(kwargs)
-        super(_Iterable, self).__init__(error=error)
+        schema, error, ignore, name = _schema_args(kwargs)
+        super(_Iterable, self).__init__(error=error, name=name)
         self._type_check = schema(type(iterable), error=error)
         self._schema = Or(*iterable, error=error, schema=schema, ignore_extra_keys=ignore)
 
@@ -379,8 +394,8 @@ class _Iterable(Base):
 
 class _Dict(Base):
     def __init__(self, dct, **kwargs):
-        schema, error, ignore = _schema_args(kwargs)
-        super(_Dict, self).__init__(error=error)
+        schema, error, ignore, name = _schema_args(kwargs)
+        super(_Dict, self).__init__(error=error, name=name)
         self._ignore_extra_keys = ignore
         sorted_keys = sorted(dct, key=self._dict_key_priority)
         self._sorted = [
@@ -453,7 +468,8 @@ class _Dict(Base):
                                     nvalue = val_sc.validate(value)
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
-                                    raise SchemaError([k] + x.autos, [e] + x.errors)
+                                    message = self._prepend_schema_name(k)
+                                    raise SchemaError([message] + x.autos, [e] + x.errors)
                                 else:
                                     new[nkey] = nvalue
                                     coverage.add(skey)
@@ -462,13 +478,15 @@ class _Dict(Base):
             if not self._required.issubset(coverage):
                 missing_keys = self._required - coverage
                 s_missing_keys = ", ".join(sorted(repr(k) for k in missing_keys))
-                raise SchemaMissingKeyError("Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys), e)
+                message = "Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys)
+                message = self._prepend_schema_name(message)
+                raise SchemaMissingKeyError(message, e)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ", ".join(sorted(repr(k) for k in wrong_keys))
-                raise SchemaWrongKeyError(
-                    "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data), e.format(data) if e else None
-                )
+                message = "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data)
+                message = self._prepend_schema_name(message)
+                raise SchemaWrongKeyError(message, e.format(data) if e else None)
             # Apply default-having optionals that haven't been used:
             for default in self._defaults - coverage:
                 new[default.key] = default.default() if callable(default.default) else default.default
@@ -479,8 +497,8 @@ class _Dict(Base):
 class _Wrapper(Base):
     """Helper class to wrap a error around a validator."""
 
-    def __init__(self, validator, error=None):
-        super(_Wrapper, self).__init__(error=error)
+    def __init__(self, validator, error=None, name=None):
+        super(_Wrapper, self).__init__(error=error, name=name)
         self._worker = schemify(validator)
 
     def validate(self, data):
@@ -489,9 +507,9 @@ class _Wrapper(Base):
         except SchemaError as x:
             raise SchemaError([None] + x.autos, [self._error] + x.errors)
         except BaseException as x:
-            raise SchemaError(
-                "%r.validate(%r) raised %r" % (self._worker, data, x), self._error.format(data) if self._error else None
-            )
+            message = "%r.validate(%r) raised %r" % (self._worker, data, x)
+            message = self._prepend_schema_name(message)
+            raise SchemaError(message, self._error.format(data) if self._error else None)
 
 
 class Schema(Base):
@@ -500,22 +518,24 @@ class Schema(Base):
     schema for the data that will be validated.
     """
 
-    def __init__(self, schema, error=None, ignore_extra_keys=False):
-        super(Schema, self).__init__(error=error)
+    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None):
+        super(Schema, self).__init__(error=error, name=name)
         self._schema = schema
         flavor = _priority(schema)
         if flavor == ITERABLE:
-            self._worker = _Iterable(schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys)
+            self._worker = _Iterable(
+                schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys, name=name
+            )
         elif flavor == DICT:
-            self._worker = _Dict(schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys)
+            self._worker = _Dict(schema, schema=type(self), error=error, ignore_extra_keys=ignore_extra_keys, name=name)
         elif flavor == TYPE:
-            self._worker = _Type(schema, error=error)
+            self._worker = _Type(schema, error=error, name=name)
         elif flavor == VALIDATOR:
-            self._worker = _Wrapper(schema, error=error)
+            self._worker = _Wrapper(schema, error=error, name=name)
         elif flavor == CALLABLE:
-            self._worker = _Check(schema, error=error)
+            self._worker = _Check(schema, error=error, name=name)
         else:
-            self._worker = _Value(schema, error=error)
+            self._worker = _Value(schema, error=error, name=name)
         self._ignore_extra_keys = ignore_extra_keys
 
     def __repr__(self):
