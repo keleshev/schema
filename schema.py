@@ -9,7 +9,7 @@ try:
 except ImportError:
     from contextlib2 import ExitStack
 
-__version__ = "0.6.8"
+__version__ = '0.7.0'
 __all__ = [
     "Schema",
     "And",
