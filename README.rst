@@ -310,6 +310,7 @@ In a dictionary, you can also combine two keys in a "one or the other" manner. T
 so, use the `Or` class as a key:
 
 .. code:: python
+
     >>> from schema import Or, Schema
     >>> schema = Schema({
     ...    Or("key1", "key2", only_one=True): str
