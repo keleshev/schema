@@ -819,20 +819,7 @@ def test_json_schema_or_values_nested():
         "id": "my-id",
         "properties": {
             "param": {
-                "anyOf": [
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "array"
-                        }
-                    },
-                ]
+                "anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "array", "items": {"type": "array"}}]
             }
         },
         "required": ["param"],
@@ -941,7 +928,9 @@ def test_json_schema_and_list():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {"param1": {"allOf": [{"type": "array", "items": {"enum": ["choice1", "choice2"]}}, {"type": "array"}]}},
+        "properties": {
+            "param1": {"allOf": [{"type": "array", "items": {"enum": ["choice1", "choice2"]}}, {"type": "array"}]}
+        },
         "required": ["param1"],
         "additionalProperties": False,
         "type": "object",
