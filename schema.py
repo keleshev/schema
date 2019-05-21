@@ -111,6 +111,11 @@ class And(object):
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
 
+    @property
+    def args(self):
+        """The provided parameters"""
+        return self._args
+
     def validate(self, data):
         """
         Validate data using defined sub schema/expressions ensuring all
@@ -193,6 +198,11 @@ class Regex(object):
 
     def __repr__(self):
         return "%s(%r%s)" % (self.__class__.__name__, self._pattern_str, self._flags_names)
+
+    @property
+    def pattern_str(self):
+        """The pattern for the represented regular expression"""
+        return self._pattern_str
 
     def validate(self, data):
         """
@@ -281,7 +291,7 @@ class Schema(object):
 
     @staticmethod
     def _is_optional_type(s):
-        """Return True if the given key is optional (does not have to be found"""
+        """Return True if the given key is optional (does not have to be found)"""
         return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
     def is_valid(self, data):
@@ -423,6 +433,21 @@ class Schema(object):
         This method can only be called when the Schema's value is a dict.
         This method must be called with a schema_id. Calling it without one
         is used in a recursive context for sub schemas."""
+
+        def _get_type_name(python_type):
+            """Return the JSON schema name for a Python type"""
+            if python_type == str:
+                return "string"
+            elif python_type == int:
+                return "integer"
+            elif python_type == float:
+                return "number"
+            elif python_type == bool:
+                return "boolean"
+            elif python_type == list:
+                return "array"
+            return "string"
+
         Schema = self.__class__
         s = self._schema
         i = self._ignore_extra_keys
@@ -433,18 +458,46 @@ class Schema(object):
 
         if flavor == TYPE:
             # Handle type
-            return {"type": {int: "integer", float: "number", bool: "boolean"}.get(s, "string")}
-        elif flavor == ITERABLE and len(s) == 1:
-            # Handle arrays of a single type or dict schema
-            return {"type": "array", "items": Schema(s[0]).json_schema(is_main_schema=False)}
+            return {"type": _get_type_name(s)}
+        elif flavor == ITERABLE:
+            # Handle arrays or dict schema
+
+            validator = {"type": "array"}
+            if len(s) == 1:
+                validator["items"] = Schema(s[0]).json_schema(is_main_schema=False)
+            elif len(s) > 1:
+                validator["items"] = Schema(Or(*s)).json_schema(is_main_schema=False)
+            return validator
+
         elif isinstance(s, Or):
             # Handle Or values
-            values = [Schema(or_key).json_schema(is_main_schema=False) for or_key in s._args]
-            any_of = []
-            for value in values:
-                if value not in any_of:
-                    any_of.append(value)
-            return {"anyOf": any_of}
+
+            # Check if we can use an enum
+            if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
+                # All values are simple, can use enum or const
+                if len(s.args) == 1:
+                    return {"const": s.args[0]}
+                return {"enum": list(s.args)}
+
+            # No enum, let's go with recursive calls
+            any_of_values = []
+            for or_key in s.args:
+                new_value = Schema(or_key).json_schema(is_main_schema=False)
+                if new_value not in any_of_values:
+                    any_of_values.append(new_value)
+            return {"anyOf": any_of_values}
+        elif isinstance(s, And):
+            # Handle And values
+            all_of_values = []
+            for and_key in s.args:
+                new_value = Schema(and_key).json_schema(is_main_schema=False)
+                if new_value != {} and new_value not in all_of_values:
+                    all_of_values.append(new_value)
+            return {"allOf": all_of_values}
+        elif flavor == COMPARABLE:
+            return {"const": s}
+        elif flavor == VALIDATOR and type(s) == Regex:
+            return {"type": "string", "pattern": s.pattern_str}
 
         if flavor != DICT:
             # If not handled, do not check
@@ -476,7 +529,7 @@ class Schema(object):
                     required_keys.append(key)
                 expanded_schema[key] = sub_schema_json
             elif isinstance(key, Or):
-                for or_key in key._args:
+                for or_key in key.args:
                     expanded_schema[or_key] = sub_schema_json
         schema_dict = {
             "type": "object",
@@ -486,6 +539,8 @@ class Schema(object):
         }
         if is_main_schema:
             schema_dict.update({"id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
+            if self._name:
+                schema_dict["title"] = self._name
         return schema_dict
 
 
