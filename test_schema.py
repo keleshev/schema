@@ -695,6 +695,19 @@ def test_json_schema():
     }
 
 
+def test_json_schema_with_title():
+    s = Schema({"test": str}, name="Testing a schema")
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "title": "Testing a schema",
+        "properties": {"test": {"type": "string"}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
 def test_json_schema_types():
     s = Schema(
         {
@@ -713,6 +726,19 @@ def test_json_schema_types():
             "test_float": {"type": "number"},
             "test_bool": {"type": "boolean"},
         },
+        "required": [],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_other_types():
+    """Test that data types not supported by JSON schema are returned as strings"""
+    s = Schema({Optional("test_other"): bytes})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {"test_other": {"type": "string"}},
         "required": [],
         "additionalProperties": False,
         "type": "object",
@@ -871,6 +897,18 @@ def test_json_schema_and_types():
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
         "properties": {"test": {"allOf": [{"type": "string"}]}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_or_one_value():
+    s = Schema({"test": Or(True)})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {"test": {"const": True}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
