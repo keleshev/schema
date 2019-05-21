@@ -16,6 +16,7 @@ from schema import (
     Const,
     Forbidden,
     Hook,
+    Literal,
     Optional,
     Or,
     Regex,
@@ -881,6 +882,92 @@ def test_json_schema_not_a_dict():
     s = Schema(int)
     with raises(ValueError):
         s.json_schema()
+
+
+def test_json_schema_title_and_description():
+    s = Schema({Literal("productId", description="The unique identifier for a product"): int}, name="Product", description="A product in the catalog")
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "title": "Product",
+        "description": "A product in the catalog",
+        "properties": {
+            "productId": {
+                "description": "The unique identifier for a product",
+                "type": "integer"
+            }
+        },
+        "required": ["productId"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_description_nested():
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): Or([str], [list])})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {
+            "test1": {
+                "description": "A description here",
+                "anyOf": [
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                    },
+                    {
+                        "items": {
+                            "type": "array"
+                        },
+                        "type": "array",
+                    }
+                ]
+            }
+        },
+        "required": [],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_description_or_nested():
+    s = Schema({Optional(Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))): Or([str], [list])})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "id": "my-id",
+        "properties": {
+            "test1": {
+                "description": "A description here",
+                "anyOf": [
+                    {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                    },
+                    {
+                        "items": {
+                            "type": "array"
+                        },
+                        "type": "array",
+                    }
+                ]
+            }
+        },
+        "required": [],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_description():
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
+    assert s.validate({
+        "test1": {}
+    })
 
 
 def test_prepend_schema_name():

@@ -247,6 +247,8 @@ def _priority(s):
         return DICT
     if issubclass(type(s), type):
         return TYPE
+    if isinstance(s, Literal):
+        return COMPARABLE
     if hasattr(s, "validate"):
         return VALIDATOR
     if callable(s):
@@ -261,11 +263,12 @@ class Schema(object):
     schema for the data that will be validated.
     """
 
-    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None):
+    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None, description=None):
         self._schema = schema
         self._error = error
         self._ignore_extra_keys = ignore_extra_keys
         self._name = name
+        self._description = description
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self._schema)
@@ -413,6 +416,9 @@ class Schema(object):
             raise SchemaError(message, e)
         if s == data:
             return data
+        if isinstance(s, Literal):
+            if s._schema == data:
+                return data
         else:
             message = "%r does not match %r" % (s, data)
             message = self._prepend_schema_name(message)
@@ -471,6 +477,10 @@ class Schema(object):
                 key = key._schema
                 is_optional = True
 
+            if isinstance(key, Literal) and key._description:
+                sub_schema_json["description"] = key._description
+                key = key._schema
+
             if isinstance(key, str):
                 if not is_optional:
                     required_keys.append(key)
@@ -486,6 +496,11 @@ class Schema(object):
         }
         if is_main_schema:
             schema_dict.update({"id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
+            if self._description:
+                schema_dict["description"] = self._description
+            if self._name:
+                schema_dict["title"] = self._name
+
         return schema_dict
 
 
@@ -538,6 +553,12 @@ class Forbidden(Hook):
     @staticmethod
     def _default_function(nkey, data, error):
         raise SchemaForbiddenKeyError("Forbidden key encountered: %r in %r" % (nkey, data), error)
+
+
+class Literal(object):
+    def __init__(self, value, description=None):
+        self._schema = value
+        self._description = description
 
 
 class Const(Schema):
