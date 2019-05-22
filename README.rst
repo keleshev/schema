@@ -537,7 +537,5 @@ Here's an example:
 Please note that this is a beta feature. Some JSON schema features are not implemented. Some caveats:
 
 - There are no object references, items of type `object` are always fully rendered
-- Some JSON schema types are not implemented. In those cases, an empty dict will be rendered.
-  This disables all validation for the item.
 - Validations other than type are not implemented. This includes features such as integers'
   minimum and maximum or arrays' minItems
