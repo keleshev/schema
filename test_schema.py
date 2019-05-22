@@ -1096,6 +1096,53 @@ def test_json_schema_description_or_nested():
     }
 
 
+def test_json_schema_description_and_nested():
+    s = Schema({Optional(Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))): And([str], [list])})
+    assert s.json_schema("my-id") == {
+      "type": "object",
+      "properties": {
+        "test1": {
+          "description": "A description here",
+          "allOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "test2": {
+          "description": "Another",
+          "allOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": False,
+      "id": "my-id",
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    }
+
+
 def test_description():
     s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
     assert s.validate({
