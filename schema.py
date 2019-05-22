@@ -9,7 +9,7 @@ try:
 except ImportError:
     from contextlib2 import ExitStack
 
-__version__ = '0.7.0'
+__version__ = "0.7.0"
 __all__ = [
     "Schema",
     "And",
@@ -490,6 +490,7 @@ class Schema(object):
 
         elif isinstance(s, Or):
             # Handle Or values
+
             # Check if we can use an enum
             if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
                 # All values are simple, can use enum or const
