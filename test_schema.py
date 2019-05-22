@@ -1052,30 +1052,47 @@ def test_json_schema_description_nested():
 def test_json_schema_description_or_nested():
     s = Schema({Optional(Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))): Or([str], [list])})
     assert s.json_schema("my-id") == {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "id": "my-id",
-        "properties": {
-            "test1": {
-                "description": "A description here",
-                "anyOf": [
-                    {
-                        "items": {
-                            "type": "string"
-                        },
-                        "type": "array",
-                    },
-                    {
-                        "items": {
-                            "type": "array"
-                        },
-                        "type": "array",
-                    }
-                ]
+      "type": "object",
+      "properties": {
+        "test1": {
+          "description": "A description here",
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "type": "array"
+              },
+              "type": "array"
             }
+          ]
         },
-        "required": [],
-        "additionalProperties": False,
-        "type": "object",
+        "test2": {
+          "description": "Another",
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "items": {
+                "type": "array"
+              },
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": False,
+      "id": "my-id",
+      "$schema": "http://json-schema.org/draft-07/schema#"
     }
 
 

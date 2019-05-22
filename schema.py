@@ -127,6 +127,10 @@ class And(object):
             data = s.validate(data)
         return data
 
+    @property
+    def args(self):
+        return self._args
+
 
 class Or(And):
     """Utility function to combine validation directives in a OR Boolean
@@ -427,7 +431,7 @@ class Schema(object):
         if s == data:
             return data
         if isinstance(s, Literal):
-            if s._schema == data:
+            if s.schema == data:
                 return data
         else:
             message = "%r does not match %r" % (s, data)
@@ -477,7 +481,6 @@ class Schema(object):
 
         elif isinstance(s, Or):
             # Handle Or values
-
             # Check if we can use an enum
             if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
                 # All values are simple, can use enum or const
@@ -530,9 +533,9 @@ class Schema(object):
                 key = key._schema
                 is_optional = True
 
-            if isinstance(key, Literal) and key._description:
-                sub_schema_json["description"] = key._description
-                key = key._schema
+            if isinstance(key, Literal) and key.description:
+                sub_schema_json["description"] = key.description
+                key = key.schema
 
             if isinstance(key, str):
                 if not is_optional:
@@ -540,7 +543,11 @@ class Schema(object):
                 expanded_schema[key] = sub_schema_json
             elif isinstance(key, Or):
                 for or_key in key.args:
-                    expanded_schema[or_key] = sub_schema_json
+                    if isinstance(or_key, Literal):
+                        expanded_schema[or_key.schema] = sub_schema_json.copy()
+                        expanded_schema[or_key.schema]["description"] = or_key.description
+                    else:
+                        expanded_schema[or_key] = sub_schema_json
         schema_dict = {
             "type": "object",
             "properties": expanded_schema,
@@ -612,6 +619,14 @@ class Literal(object):
     def __init__(self, value, description=None):
         self._schema = value
         self._description = description
+
+    @property
+    def description(self):
+        return self._description
+
+    @property
+    def schema(self):
+        return self._schema
 
 
 class Const(Schema):
