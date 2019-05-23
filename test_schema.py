@@ -78,21 +78,13 @@ def test_schema():
 
 
 def test_validate_file():
-    assert (
-        Schema(Use(open))
-        .validate("LICENSE-MIT")
-        .read()
-        .startswith("Copyright")
-    )
+    assert Schema(Use(open)).validate("LICENSE-MIT").read().startswith("Copyright")
     with SE:
         Schema(Use(open)).validate("NON-EXISTENT")
     assert Schema(os.path.exists).validate(".") == "."
     with SE:
         Schema(os.path.exists).validate("./non-existent/")
-    assert (
-        Schema(os.path.isfile).validate("LICENSE-MIT")
-        == "LICENSE-MIT"
-    )
+    assert Schema(os.path.isfile).validate("LICENSE-MIT") == "LICENSE-MIT"
     with SE:
         Schema(os.path.isfile).validate("NON-EXISTENT")
 
@@ -101,10 +93,7 @@ def test_and():
     assert And(int, lambda n: 0 < n < 5).validate(3) == 3
     with SE:
         And(int, lambda n: 0 < n < 5).validate(3.33)
-    assert (
-        And(Use(int), lambda n: 0 < n < 5).validate(3.33)
-        == 3
-    )
+    assert And(Use(int), lambda n: 0 < n < 5).validate(3.33) == 3
     with SE:
         And(Use(int), lambda n: 0 < n < 5).validate("3.33")
 
@@ -121,49 +110,22 @@ def test_or():
 
 def test_or_only_one():
     or_rule = Or("test1", "test2", only_one=True)
-    schema = Schema(
-        {
-            or_rule: str,
-            Optional("sub_schema"): {
-                Optional(copy.deepcopy(or_rule)): str
-            },
-        }
-    )
+    schema = Schema({or_rule: str, Optional("sub_schema"): {Optional(copy.deepcopy(or_rule)): str}})
     assert schema.validate({"test1": "value"})
-    assert schema.validate(
-        {"test1": "value", "sub_schema": {"test2": "value"}}
-    )
+    assert schema.validate({"test1": "value", "sub_schema": {"test2": "value"}})
     assert schema.validate({"test2": "other_value"})
     with SE:
-        schema.validate(
-            {"test1": "value", "test2": "other_value"}
-        )
+        schema.validate({"test1": "value", "test2": "other_value"})
     with SE:
-        schema.validate(
-            {
-                "test1": "value",
-                "sub_schema": {
-                    "test1": "value",
-                    "test2": "value",
-                },
-            }
-        )
+        schema.validate({"test1": "value", "sub_schema": {"test1": "value", "test2": "value"}})
     with SE:
         schema.validate({"othertest": "value"})
 
-    extra_keys_schema = Schema(
-        {or_rule: str}, ignore_extra_keys=True
-    )
-    assert extra_keys_schema.validate(
-        {"test1": "value", "other-key": "value"}
-    )
-    assert extra_keys_schema.validate(
-        {"test2": "other_value"}
-    )
+    extra_keys_schema = Schema({or_rule: str}, ignore_extra_keys=True)
+    assert extra_keys_schema.validate({"test1": "value", "other-key": "value"})
+    assert extra_keys_schema.validate({"test2": "other_value"})
     with SE:
-        extra_keys_schema.validate(
-            {"test1": "value", "test2": "other_value"}
-        )
+        extra_keys_schema.validate({"test1": "value", "test2": "other_value"})
 
 
 def test_test():
@@ -173,24 +135,11 @@ def test_test():
     def dict_keys(key, _list):
         return list(map(lambda d: d[key], _list))
 
-    schema = Schema(
-        Const(
-            And(
-                Use(partial(dict_keys, "index")),
-                unique_list,
-            )
-        )
-    )
-    data = [
-        {"index": 1, "value": "foo"},
-        {"index": 2, "value": "bar"},
-    ]
+    schema = Schema(Const(And(Use(partial(dict_keys, "index")), unique_list)))
+    data = [{"index": 1, "value": "foo"}, {"index": 2, "value": "bar"}]
     assert schema.validate(data) == data
 
-    bad_data = [
-        {"index": 1, "value": "foo"},
-        {"index": 1, "value": "bar"},
-    ]
+    bad_data = [{"index": 1, "value": "foo"}, {"index": 1, "value": "bar"}]
     with SE:
         schema.validate(bad_data)
 
@@ -202,31 +151,19 @@ def test_regex():
         Regex(r"bar").validate("afoot")
 
     # More complex case: validate string
-    assert (
-        Regex(r"^[a-z]+$").validate("letters") == "letters"
-    )
+    assert Regex(r"^[a-z]+$").validate("letters") == "letters"
     with SE:
-        Regex(r"^[a-z]+$").validate(
-            "letters + spaces"
-        ) == "letters + spaces"
+        Regex(r"^[a-z]+$").validate("letters + spaces") == "letters + spaces"
 
     # Validate dict key
-    assert Schema({Regex(r"^foo"): str}).validate(
-        {"fookey": "value"}
-    ) == {"fookey": "value"}
+    assert Schema({Regex(r"^foo"): str}).validate({"fookey": "value"}) == {"fookey": "value"}
     with SE:
-        Schema({Regex(r"^foo"): str}).validate(
-            {"barkey": "value"}
-        )
+        Schema({Regex(r"^foo"): str}).validate({"barkey": "value"})
 
     # Validate dict value
-    assert Schema({str: Regex(r"^foo")}).validate(
-        {"key": "foovalue"}
-    ) == {"key": "foovalue"}
+    assert Schema({str: Regex(r"^foo")}).validate({"key": "foovalue"}) == {"key": "foovalue"}
     with SE:
-        Schema({str: Regex(r"^foo")}).validate(
-            {"key": "barvalue"}
-        )
+        Schema({str: Regex(r"^foo")}).validate({"key": "barvalue"})
 
     # Error if the value does not have a buffer interface
     with SE:
@@ -239,9 +176,7 @@ def test_regex():
         Regex(r"bar").validate(None)
 
     # Validate that the pattern has a buffer interface
-    assert (
-        Regex(re.compile(r"foo")).validate("foo") == "foo"
-    )
+    assert Regex(re.compile(r"foo")).validate("foo") == "foo"
     assert Regex(unicode("foo")).validate("foo") == "foo"
     with raises(TypeError):
         Regex(1).validate("bar")
@@ -254,20 +189,13 @@ def test_regex():
 
 
 def test_validate_list():
-    assert Schema([1, 0]).validate([1, 0, 1, 1]) == [
-        1,
-        0,
-        1,
-        1,
-    ]
+    assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
     assert Schema([1, 0]).validate([]) == []
     with SE:
         Schema([1, 0]).validate(0)
     with SE:
         Schema([1, 0]).validate([2])
-    assert And([1, 0], lambda l: len(l) > 2).validate(
-        [0, 1, 0]
-    ) == [0, 1, 0]
+    assert And([1, 0], lambda l: len(l) > 2).validate([0, 1, 0]) == [0, 1, 0]
     with SE:
         And([1, 0], lambda l: len(l) > 2).validate([0, 1])
 
@@ -276,16 +204,12 @@ def test_list_tuple_set_frozenset():
     assert Schema([int]).validate([1, 2])
     with SE:
         Schema([int]).validate(["1", 2])
-    assert Schema(set([int])).validate(set([1, 2])) == set(
-        [1, 2]
-    )
+    assert Schema(set([int])).validate(set([1, 2])) == set([1, 2])
     with SE:
         Schema(set([int])).validate([1, 2])  # not a set
     with SE:
         Schema(set([int])).validate(["1", 2])
-    assert Schema(tuple([int])).validate(
-        tuple([1, 2])
-    ) == tuple([1, 2])
+    assert Schema(tuple([int])).validate(tuple([1, 2])) == tuple([1, 2])
     with SE:
         Schema(tuple([int])).validate([1, 2])  # not a set
 
@@ -297,30 +221,20 @@ def test_strictly():
 
 
 def test_dict():
-    assert Schema({"key": 5}).validate({"key": 5}) == {
-        "key": 5
-    }
+    assert Schema({"key": 5}).validate({"key": 5}) == {"key": 5}
     with SE:
         Schema({"key": 5}).validate({"key": "x"})
     with SE:
         Schema({"key": 5}).validate(["key", 5])
-    assert Schema({"key": int}).validate({"key": 5}) == {
-        "key": 5
-    }
-    assert Schema({"n": int, "f": float}).validate(
-        {"n": 5, "f": 3.14}
-    ) == {"n": 5, "f": 3.14}
+    assert Schema({"key": int}).validate({"key": 5}) == {"key": 5}
+    assert Schema({"n": int, "f": float}).validate({"n": 5, "f": 3.14}) == {"n": 5, "f": 3.14}
     with SE:
-        Schema({"n": int, "f": float}).validate(
-            {"n": 3.14, "f": 5}
-        )
+        Schema({"n": int, "f": float}).validate({"n": 3.14, "f": 5})
     with SE:
         try:
             Schema({}).validate({"abc": None, 1: None})
         except SchemaWrongKeyError as e:
-            assert e.args[0].startswith(
-                "Wrong keys 'abc', 1 in"
-            )
+            assert e.args[0].startswith("Wrong keys 'abc', 1 in")
             raise
     with SE:
         try:
@@ -338,9 +252,7 @@ def test_dict():
         try:
             Schema({"key": 5, "key2": 5}).validate({"n": 5})
         except SchemaMissingKeyError as e:
-            assert (
-                e.args[0] == "Missing keys: 'key', 'key2'"
-            )
+            assert e.args[0] == "Missing keys: 'key', 'key2'"
             raise
     with SE:
         try:
@@ -350,160 +262,92 @@ def test_dict():
             raise
     with SE:
         try:
-            Schema({"key": 5}).validate(
-                {"key": 5, "bad": 5}
-            )
+            Schema({"key": 5}).validate({"key": 5, "bad": 5})
         except SchemaWrongKeyError as e:
-            assert e.args[0] in [
-                "Wrong key 'bad' in {'key': 5, 'bad': 5}",
-                "Wrong key 'bad' in {'bad': 5, 'key': 5}",
-            ]
+            assert e.args[0] in ["Wrong key 'bad' in {'key': 5, 'bad': 5}", "Wrong key 'bad' in {'bad': 5, 'key': 5}"]
             raise
     with SE:
         try:
             Schema({}).validate({"a": 5, "b": 5})
         except SchemaError as e:
-            assert e.args[0] in [
-                "Wrong keys 'a', 'b' in {'a': 5, 'b': 5}",
-                "Wrong keys 'a', 'b' in {'b': 5, 'a': 5}",
-            ]
+            assert e.args[0] in ["Wrong keys 'a', 'b' in {'a': 5, 'b': 5}", "Wrong keys 'a', 'b' in {'b': 5, 'a': 5}"]
             raise
 
     with SE:
         try:
             Schema({int: int}).validate({"": ""})
         except SchemaUnexpectedTypeError as e:
-            assert e.args[0] in [
-                "'' should be instance of 'int'"
-            ]
+            assert e.args[0] in ["'' should be instance of 'int'"]
 
 
 def test_dict_keys():
-    assert Schema({str: int}).validate(
-        {"a": 1, "b": 2}
-    ) == {"a": 1, "b": 2}
+    assert Schema({str: int}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     with SE:
         Schema({str: int}).validate({1: 1, "b": 2})
-    assert Schema({Use(str): Use(int)}).validate(
-        {1: 3.14, 3.14: 1}
-    ) == {"1": 3, "3.14": 1}
+    assert Schema({Use(str): Use(int)}).validate({1: 3.14, 3.14: 1}) == {"1": 3, "3.14": 1}
 
 
 def test_ignore_extra_keys():
-    assert Schema(
-        {"key": 5}, ignore_extra_keys=True
-    ).validate({"key": 5, "bad": 4}) == {"key": 5}
-    assert Schema(
-        {"key": 5, "dk": {"a": "a"}}, ignore_extra_keys=True
-    ).validate(
+    assert Schema({"key": 5}, ignore_extra_keys=True).validate({"key": 5, "bad": 4}) == {"key": 5}
+    assert Schema({"key": 5, "dk": {"a": "a"}}, ignore_extra_keys=True).validate(
         {"key": 5, "bad": "b", "dk": {"a": "a", "bad": "b"}}
-    ) == {
-        "key": 5,
-        "dk": {"a": "a"},
-    }
-    assert Schema(
-        [{"key": "v"}], ignore_extra_keys=True
-    ).validate([{"key": "v", "bad": "bad"}]) == [
-        {"key": "v"}
-    ]
-    assert Schema(
-        [{"key": "v"}], ignore_extra_keys=True
-    ).validate([{"key": "v", "bad": "bad"}]) == [
-        {"key": "v"}
-    ]
+    ) == {"key": 5, "dk": {"a": "a"}}
+    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate([{"key": "v", "bad": "bad"}]) == [{"key": "v"}]
+    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate([{"key": "v", "bad": "bad"}]) == [{"key": "v"}]
 
 
 def test_ignore_extra_keys_validation_and_return_keys():
-    assert Schema(
-        {"key": 5, object: object}, ignore_extra_keys=True
-    ).validate({"key": 5, "bad": 4}) == {"key": 5, "bad": 4}
-    assert Schema(
-        {"key": 5, "dk": {"a": "a", object: object}},
-        ignore_extra_keys=True,
-    ).validate(
-        {"key": 5, "dk": {"a": "a", "bad": "b"}}
-    ) == {
+    assert Schema({"key": 5, object: object}, ignore_extra_keys=True).validate({"key": 5, "bad": 4}) == {
         "key": 5,
-        "dk": {"a": "a", "bad": "b"},
+        "bad": 4,
     }
+    assert Schema({"key": 5, "dk": {"a": "a", object: object}}, ignore_extra_keys=True).validate(
+        {"key": 5, "dk": {"a": "a", "bad": "b"}}
+    ) == {"key": 5, "dk": {"a": "a", "bad": "b"}}
 
 
 def test_dict_forbidden_keys():
     with raises(SchemaForbiddenKeyError):
-        Schema({Forbidden("b"): object}).validate(
-            {"b": "bye"}
-        )
+        Schema({Forbidden("b"): object}).validate({"b": "bye"})
     with raises(SchemaWrongKeyError):
         Schema({Forbidden("b"): int}).validate({"b": "bye"})
-    assert Schema(
-        {Forbidden("b"): int, Optional("b"): object}
-    ).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({Forbidden("b"): int, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
     with raises(SchemaForbiddenKeyError):
-        Schema(
-            {Forbidden("b"): object, Optional("b"): object}
-        ).validate({"b": "bye"})
+        Schema({Forbidden("b"): object, Optional("b"): object}).validate({"b": "bye"})
 
 
 def test_dict_hook():
     function_mock = Mock(return_value=None)
     hook = Hook("b", handler=function_mock)
 
-    assert Schema(
-        {hook: str, Optional("b"): object}
-    ).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({hook: str, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
     function_mock.assert_called_once()
 
-    assert Schema(
-        {hook: int, Optional("b"): object}
-    ).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({hook: int, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
     function_mock.assert_called_once()
 
-    assert Schema({hook: str, "b": object}).validate(
-        {"b": "bye"}
-    ) == {"b": "bye"}
+    assert Schema({hook: str, "b": object}).validate({"b": "bye"}) == {"b": "bye"}
     assert function_mock.call_count == 2
 
 
 def test_dict_optional_keys():
     with SE:
         Schema({"a": 1, "b": 2}).validate({"a": 1})
-    assert Schema({"a": 1, Optional("b"): 2}).validate(
-        {"a": 1}
-    ) == {"a": 1}
-    assert Schema({"a": 1, Optional("b"): 2}).validate(
-        {"a": 1, "b": 2}
-    ) == {"a": 1, "b": 2}
+    assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1}) == {"a": 1}
+    assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     # Make sure Optionals are favored over types:
-    assert Schema(
-        {basestring: 1, Optional("b"): 2}
-    ).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+    assert Schema({basestring: 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     # Make sure Optionals hash based on their key:
-    assert (
-        len(
-            {
-                Optional("a"): 1,
-                Optional("a"): 1,
-                Optional("b"): 2,
-            }
-        )
-        == 2
-    )
+    assert len({Optional("a"): 1, Optional("a"): 1, Optional("b"): 2}) == 2
 
 
 def test_dict_optional_defaults():
     # Optionals fill out their defaults:
-    assert Schema(
-        {
-            Optional("a", default=1): 11,
-            Optional("b", default=2): 22,
-        }
-    ).validate({"a": 11}) == {"a": 11, "b": 2}
+    assert Schema({Optional("a", default=1): 11, Optional("b", default=2): 22}).validate({"a": 11}) == {"a": 11, "b": 2}
 
     # Optionals take precedence over types. Here, the "a" is served by the
     # Optional:
-    assert Schema(
-        {Optional("a", default=1): 11, basestring: 22}
-    ).validate({"b": 22}) == {"a": 1, "b": 22}
+    assert Schema({Optional("a", default=1): 11, basestring: 22}).validate({"b": 22}) == {"a": 1, "b": 22}
 
     with raises(TypeError):
         Optional(And(str, Use(int)), default=7)
@@ -522,21 +366,14 @@ def test_dict_key_error():
     try:
         Schema({"k": int}).validate({"k": "x"})
     except SchemaError as e:
-        assert (
-            e.code
-            == "Key 'k' error:\n'x' should be instance of 'int'"
-        )
+        assert e.code == "Key 'k' error:\n'x' should be instance of 'int'"
     try:
-        Schema({"k": {"k2": int}}).validate(
-            {"k": {"k2": "x"}}
-        )
+        Schema({"k": {"k2": int}}).validate({"k": {"k2": "x"}})
     except SchemaError as e:
         code = "Key 'k' error:\nKey 'k2' error:\n'x' should be instance of 'int'"
         assert e.code == code
     try:
-        Schema(
-            {"k": {"k2": int}}, error="k2 should be int"
-        ).validate({"k": {"k2": "x"}})
+        Schema({"k": {"k2": int}}, error="k2 should be int").validate({"k": {"k2": "x"}})
     except SchemaError as e:
         assert e.code == "k2 should be int"
 
@@ -546,14 +383,10 @@ def test_complex():
         {
             "<file>": And([Use(open)], lambda l: len(l)),
             "<path>": os.path.exists,
-            Optional("--count"): And(
-                int, lambda n: 0 <= n <= 5
-            ),
+            Optional("--count"): And(int, lambda n: 0 <= n <= 5),
         }
     )
-    data = s.validate(
-        {"<file>": ["./LICENSE-MIT"], "<path>": "./"}
-    )
+    data = s.validate({"<file>": ["./LICENSE-MIT"], "<path>": "./"})
     assert len(data) == 2
     assert len(data["<file>"]) == 1
     assert data["<file>"][0].read().startswith("Copyright")
@@ -566,19 +399,11 @@ def test_nice_errors():
     except SchemaError as e:
         assert e.errors == ["should be integer"]
     try:
-        Schema(
-            Use(float), error="should be a number"
-        ).validate("x")
+        Schema(Use(float), error="should be a number").validate("x")
     except SchemaError as e:
         assert e.code == "should be a number"
     try:
-        Schema(
-            {
-                Optional("i"): Use(
-                    int, error="should be a number"
-                )
-            }
-        ).validate({"i": "x"})
+        Schema({Optional("i"): Use(int, error="should be a number")}).validate({"i": "x"})
     except SchemaError as e:
         assert e.code == "should be a number"
 
@@ -622,25 +447,16 @@ def test_or_error_handling():
         assert e.autos[0].endswith(") did not validate 'x'")
         assert e.autos[1] == "ve('x') raised ValueError()"
         assert len(e.autos) == 2
-        assert e.errors == [
-            "should not raise",
-            "should not raise",
-        ]
+        assert e.errors == ["should not raise", "should not raise"]
     try:
         Or("o").validate("x")
     except SchemaError as e:
-        assert e.autos == [
-            "Or('o') did not validate 'x'",
-            "'o' does not match 'x'",
-        ]
+        assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
         assert e.errors == [None, None]
     try:
         Or("o", error="second error").validate("x")
     except SchemaError as e:
-        assert e.autos == [
-            "Or('o') did not validate 'x'",
-            "'o' does not match 'x'",
-        ]
+        assert e.autos == ["Or('o') did not validate 'x'", "'o' does not match 'x'"]
         assert e.errors == ["second error", "second error"]
 
 
@@ -671,20 +487,12 @@ def test_schema_error_handling():
     try:
         Schema(Use(ve)).validate("x")
     except SchemaError as e:
-        assert e.autos == [
-            None,
-            "ve('x') raised ValueError()",
-        ]
+        assert e.autos == [None, "ve('x') raised ValueError()"]
         assert e.errors == [None, None]
     try:
-        Schema(Use(ve), error="should not raise").validate(
-            "x"
-        )
+        Schema(Use(ve), error="should not raise").validate("x")
     except SchemaError as e:
-        assert e.autos == [
-            None,
-            "ve('x') raised ValueError()",
-        ]
+        assert e.autos == [None, "ve('x') raised ValueError()"]
         assert e.errors == ["should not raise", None]
     try:
         Schema(Use(se)).validate("x")
@@ -695,11 +503,7 @@ def test_schema_error_handling():
         Schema(Use(se), error="second error").validate("x")
     except SchemaError as e:
         assert e.autos == [None, None, "first auto"]
-        assert e.errors == [
-            "second error",
-            None,
-            "first error",
-        ]
+        assert e.errors == ["second error", None, "first error"]
 
 
 def test_use_json():
@@ -708,13 +512,7 @@ def test_use_json():
     gist_schema = Schema(
         And(
             Use(json.loads),  # first convert from JSON
-            {
-                Optional("description"): basestring,
-                "public": bool,
-                "files": {
-                    basestring: {"content": basestring}
-                },
-            },
+            {Optional("description"): basestring, "public": bool, "files": {basestring: {"content": basestring}}},
         )
     )
     gist = """{"description": "the description for this gist",
@@ -728,57 +526,26 @@ def test_use_json():
 def test_error_reporting():
     s = Schema(
         {
-            "<files>": [
-                Use(
-                    open, error="<files> should be readable"
-                )
-            ],
-            "<path>": And(
-                os.path.exists, error="<path> should exist"
-            ),
-            "--count": Or(
-                None,
-                And(Use(int), lambda n: 0 < n < 5),
-                error="--count should be integer 0 < n < 5",
-            ),
+            "<files>": [Use(open, error="<files> should be readable")],
+            "<path>": And(os.path.exists, error="<path> should exist"),
+            "--count": Or(None, And(Use(int), lambda n: 0 < n < 5), error="--count should be integer 0 < n < 5"),
         },
         error="Error:",
     )
-    s.validate(
-        {"<files>": [], "<path>": "./", "--count": 3}
-    )
+    s.validate({"<files>": [], "<path>": "./", "--count": 3})
 
     try:
-        s.validate(
-            {"<files>": [], "<path>": "./", "--count": "10"}
-        )
+        s.validate({"<files>": [], "<path>": "./", "--count": "10"})
     except SchemaError as e:
-        assert (
-            e.code
-            == "Error:\n--count should be integer 0 < n < 5"
-        )
+        assert e.code == "Error:\n--count should be integer 0 < n < 5"
     try:
-        s.validate(
-            {
-                "<files>": [],
-                "<path>": "./hai",
-                "--count": "2",
-            }
-        )
+        s.validate({"<files>": [], "<path>": "./hai", "--count": "2"})
     except SchemaError as e:
         assert e.code == "Error:\n<path> should exist"
     try:
-        s.validate(
-            {
-                "<files>": ["hai"],
-                "<path>": "./",
-                "--count": "2",
-            }
-        )
+        s.validate({"<files>": ["hai"], "<path>": "./", "--count": "2"})
     except SchemaError as e:
-        assert (
-            e.code == "Error:\n<files> should be readable"
-        )
+        assert e.code == "Error:\n<files> should be readable"
 
 
 def test_schema_repr():  # what about repr with `error`s?
@@ -797,10 +564,7 @@ def test_validate_object():
 
 def test_issue_9_prioritized_key_comparison():
     validate = Schema({"key": 42, object: 42}).validate
-    assert validate({"key": 42, 777: 42}) == {
-        "key": 42,
-        777: 42,
-    }
+    assert validate({"key": 42, 777: 42}) == {"key": 42, 777: 42}
 
 
 def test_issue_9_prioritized_key_comparison_in_dicts():
@@ -808,28 +572,18 @@ def test_issue_9_prioritized_key_comparison_in_dicts():
     s = Schema(
         {
             "ID": Use(int, error="ID should be an int"),
-            "FILE": Or(
-                None,
-                Use(open, error="FILE should be readable"),
-            ),
+            "FILE": Or(None, Use(open, error="FILE should be readable")),
             Optional(str): object,
         }
     )
-    data = {
-        "ID": 10,
-        "FILE": None,
-        "other": "other",
-        "other2": "other2",
-    }
+    data = {"ID": 10, "FILE": None, "other": "other", "other2": "other2"}
     assert s.validate(data) == data
     data = {"ID": 10, "FILE": None}
     assert s.validate(data) == data
 
 
 def test_missing_keys_exception_with_non_str_dict_keys():
-    s = Schema(
-        {And(str, Use(str.lower), "name"): And(str, len)}
-    )
+    s = Schema({And(str, Use(str.lower), "name"): And(str, len)})
     with SE:
         s.validate(dict())
     with SE:
@@ -841,10 +595,7 @@ def test_missing_keys_exception_with_non_str_dict_keys():
 
 
 # PyPy does have a __name__ attribute for its callables.
-@mark.skipif(
-    platform.python_implementation() == "PyPy",
-    reason="Running on PyPy",
-)
+@mark.skipif(platform.python_implementation() == "PyPy", reason="Running on PyPy")
 def test_issue_56_cant_rely_on_callables_to_have_name():
     s = Schema(methodcaller("endswith", ".csv"))
     assert s.validate("test.csv") == "test.csv"
@@ -891,10 +642,7 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
     import datetime
 
     fmt = "%Y-%m-%d %H:%M:%S"
-    _datetime_validator = Or(
-        None,
-        Use(lambda i: datetime.datetime.strptime(i, fmt)),
-    )
+    _datetime_validator = Or(None, Use(lambda i: datetime.datetime.strptime(i, fmt)))
     # FIXME given tests enough
     for i in range(1024):
         s = Schema(
@@ -909,9 +657,7 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
         validated_data = s.validate(data)
         # is expected to be converted to a datetime instance, but fails randomly
         # (most of the time)
-        assert isinstance(
-            validated_data["created_at"], datetime.datetime
-        )
+        assert isinstance(validated_data["created_at"], datetime.datetime)
         # assert isinstance(validated_data['created_at'], basestring)
 
 
@@ -930,18 +676,12 @@ def test_inheritance():
 
     class MySchema(Schema):
         def validate(self, data):
-            return super(MySchema, self).validate(
-                convert(data)
-            )
+            return super(MySchema, self).validate(convert(data))
 
     s = {"k": int, "d": {"k": int, "l": [{"l": [int]}]}}
     v = {"k": 1, "d": {"k": 2, "l": [{"l": [3, 4, 5]}]}}
     d = MySchema(s).validate(v)
-    assert (
-        d["k"] == 2
-        and d["d"]["k"] == 3
-        and d["d"]["l"][0]["l"] == [4, 5, 6]
-    )
+    assert d["k"] == 2 and d["d"]["k"] == 3 and d["d"]["l"][0]["l"] == [4, 5, 6]
 
 
 def test_json_schema():
@@ -1007,9 +747,7 @@ def test_json_schema_other_types():
 
 
 def test_json_schema_nested():
-    s = Schema(
-        {"test": {"other": str}}, ignore_extra_keys=True
-    )
+    s = Schema({"test": {"other": str}}, ignore_extra_keys=True)
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
@@ -1028,13 +766,7 @@ def test_json_schema_nested():
 
 
 def test_json_schema_nested_schema():
-    s = Schema(
-        {
-            "test": Schema(
-                {"other": str}, ignore_extra_keys=True
-            )
-        }
-    )
+    s = Schema({"test": Schema({"other": str}, ignore_extra_keys=True)})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
@@ -1088,10 +820,7 @@ def test_json_schema_or_key():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "test1": {"type": "string"},
-            "test2": {"type": "string"},
-        },
+        "properties": {"test1": {"type": "string"}, "test2": {"type": "string"}},
         "required": [],
         "additionalProperties": False,
         "type": "object",
@@ -1103,9 +832,7 @@ def test_json_schema_or_values():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "param": {"enum": ["test1", "test2"]}
-        },
+        "properties": {"param": {"enum": ["test1", "test2"]}},
         "required": ["param"],
         "additionalProperties": False,
         "type": "object",
@@ -1119,16 +846,7 @@ def test_json_schema_or_values_nested():
         "id": "my-id",
         "properties": {
             "param": {
-                "anyOf": [
-                    {
-                        "type": "array",
-                        "items": {"type": "string"},
-                    },
-                    {
-                        "type": "array",
-                        "items": {"type": "array"},
-                    },
-                ]
+                "anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "array", "items": {"type": "array"}}]
             }
         },
         "required": ["param"],
@@ -1142,9 +860,7 @@ def test_json_schema_or_values_with_optional():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "whatever": {"enum": ["test1", "test2"]}
-        },
+        "properties": {"whatever": {"enum": ["test1", "test2"]}},
         "required": [],
         "additionalProperties": False,
         "type": "object",
@@ -1152,22 +868,11 @@ def test_json_schema_or_values_with_optional():
 
 
 def test_json_schema_regex():
-    s = Schema(
-        {
-            Optional("username"): Regex(
-                "[a-zA-Z][a-zA-Z0-9]{3,}"
-            )
-        }
-    )
+    s = Schema({Optional("username"): Regex("[a-zA-Z][a-zA-Z0-9]{3,}")})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "username": {
-                "type": "string",
-                "pattern": "[a-zA-Z][a-zA-Z0-9]{3,}",
-            }
-        },
+        "properties": {"username": {"type": "string", "pattern": "[a-zA-Z][a-zA-Z0-9]{3,}"}},
         "required": [],
         "additionalProperties": False,
         "type": "object",
@@ -1179,14 +884,7 @@ def test_json_schema_or_types():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "test": {
-                "anyOf": [
-                    {"type": "string"},
-                    {"type": "integer"},
-                ]
-            }
-        },
+        "properties": {"test": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
@@ -1199,9 +897,7 @@ def test_json_schema_and_types():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "test": {"allOf": [{"type": "string"}]}
-        },
+        "properties": {"test": {"allOf": [{"type": "string"}]}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
@@ -1232,10 +928,7 @@ def test_json_schema_object_or_array_of_object():
                 "anyOf": [
                     {
                         "additionalProperties": False,
-                        "properties": {
-                            "param1": {"const": "test1"},
-                            "param2": {"const": "test2"},
-                        },
+                        "properties": {"param1": {"const": "test1"}, "param2": {"const": "test2"}},
                         "required": ["param1"],
                         "type": "object",
                     },
@@ -1243,14 +936,7 @@ def test_json_schema_object_or_array_of_object():
                         "type": "array",
                         "items": {
                             "additionalProperties": False,
-                            "properties": {
-                                "param1": {
-                                    "const": "test1"
-                                },
-                                "param2": {
-                                    "const": "test2"
-                                },
-                            },
+                            "properties": {"param1": {"const": "test1"}, "param2": {"const": "test2"}},
                             "required": ["param1"],
                             "type": "object",
                         },
@@ -1269,14 +955,7 @@ def test_json_schema_and_simple():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
-        "properties": {
-            "test1": {
-                "allOf": [
-                    {"type": "string"},
-                    {"const": "test2"},
-                ]
-            }
-        },
+        "properties": {"test1": {"allOf": [{"type": "string"}, {"const": "test2"}]}},
         "required": ["test1"],
         "additionalProperties": False,
         "type": "object",
@@ -1284,24 +963,12 @@ def test_json_schema_and_simple():
 
 
 def test_json_schema_and_list():
-    s = Schema(
-        {"param1": And(["choice1", "choice2"], list)}
-    )
+    s = Schema({"param1": And(["choice1", "choice2"], list)})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
         "properties": {
-            "param1": {
-                "allOf": [
-                    {
-                        "type": "array",
-                        "items": {
-                            "enum": ["choice1", "choice2"]
-                        },
-                    },
-                    {"type": "array"},
-                ]
-            }
+            "param1": {"allOf": [{"type": "array", "items": {"enum": ["choice1", "choice2"]}}, {"type": "array"}]}
         },
         "required": ["param1"],
         "additionalProperties": False,
@@ -1335,12 +1002,7 @@ def test_json_schema_not_a_dict():
 
 def test_json_schema_title_and_description():
     s = Schema(
-        {
-            Literal(
-                "productId",
-                description="The unique identifier for a product",
-            ): int
-        },
+        {Literal("productId", description="The unique identifier for a product"): int},
         name="Product",
         description="A product in the catalog",
     )
@@ -1349,12 +1011,7 @@ def test_json_schema_title_and_description():
         "id": "my-id",
         "title": "Product",
         "description": "A product in the catalog",
-        "properties": {
-            "productId": {
-                "description": "The unique identifier for a product",
-                "type": "integer",
-            }
-        },
+        "properties": {"productId": {"description": "The unique identifier for a product", "type": "integer"}},
         "required": ["productId"],
         "additionalProperties": False,
         "type": "object",
@@ -1362,17 +1019,7 @@ def test_json_schema_title_and_description():
 
 
 def test_json_schema_description_nested():
-    s = Schema(
-        {
-            Optional(
-                Literal(
-                    "test1",
-                    description="A description here",
-                ),
-                default={},
-            ): Or([str], [list])
-        }
-    )
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): Or([str], [list])})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "id": "my-id",
@@ -1380,14 +1027,8 @@ def test_json_schema_description_nested():
             "test1": {
                 "description": "A description here",
                 "anyOf": [
-                    {
-                        "items": {"type": "string"},
-                        "type": "array",
-                    },
-                    {
-                        "items": {"type": "array"},
-                        "type": "array",
-                    },
+                    {"items": {"type": "string"}, "type": "array"},
+                    {"items": {"type": "array"}, "type": "array"},
                 ],
             }
         },
@@ -1401,13 +1042,7 @@ def test_json_schema_description_or_nested():
     s = Schema(
         {
             Optional(
-                Or(
-                    Literal(
-                        "test1",
-                        description="A description here",
-                    ),
-                    Literal("test2", description="Another"),
-                )
+                Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))
             ): Or([str], [list])
         }
     )
@@ -1417,27 +1052,15 @@ def test_json_schema_description_or_nested():
             "test1": {
                 "description": "A description here",
                 "anyOf": [
-                    {
-                        "items": {"type": "string"},
-                        "type": "array",
-                    },
-                    {
-                        "items": {"type": "array"},
-                        "type": "array",
-                    },
+                    {"items": {"type": "string"}, "type": "array"},
+                    {"items": {"type": "array"}, "type": "array"},
                 ],
             },
             "test2": {
                 "description": "Another",
                 "anyOf": [
-                    {
-                        "items": {"type": "string"},
-                        "type": "array",
-                    },
-                    {
-                        "items": {"type": "array"},
-                        "type": "array",
-                    },
+                    {"items": {"type": "string"}, "type": "array"},
+                    {"items": {"type": "array"}, "type": "array"},
                 ],
             },
         },
@@ -1452,13 +1075,7 @@ def test_json_schema_description_and_nested():
     s = Schema(
         {
             Optional(
-                Or(
-                    Literal(
-                        "test1",
-                        description="A description here",
-                    ),
-                    Literal("test2", description="Another"),
-                )
+                Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))
             ): And([str], [list])
         }
     )
@@ -1468,27 +1085,15 @@ def test_json_schema_description_and_nested():
             "test1": {
                 "description": "A description here",
                 "allOf": [
-                    {
-                        "items": {"type": "string"},
-                        "type": "array",
-                    },
-                    {
-                        "items": {"type": "array"},
-                        "type": "array",
-                    },
+                    {"items": {"type": "string"}, "type": "array"},
+                    {"items": {"type": "array"}, "type": "array"},
                 ],
             },
             "test2": {
                 "description": "Another",
                 "allOf": [
-                    {
-                        "items": {"type": "string"},
-                        "type": "array",
-                    },
-                    {
-                        "items": {"type": "array"},
-                        "type": "array",
-                    },
+                    {"items": {"type": "string"}, "type": "array"},
+                    {"items": {"type": "array"}, "type": "array"},
                 ],
             },
         },
@@ -1500,17 +1105,7 @@ def test_json_schema_description_and_nested():
 
 
 def test_description():
-    s = Schema(
-        {
-            Optional(
-                Literal(
-                    "test1",
-                    description="A description here",
-                ),
-                default={},
-            ): dict
-        }
-    )
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
     assert s.validate({"test1": {}})
 
 
@@ -1518,25 +1113,14 @@ def test_prepend_schema_name():
     try:
         Schema({"key1": int}).validate({"key1": "a"})
     except SchemaError as e:
-        assert (
-            str(e)
-            == "Key 'key1' error:\n'a' should be instance of 'int'"
-        )
+        assert str(e) == "Key 'key1' error:\n'a' should be instance of 'int'"
 
     try:
-        Schema(
-            {"key1": int}, name="custom_schemaname"
-        ).validate({"key1": "a"})
+        Schema({"key1": int}, name="custom_schemaname").validate({"key1": "a"})
     except SchemaError as e:
-        assert (
-            str(e)
-            == "'custom_schemaname' Key 'key1' error:\n'a' should be instance of 'int'"
-        )
+        assert str(e) == "'custom_schemaname' Key 'key1' error:\n'a' should be instance of 'int'"
 
     try:
         Schema(int, name="custom_schemaname").validate("a")
     except SchemaUnexpectedTypeError as e:
-        assert (
-            str(e)
-            == "'custom_schemaname' 'a' should be instance of 'int'"
-        )
+        assert str(e) == "'custom_schemaname' 'a' should be instance of 'int'"
