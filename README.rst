@@ -509,7 +509,7 @@ Here's an example:
     >>> s = Schema({"test": str,
     ...             "nested": {Optional("other"): str}
     ...             })
-    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json", no_refs=True))
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"))
 
     # json_schema
     {
@@ -534,8 +534,8 @@ Here's an example:
         "$schema":"http://json-schema.org/draft-07/schema#"
     }
 
-By default, in order to minimize the size of the output, the generated schema will use references to other parts of the schema. You can disable
-this behaviour by providing the parameter `no_refs` to the json_schema method.
-
 Please note that not all JSON schema validations are implemented. This includes features such as integers' minimum and maximum or
 arrays' minItems.
+
+In order to minimize the size of the output, the generated schema can be made to use references to other parts of the schema.
+Enable this behaviour by providing the parameter `use_refs` to the json_schema method.

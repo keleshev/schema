@@ -446,24 +446,26 @@ class Schema(object):
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e.format(data) if e else None)
 
-    def json_schema(self, schema_id, no_refs=False):
+    def json_schema(self, schema_id, use_refs=False):
         """Generate a draft-07 JSON schema dict representing the Schema.
         This method can only be called when the Schema's value is a dict.
         This method must be called with a schema_id.
 
         :param schema_id: The value of the $id on the main schema
-        :param no_refs: Disable reusing object references in the resulting JSON schema.
-                        Easier to read but can produce a very big schema
+        :param use_refs: Enable reusing object references in the resulting JSON schema.
+                         Schemas with references are harder to read by humans, but are a lot smaller when there
+                         is a lot of reuse
         """
 
-        seen = dict()
+        seen = dict()  # For use_refs
 
         def _json_schema(schema, is_main_schema=True, description=None):
             def _create_or_use_ref(return_dict):
                 """If not already seen, return the provided part of the schema unchanged.
-                If already seen, give an id to the already seen dict and return a reference to the previous part of the schema instead.
+                If already seen, give an id to the already seen dict and return a reference to the previous part
+                of the schema instead.
                 """
-                if no_refs or is_main_schema:
+                if not use_refs or is_main_schema:
                     return return_schema
 
                 hashed = hash(repr(sorted(return_dict.items())))
@@ -609,8 +611,8 @@ class Schema(object):
                     return_schema.update({"$id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
                     if self._name:
                         return_schema["title"] = self._name
-                if self._description:
-                    return_schema["description"] = self._description
+                if self.description:
+                    return_schema["description"] = self.description
 
             return _create_or_use_ref(return_schema)
 
