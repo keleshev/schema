@@ -520,11 +520,12 @@ class Schema(object):
 
                 # Check if we can use an enum
                 if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
+                    or_values = [str(s) if isinstance(s, Literal) else s for s in s.args]
                     # All values are simple, can use enum or const
-                    if len(s.args) == 1:
-                        return_schema["const"] = s.args[0]
+                    if len(or_values) == 1:
+                        return_schema["const"] = or_values[0]
                         return return_schema
-                    return_schema["enum"] = list(s.args)
+                    return_schema["enum"] = or_values
                 else:
                     # No enum, let's go with recursive calls
                     any_of_values = []
@@ -542,7 +543,7 @@ class Schema(object):
                         all_of_values.append(new_value)
                 return_schema["allOf"] = all_of_values
             elif flavor == COMPARABLE:
-                return_schema["const"] = s
+                return_schema["const"] = str(s)
             elif flavor == VALIDATOR and type(s) == Regex:
                 return_schema["type"] = "string"
                 return_schema["pattern"] = s.pattern_str
@@ -674,6 +675,9 @@ class Literal(object):
     def __init__(self, value, description=None):
         self._schema = value
         self._description = description
+
+    def __str__(self):
+        return self._schema
 
     @property
     def description(self):
