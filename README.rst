@@ -497,7 +497,7 @@ this is how you validate it using ``schema``:
 As you can see, **schema** validated data successfully, opened files and
 converted ``'3'`` to ``int``.
 
-(Beta feature) Generating JSON schema
+Generating JSON schema
 -------------------------------------------------------------------------------
 You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict `Schema`.
 This can be used to add word completion and validation directly in code editors.
@@ -531,12 +531,12 @@ Here's an example:
             "nested"
         ],
         "additionalProperties":false,
-        "id":"https://example.com/my-schema.json",
+        "$id":"https://example.com/my-schema.json",
         "$schema":"http://json-schema.org/draft-07/schema#"
     }
 
-Please note that this is a beta feature. Some JSON schema features are not implemented. Some caveats:
+Please note that not all JSON schema validations are implemented. This includes features such as integers' minimum and maximum or
+arrays' minItems.
 
-- There are no object references, items of type `object` are always fully rendered
-- Validations other than type are not implemented. This includes features such as integers'
-  minimum and maximum or arrays' minItems
+In order to minimize the size of the output, the generated schema can be made to use references to other parts of the schema.
+Enable this behaviour by providing the parameter `use_refs` to the json_schema method.
