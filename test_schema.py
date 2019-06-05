@@ -1123,6 +1123,11 @@ def test_description():
     assert s.validate({"test1": {}})
 
 
+def test_description_with_default():
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
+    assert s.validate({}) == {"test1": {}}
+
+
 def test_json_schema_refs():
     s = Schema({"test1": str, "test2": str, "test3": str})
     hashed = "#" + str(hash(repr(sorted({"type": "string"}.items()))))

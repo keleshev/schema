@@ -19,6 +19,7 @@ __all__ = [
     "Use",
     "Forbidden",
     "Const",
+    "Literal",
     "SchemaError",
     "SchemaWrongKeyError",
     "SchemaMissingKeyError",
@@ -334,6 +335,10 @@ class Schema(object):
         s = self._schema
         e = self._error
         i = self._ignore_extra_keys
+
+        if isinstance(s, Literal):
+            s = s.schema
+
         flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data)
@@ -438,9 +443,6 @@ class Schema(object):
             raise SchemaError(message, e)
         if s == data:
             return data
-        if isinstance(s, Literal):
-            if s.schema == data:
-                return data
         else:
             message = "%r does not match %r" % (s, data)
             message = self._prepend_schema_name(message)
@@ -637,7 +639,7 @@ class Optional(Schema):
                     '"%r" is too complex.' % (self._schema,)
                 )
             self.default = default
-            self.key = self._schema
+            self.key = str(self._schema)
 
     def __hash__(self):
         return hash(self._schema)
