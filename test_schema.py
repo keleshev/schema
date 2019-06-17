@@ -1066,6 +1066,25 @@ def test_json_schema_description_or_nested():
     }
 
 
+def test_json_schema_literal_with_enum():
+    s = Schema(
+        {
+            Literal("test", description="A test"): Or(
+                Literal("literal1", description="A literal with description"),
+                Literal("literal2", description="Another literal with description"),
+            )
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test": {"description": "A test", "enum": ["literal1", "literal2"]}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
 def test_json_schema_description_and_nested():
     s = Schema(
         {
@@ -1102,6 +1121,11 @@ def test_json_schema_description_and_nested():
 def test_description():
     s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
     assert s.validate({"test1": {}})
+
+
+def test_description_with_default():
+    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
+    assert s.validate({}) == {"test1": {}}
 
 
 def test_json_schema_refs():
