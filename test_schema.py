@@ -46,6 +46,21 @@ def se(_):
     raise SchemaError("first auto", "first error")
 
 
+def sorted_dict(to_sort):
+    """Helper function to sort list of string inside dictionaries in order to compare them"""
+    if isinstance(to_sort, dict):
+        new_dict = {}
+        for k in sorted(to_sort.keys()):
+            new_dict[k] = sorted_dict(to_sort[k])
+        return new_dict
+    if isinstance(to_sort, list) and to_sort:
+        if isinstance(to_sort[0], str):
+            return sorted(to_sort)
+        else:
+            return [sorted_dict(element) for element in to_sort]
+    return to_sort
+
+
 def test_schema():
 
     assert Schema(1).validate(1) == 1
@@ -685,6 +700,11 @@ def test_inheritance():
     assert d["k"] == 2 and d["d"]["k"] == 3 and d["d"]["l"][0]["l"] == [4, 5, 6]
 
 
+def test_literal_repr():
+    assert repr(Literal("test", description="testing")) == 'Literal("test", description="testing")'
+    assert repr(Literal("test")) == 'Literal("test", description="")'
+
+
 def test_json_schema():
     s = Schema({"test": str})
     assert s.json_schema("my-id") == {
@@ -1195,6 +1215,121 @@ def test_json_schema_refs_no_missing():
     # All refs have an associated ID
     for ref in refs:
         assert ref in schema_ids
+
+
+def test_json_schema_definitions():
+    sub_schema = Schema({"sub_key1": int}, name="sub_schema", as_reference=True)
+    main_schema = Schema({"main_key1": str, "main_key2": sub_schema})
+
+    json_schema = main_schema.json_schema("my-id")
+    assert sorted_dict(json_schema) == {
+        "type": "object",
+        "properties": {"main_key1": {"type": "string"}, "main_key2": {"$ref": "#/definitions/sub_schema"}},
+        "required": ["main_key1", "main_key2"],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "sub_schema": {
+                "type": "object",
+                "properties": {"sub_key1": {"type": "integer"}},
+                "required": ["sub_key1"],
+                "additionalProperties": False,
+            }
+        },
+    }
+
+
+def test_json_schema_definitions_and_literals():
+    sub_schema = Schema({Literal("sub_key1", description="Sub key 1"): int}, name="sub_schema", as_reference=True)
+    main_schema = Schema(
+        {Literal("main_key1", description="Main key 1"): str, Literal("main_key2", description="main_key2"): sub_schema}
+    )
+
+    json_schema = main_schema.json_schema("my-id")
+    assert sorted_dict(json_schema) == {
+        "type": "object",
+        "properties": {
+            "main_key1": {"description": "Main key 1", "type": "string"},
+            "main_key2": {"description": "main_key2", "$ref": "#/definitions/sub_schema"},
+        },
+        "required": ["main_key1", "main_key2"],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "sub_schema": {
+                "type": "object",
+                "properties": {"sub_key1": {"description": "Sub key 1", "type": "integer"}},
+                "required": ["sub_key1"],
+                "additionalProperties": False,
+            }
+        },
+    }
+
+
+def test_json_schema_definitions_nested():
+    sub_sub_schema = Schema({"sub_sub_key1": int}, name="sub_sub_schema", as_reference=True)
+    sub_schema = Schema({"sub_key1": int, "sub_key2": sub_sub_schema}, name="sub_schema", as_reference=True)
+    main_schema = Schema({"main_key1": str, "main_key2": sub_schema})
+
+    json_schema = main_schema.json_schema("my-id")
+    assert sorted_dict(json_schema) == {
+        "type": "object",
+        "properties": {"main_key1": {"type": "string"}, "main_key2": {"$ref": "#/definitions/sub_schema"}},
+        "required": ["main_key1", "main_key2"],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "sub_schema": {
+                "type": "object",
+                "properties": {"sub_key1": {"type": "integer"}, "sub_key2": {"$ref": "#/definitions/sub_sub_schema"}},
+                "required": ["sub_key1", "sub_key2"],
+                "additionalProperties": False,
+            },
+            "sub_sub_schema": {
+                "type": "object",
+                "properties": {"sub_sub_key1": {"type": "integer"}},
+                "required": ["sub_sub_key1"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+
+def test_json_schema_definitions_recursive():
+    """Create a JSON schema with an object that refers to itself
+
+    This is the example from here: https://json-schema.org/understanding-json-schema/structuring.html#recursion
+    """
+    children = []
+    person = Schema({Optional("name"): str, Optional("children"): children}, name="person", as_reference=True)
+    children.append(person)
+
+    json_schema = person.json_schema("my-id")
+    assert json_schema == {
+        "$ref": "#/definitions/person",
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "person",
+        "definitions": {
+            "person": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "children": {"type": "array", "items": {"$ref": "#/definitions/person"}},
+                },
+                "required": [],
+                "additionalProperties": False,
+            }
+        },
+    }
+
+
+def test_json_schema_definitions_invalid():
+    with raises(ValueError):
+        _ = Schema({"test1": str}, as_reference=True)
 
 
 def test_prepend_schema_name():
