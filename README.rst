@@ -497,11 +497,17 @@ this is how you validate it using ``schema``:
 As you can see, **schema** validated data successfully, opened files and
 converted ``'3'`` to ``int``.
 
-Generating JSON schema
--------------------------------------------------------------------------------
-You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict `Schema`.
-This can be used to add word completion and validation directly in code editors.
-Here's an example: 
+JSON schema
+-----------
+
+You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict ``Schema``.
+This can be used to add word completion, validation, and documentation directly in code editors.
+The output schema can also be used with JSON schema compatible libraries.
+
+JSON: Generating
+~~~~~~~~~~~~~~~~
+
+Just define your schema normally and call ``.json_schema()`` on it. The output is a Python dict, you need to dump it to JSON.
 
 .. code:: python
 
@@ -523,7 +529,7 @@ Here's an example:
                     "other": {"type": "string"}
                 },
                 "required": [],
-                "additionalProperties":false
+                "additionalProperties": false
             }
         },
         "required":[
@@ -535,8 +541,403 @@ Here's an example:
         "$schema":"http://json-schema.org/draft-07/schema#"
     }
 
-Please note that not all JSON schema validations are implemented. This includes features such as integers' minimum and maximum or
-arrays' minItems.
+You can add descriptions for the schema elements using the ``Literal`` object instead of a string. The main schema can also have a description.
 
-In order to minimize the size of the output, the generated schema can be made to use references to other parts of the schema.
-Enable this behaviour by providing the parameter `use_refs` to the json_schema method.
+These will appear in IDEs to help your users write a configuration.
+
+.. code:: python
+
+    >>> from schema import Literal, Schema
+    >>> import json
+    >>> s = Schema({Literal("project_name", description="Names must be unique"): str}, description="Project schema")
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
+
+    # json_schema
+    {
+        "type": "object",
+        "properties": {
+            "project_name": {
+                "description": "Names must be unique",
+                "type": "string"
+            }
+        },
+        "required": [
+            "project_name"
+        ],
+        "additionalProperties": false,
+        "$id": "https://example.com/my-schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "description": "Project schema"
+    }
+
+
+JSON: Supported validations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The main schema must be a dict. i.e. ``Schema({"test": str})`` works but ``Schema(str)`` does not.
+The following examples will assume the main schema is a dict.
+
+The resulting JSON schema is not guaranteed to accept the same objects as the library would accept, since some validations are not implemented or
+have no JSON schema equivalent. This is the case of the ``Use`` and ``Hook`` objects for example.
+
+Implemented
+'''''''''''
+
+`Object properties <https://json-schema.org/understanding-json-schema/reference/object.html#properties>`_
+    Use a dict literal. The dict keys are the JSON schema properties.
+
+    Example:
+
+    ``Schema({"test": str})``
+
+    becomes
+
+    ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': ['test'], 'additionalProperties': False}``.
+
+    Please note that attributes are required by default. To create optional attributes use ``Optional``, like so:
+
+    ``Schema({Optional("test"): str})``
+
+    becomes
+
+    ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': [], 'additionalProperties': False}``
+
+Types
+    Use the Python type name directly. It will be converted to the JSON name:
+
+    - ``str`` -> `string <https://json-schema.org/understanding-json-schema/reference/string.html>`_
+    - ``int`` -> `integer <https://json-schema.org/understanding-json-schema/reference/numeric.html#integer>`_
+    - ``float`` -> `number <https://json-schema.org/understanding-json-schema/reference/numeric.html#number>`_
+    - ``bool`` -> `boolean <https://json-schema.org/understanding-json-schema/reference/boolean.html>`_
+    - ``list`` -> `array <https://json-schema.org/understanding-json-schema/reference/array.html>`_
+
+    Example:
+
+    ``Schema(float)``
+
+    becomes
+
+    ``{"type": "number"}``
+
+`Array items <https://json-schema.org/understanding-json-schema/reference/array.html#items>`_
+    Surround a schema with ``[]``.
+
+    Example:
+
+    ``Schema([str])`` means an array of string and becomes:
+
+    ``{'type': 'array', 'items': {'type': 'string'}}``
+
+`Enumerated values <https://json-schema.org/understanding-json-schema/reference/generic.html#enumerated-values>`_
+    List the accepted values.
+
+    Example:
+
+    ``Schema([1, 2, 3])`` becomes
+
+    ``{"enum": [1, 2, 3]}``
+
+`Constant values <https://json-schema.org/understanding-json-schema/reference/generic.html#constant-values>`_
+    Use the value itself.
+
+    Example:
+
+    ``Schema("name")`` becomes
+
+    ``{"const": "name"}``
+
+`Regular expressions <https://json-schema.org/understanding-json-schema/reference/regular_expressions.html>`_
+    Use ``Regex``.
+
+    Example:
+
+    ``Regex("^v\d+")`` becomes
+
+    ``{'type': 'string', 'pattern': '^v\\d+'}``
+
+`Annotations (title and description) <https://json-schema.org/understanding-json-schema/reference/generic.html#annotations>`_
+    You can use the ``name`` and ``description`` parameters of the ``Schema`` object init method.
+
+    To add description to keys, replace a str with a ``Literal`` object.
+
+    Example:
+
+    ``Schema({Literal("test", description="A description"): str})``
+
+    is equivalent to
+
+    ``Schema({"test": str})``
+
+    with the description added to the resulting JSON schema.
+
+`Combining schemas with allOf <https://json-schema.org/understanding-json-schema/reference/combining.html#allof>`_
+    Use ``And``
+
+    Example:
+
+    ``Schema(And(str, "value")``
+
+    becomes
+
+    ``{"allOf": [{"type": "string"}, {"const": "value"}]}``
+
+    Note that this example is not really useful in the real world, since ``const`` already implies the type.
+
+`Combining schemas with anyOf <https://json-schema.org/understanding-json-schema/reference/combining.html#anyof>`_
+    Use ``Or``
+
+    Example:
+
+    ``Schema(Or(str, int))``
+
+    becomes
+
+    ``{"anyOf": [{"type": "string"}, {"type": "integer"}]}``
+
+
+Not implemented
+'''''''''''''''
+
+The following JSON schema validations cannot be generated from this library.
+
+- `String length <https://json-schema.org/understanding-json-schema/reference/string.html#length>`_
+    However, those can be implemented using ``Regex``
+- `String format <https://json-schema.org/understanding-json-schema/reference/string.html#format>`_
+    However, those can be implemented using ``Regex``
+- `Object dependencies <https://json-schema.org/understanding-json-schema/reference/object.html#dependencies>`_
+- `Array length <https://json-schema.org/understanding-json-schema/reference/array.html#length>`_
+- `Array uniqueness <https://json-schema.org/understanding-json-schema/reference/array.html#uniqueness>`_
+- `Numeric multiples <https://json-schema.org/understanding-json-schema/reference/numeric.html#multiples>`_
+- `Numeric ranges <https://json-schema.org/understanding-json-schema/reference/numeric.html#range>`_
+- `Property Names <https://json-schema.org/understanding-json-schema/reference/object.html#property-names>`_
+    Not implemented. We suggest listing the possible keys instead. As a tip, you can use ``Or`` as a dict key.
+
+    Example:
+
+    ``Schema({Or("name1", "name2"): str})``
+- `Annotations (default and examples) <https://json-schema.org/understanding-json-schema/reference/generic.html#annotations>`_
+- `Combining schemas with oneOf <https://json-schema.org/understanding-json-schema/reference/combining.html#oneof>`_
+- `Not <https://json-schema.org/understanding-json-schema/reference/combining.html#not>`_
+- `Object size <https://json-schema.org/understanding-json-schema/reference/object.html#size>`_
+
+
+JSON: Minimizing output size
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Explicit Reuse
+''''''''''''''
+
+If your JSON schema is big and has a lot of repetition, it can be made simpler and smaller by defining Schema objects as reference.
+These references will be placed in a "definitions" section in the main schema.
+
+`You can look at the JSON schema documentation for more information <https://json-schema.org/understanding-json-schema/structuring.html#reuse>`_
+
+.. code:: python
+
+    >>> from schema import Optional, Schema
+    >>> import json
+    >>> s = Schema({"test": str,
+    ...             "nested": Schema({Optional("other"): str}, name="nested", as_reference=True)
+    ...             })
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
+
+    # json_schema
+    {
+        "type": "object",
+        "properties": {
+            "test": {
+                "type": "string"
+            },
+            "nested": {
+                "$ref": "#/definitions/nested"
+            }
+        },
+        "required": [
+            "test",
+            "nested"
+        ],
+        "additionalProperties": false,
+        "$id": "https://example.com/my-schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "nested": {
+                "type": "object",
+                "properties": {
+                    "other": {
+                        "type": "string"
+                    }
+                },
+                "required": [],
+                "additionalProperties": false
+            }
+        }
+    }
+
+This becomes really useful when using the same object several times
+
+.. code:: python
+
+    >>> from schema import Optional, Or, Schema
+    >>> import json
+    >>> language_configuration = Schema({"autocomplete": bool, "stop_words": [str]}, name="language", as_reference=True)
+    >>> s = Schema({Or("ar", "cs", "de", "el", "eu", "en", "es", "fr"): language_configuration})
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
+
+    # json_schema
+    {
+        "type": "object",
+        "properties": {
+            "ar": {
+                "$ref": "#/definitions/language"
+            },
+            "cs": {
+                "$ref": "#/definitions/language"
+            },
+            "de": {
+                "$ref": "#/definitions/language"
+            },
+            "el": {
+                "$ref": "#/definitions/language"
+            },
+            "eu": {
+                "$ref": "#/definitions/language"
+            },
+            "en": {
+                "$ref": "#/definitions/language"
+            },
+            "es": {
+                "$ref": "#/definitions/language"
+            },
+            "fr": {
+                "$ref": "#/definitions/language"
+            }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "$id": "https://example.com/my-schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "language": {
+                "type": "object",
+                "properties": {
+                    "autocomplete": {
+                        "type": "boolean"
+                    },
+                    "stop_words": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "autocomplete",
+                    "stop_words"
+                ],
+                "additionalProperties": false
+            }
+        }
+    }
+
+Automatic reuse
+'''''''''''''''
+
+If you want to minimize the output size without using names explicitly, you can have the library generate hashes of parts of the output JSON
+schema and use them as references throughout.
+
+Enable this behaviour by providing the parameter ``use_refs`` to the json_schema method.
+
+Be aware that this method is less often compatible with IDEs and JSON schema libraries.
+It produces a JSON schema that is more difficult to read by humans.
+
+.. code:: python
+
+    >>> from schema import Optional, Or, Schema
+    >>> import json
+    >>> language_configuration = Schema({"autocomplete": bool, "stop_words": [str]})
+    >>> s = Schema({Or("ar", "cs", "de", "el", "eu", "en", "es", "fr"): language_configuration})
+    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json", use_refs=True), indent=4)
+
+    # json_schema
+    {
+        "type": "object",
+        "properties": {
+            "ar": {
+                "type": "object",
+                "properties": {
+                    "autocomplete": {
+                        "type": "boolean",
+                        "$id": "#6456104181059880193"
+                    },
+                    "stop_words": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "$id": "#1856069563381977338"
+                        }
+                    }
+                },
+                "required": [
+                    "autocomplete",
+                    "stop_words"
+                ],
+                "additionalProperties": false
+            },
+            "cs": {
+                "type": "object",
+                "properties": {
+                    "autocomplete": {
+                        "$ref": "#6456104181059880193"
+                    },
+                    "stop_words": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#1856069563381977338"
+                        },
+                        "$id": "#-5377945144312515805"
+                    }
+                },
+                "required": [
+                    "autocomplete",
+                    "stop_words"
+                ],
+                "additionalProperties": false
+            },
+            "de": {
+                "type": "object",
+                "properties": {
+                    "autocomplete": {
+                        "$ref": "#6456104181059880193"
+                    },
+                    "stop_words": {
+                        "$ref": "#-5377945144312515805"
+                    }
+                },
+                "required": [
+                    "autocomplete",
+                    "stop_words"
+                ],
+                "additionalProperties": false,
+                "$id": "#-8142886105174600858"
+            },
+            "el": {
+                "$ref": "#-8142886105174600858"
+            },
+            "eu": {
+                "$ref": "#-8142886105174600858"
+            },
+            "en": {
+                "$ref": "#-8142886105174600858"
+            },
+            "es": {
+                "$ref": "#-8142886105174600858"
+            },
+            "fr": {
+                "$ref": "#-8142886105174600858"
+            }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "$id": "https://example.com/my-schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#"
+    }
