@@ -498,16 +498,16 @@ As you can see, **schema** validated data successfully, opened files and
 converted ``'3'`` to ``int``.
 
 JSON schema
--------------------------------------------------------------------------------
+-----------
 
-You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict `Schema`.
+You can also generate standard `draft-07 JSON schema <https://json-schema.org/>`_ from a dict ``Schema``.
 This can be used to add word completion, validation, and documentation directly in code editors.
 The output schema can also be used with JSON schema compatible libraries.
 
 JSON: Generating
 ~~~~~~~~~~~~~~~~
 
-Just define your schema normally and call `json_schema` on it. The output is a Python dict, you need to dump it to JSON.
+Just define your schema normally and call ``.json_schema()`` on it. The output is a Python dict, you need to dump it to JSON.
 
 .. code:: python
 
@@ -845,7 +845,7 @@ Automatic reuse
 If you want to minimize the output size without using names explicitly, you can have the library generate hashes of parts of the output JSON
 schema and use them as references throughout.
 
-Enable this behaviour by providing the parameter `use_refs` to the json_schema method.
+Enable this behaviour by providing the parameter ``use_refs`` to the json_schema method.
 
 Be aware that this method is less often compatible with IDEs and JSON schema libraries.
 It produces a JSON schema that is more difficult to read by humans.
