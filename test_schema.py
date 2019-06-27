@@ -1015,6 +1015,19 @@ def test_json_schema_not_a_dict():
         s.json_schema("my-id")
 
 
+def test_json_schema_dict_type():
+    json_schema = Schema({Optional("test1", default={}): dict}).json_schema("my-id")
+
+    assert json_schema == {
+        "type": "object",
+        "properties": {"test1": {"type": "object"}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
 def test_json_schema_title_and_description():
     s = Schema(
         {Literal("productId", description="The unique identifier for a product"): int},

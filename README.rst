@@ -610,6 +610,7 @@ Types
     - ``float`` -> `number <https://json-schema.org/understanding-json-schema/reference/numeric.html#number>`_
     - ``bool`` -> `boolean <https://json-schema.org/understanding-json-schema/reference/boolean.html>`_
     - ``list`` -> `array <https://json-schema.org/understanding-json-schema/reference/array.html>`_
+    - ``dict`` -> `object <https://json-schema.org/understanding-json-schema/reference/object.html>`_
 
     Example:
 
