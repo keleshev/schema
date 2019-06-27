@@ -503,6 +503,8 @@ class Schema(object):
                     return "boolean"
                 elif python_type == list:
                     return "array"
+                elif python_type == dict:
+                    return "object"
                 return "string"
 
             def _to_schema(s, ignore_extra_keys):
