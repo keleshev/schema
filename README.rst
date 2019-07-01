@@ -56,7 +56,7 @@ Use `pip <http://pip-installer.org>`_ or easy_install::
 Alternatively, you can just drop ``schema.py`` file into your project—it is
 self-contained.
 
-- **schema** is tested with Python 2.6, 2.7, 3.2, 3.3, 3.4, 3.5, 3.6 and PyPy.
+- **schema** is tested with Python 2.6, 2.7, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7 and PyPy.
 - **schema** follows `semantic versioning <http://semver.org>`_.
 
 How ``Schema`` validates data
