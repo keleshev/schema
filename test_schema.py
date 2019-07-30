@@ -1348,6 +1348,18 @@ def test_json_schema_definitions_invalid():
         _ = Schema({"test1": str}, as_reference=True)
 
 
+def test_json_schema_default_value():
+    s = Schema({Optional("test1", default=42): int})
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test1": {"type": "integer", "default": 42}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
 def test_prepend_schema_name():
     try:
         Schema({"key1": int}).validate({"key1": "a"})

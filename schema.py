@@ -624,6 +624,8 @@ class Schema(object):
                             expanded_schema[key_name] = _json_schema(
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
+                            if isinstance(key, Optional) and hasattr(key, "default") and key.default:
+                                expanded_schema[key_name]["default"] = key.default
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
