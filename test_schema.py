@@ -1256,15 +1256,18 @@ def test_json_schema_definitions():
 def test_json_schema_definitions_and_literals():
     sub_schema = Schema({Literal("sub_key1", description="Sub key 1"): int}, name="sub_schema", as_reference=True)
     main_schema = Schema(
-        {Literal("main_key1", description="Main key 1"): str, Literal("main_key2", description="main_key2"): sub_schema}
+        {
+            Literal("main_key1", description="Main Key 1"): str,
+            Literal("main_key2", description="Main Key 2"): sub_schema,
+        }
     )
 
     json_schema = main_schema.json_schema("my-id")
     assert sorted_dict(json_schema) == {
         "type": "object",
         "properties": {
-            "main_key1": {"description": "Main key 1", "type": "string"},
-            "main_key2": {"description": "main_key2", "$ref": "#/definitions/sub_schema"},
+            "main_key1": {"description": "Main Key 1", "type": "string"},
+            "main_key2": {"$ref": "#/definitions/sub_schema"},
         },
         "required": ["main_key1", "main_key2"],
         "additionalProperties": False,
