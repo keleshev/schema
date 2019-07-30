@@ -518,7 +518,11 @@ class Schema(object):
             flavor = _priority(s)
 
             return_schema = {}
-            if description:
+
+            is_a_ref = allow_reference and schema.as_reference
+            if schema.description and not is_a_ref:
+                return_schema["description"] = schema.description
+            if description and not is_a_ref:
                 return_schema["description"] = description
 
             if flavor != DICT and is_main_schema:
@@ -575,7 +579,7 @@ class Schema(object):
                 # Schema is a dict
 
                 # Check if we have to create a common definition and use as reference
-                if allow_reference and schema.as_reference:
+                if is_a_ref:
                     # Generate sub schema if not already done
                     if schema.name not in definitions_by_name:
                         definitions_by_name[schema.name] = {}  # Avoid infinite loop
@@ -647,9 +651,6 @@ class Schema(object):
                         return_schema["definitions"] = {}
                         for definition_name, definition in definitions_by_name.items():
                             return_schema["definitions"][definition_name] = definition
-
-                if schema.description:
-                    return_schema["description"] = self.description
 
             return _create_or_use_ref(return_schema)
 
