@@ -937,6 +937,65 @@ def test_json_schema_or_one_value():
     }
 
 
+def test_json_schema_const_is_none():
+    s = Schema({"test": None})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {"test": {"const": None}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_const_is_callable():
+    def something_callable(x):
+        return x * 2
+
+    s = Schema({"test": something_callable})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {"test": {}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_const_is_custom_type():
+    class SomethingSerializable:
+        def __str__(self):
+            return "Hello!"
+
+    s = Schema({"test": SomethingSerializable()})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {"test": {"const": "Hello!"}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
+def test_json_schema_default_is_custom_type():
+    class SomethingSerializable:
+        def __str__(self):
+            return "Hello!"
+
+    s = Schema({Optional("test", default=SomethingSerializable()): str})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {"test": {"default": "Hello!", "type": "string"}},
+        "required": [],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
 def test_json_schema_object_or_array_of_object():
     # Complex test where "test" accepts either an object or an array of that object
     o = {"param1": "test1", Optional("param2"): "test2"}
@@ -1020,7 +1079,7 @@ def test_json_schema_dict_type():
 
     assert json_schema == {
         "type": "object",
-        "properties": {"test1": {"type": "object"}},
+        "properties": {"test1": {"default": {}, "type": "object"}},
         "required": [],
         "additionalProperties": False,
         "$id": "my-id",
@@ -1053,6 +1112,7 @@ def test_json_schema_description_nested():
         "$id": "my-id",
         "properties": {
             "test1": {
+                "default": {},
                 "description": "A description here",
                 "anyOf": [
                     {"items": {"type": "string"}, "type": "array"},
@@ -1353,6 +1413,54 @@ def test_json_schema_default_value():
     assert s.json_schema("my-id") == {
         "type": "object",
         "properties": {"test1": {"type": "integer", "default": 42}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_default_value_with_literal():
+    s = Schema({Optional(Literal("test1"), default=False): bool})
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test1": {"type": "boolean", "default": False}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_default_is_none():
+    s = Schema({Optional("test1", default=None): str})
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test1": {"type": "string", "default": None}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_default_is_tuple():
+    s = Schema({Optional("test1", default=(1, 2)): list})
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test1": {"type": "array", "default": [1, 2]}},
+        "required": [],
+        "additionalProperties": False,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_default_is_literal():
+    s = Schema({Optional("test1", default=Literal("Hello!")): str})
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {"test1": {"type": "string", "default": "Hello!"}},
         "required": [],
         "additionalProperties": False,
         "$id": "my-id",

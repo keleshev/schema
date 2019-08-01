@@ -507,6 +507,19 @@ class Schema(object):
                     return "object"
                 return "string"
 
+            def _to_json_type(value):
+                """Attempt to convert a constant value (for "const" and "default") to a JSON serializable value"""
+                if value is None or type(value) in (str, int, float, bool, list, dict):
+                    return value
+
+                if type(value) in (tuple, set, frozenset):
+                    return list(value)
+
+                if isinstance(value, Literal):
+                    return value.schema
+
+                return str(value)
+
             def _to_schema(s, ignore_extra_keys):
                 if not isinstance(s, Schema):
                     return Schema(s, ignore_extra_keys=ignore_extra_keys)
@@ -547,7 +560,7 @@ class Schema(object):
                     or_values = [str(s) if isinstance(s, Literal) else s for s in s.args]
                     # All values are simple, can use enum or const
                     if len(or_values) == 1:
-                        return_schema["const"] = or_values[0]
+                        return_schema["const"] = _to_json_type(or_values[0])
                         return return_schema
                     return_schema["enum"] = or_values
                 else:
@@ -567,7 +580,7 @@ class Schema(object):
                         all_of_values.append(new_value)
                 return_schema["allOf"] = all_of_values
             elif flavor == COMPARABLE:
-                return_schema["const"] = str(s)
+                return_schema["const"] = _to_json_type(s)
             elif flavor == VALIDATOR and type(s) == Regex:
                 return_schema["type"] = "string"
                 return_schema["pattern"] = s.pattern_str
@@ -624,8 +637,8 @@ class Schema(object):
                             expanded_schema[key_name] = _json_schema(
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
-                            if isinstance(key, Optional) and hasattr(key, "default") and key.default:
-                                expanded_schema[key_name]["default"] = key.default
+                            if isinstance(key, Optional) and hasattr(key, "default"):
+                                expanded_schema[key_name]["default"] = _to_json_type(key.default)
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
