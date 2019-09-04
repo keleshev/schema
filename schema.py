@@ -568,9 +568,13 @@ class Schema(object):
                     any_of_values = []
                     for or_key in s.args:
                         new_value = _json_schema(_to_schema(or_key, i), is_main_schema=False)
-                        if new_value not in any_of_values:
+                        if new_value != {} and new_value not in any_of_values:
                             any_of_values.append(new_value)
-                    return_schema["anyOf"] = any_of_values
+                    if len(any_of_values) == 1:
+                        # Only one representable condition remains, do not put under oneOf
+                        return_schema.update(any_of_values[0])
+                    else:
+                        return_schema["anyOf"] = any_of_values
             elif isinstance(s, And):
                 # Handle And values
                 all_of_values = []
@@ -578,7 +582,11 @@ class Schema(object):
                     new_value = _json_schema(_to_schema(and_key, i), is_main_schema=False)
                     if new_value != {} and new_value not in all_of_values:
                         all_of_values.append(new_value)
-                return_schema["allOf"] = all_of_values
+                if len(all_of_values) == 1:
+                    # Only one representable condition remains, do not put under allOf
+                    return_schema.update(all_of_values[0])
+                else:
+                    return_schema["allOf"] = all_of_values
             elif flavor == COMPARABLE:
                 return_schema["const"] = _to_json_type(s)
             elif flavor == VALIDATOR and type(s) == Regex:
