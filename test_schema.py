@@ -912,13 +912,25 @@ def test_json_schema_or_types():
     }
 
 
+def test_json_schema_or_only_one():
+    s = Schema({"test": Or(str, lambda x: len(x) < 5)})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {"test": {"type": "string"}},
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
 def test_json_schema_and_types():
     # Can't determine the type, it will not be checked
     s = Schema({"test": And(str, lambda x: len(x) < 5)})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
-        "properties": {"test": {"allOf": [{"type": "string"}]}},
+        "properties": {"test": {"type": "string"}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
