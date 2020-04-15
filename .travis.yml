@@ -25,10 +25,10 @@ cache:
   directories:
     - .tox
 
-install: pip install codecov pre-commit tox
+install: pip install codecov tox
 
 script:
-  - if [ "$TOXENV" = "checks" ]; then pre-commit run -a; fi
+  - if [ "$TOXENV" = "checks" ]; then ; pip install pre-commit ; pre-commit run -a; fi
   - tox
 
 # publish coverage only after a successful build
