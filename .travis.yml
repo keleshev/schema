@@ -1,9 +1,8 @@
-# use new container-based infrastructure
-sudo: false
-
+os:linux:
+dist: xenial
 language: python
 
-matrix:
+jobs:
   include:
     - env: TOXENV=py27
       python: 2.7
@@ -15,23 +14,24 @@ matrix:
       python: 3.6
     - env: TOXENV=py37
       python: 3.7
-      dist: xenial
-      sudo: true
+    - env: TOXENV=py38
+      python: 3.8
     - env: TOXENV=coverage
-    - env: TOXENV=checks
-      python: 3.6
-
+    - python: 3.8
+      install: pip install pre-commit
+      script: pre-commit run -a
+    - python: 3.8
+      install: pip install pypistats
+      script:
+        - pypistats recent schema
+        - pypistats python_major schema --last-month
+        - pypistats python_minor schema --last-month
 cache:
   pip: true
   directories:
     - .tox
 
-install: pip install codecov tox pre-commit
-
-script:
-  - if [ "$TOXENV" = "checks" ]; then pre-commit run -a; fi
-  - tox
-
+install: pip install codecov tox
+script: tox
 # publish coverage only after a successful build
-after_success:
-  - codecov
+after_success: codecov
