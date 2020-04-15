@@ -15,7 +15,7 @@ repos:
       - id: flake8
         args:
           - --max-complexity=10
-          - --max-line-length=361  # 88
+          - --max-line-length=88
   - repo: https://github.com/timothycrosley/isort
     rev: 4.3.21-2
     hooks:
