@@ -533,10 +533,9 @@ class Schema(object):
             return_schema = {}
 
             is_a_ref = allow_reference and schema.as_reference
-            if schema.description and not is_a_ref:
-                return_schema["description"] = schema.description
-            if description and not is_a_ref:
-                return_schema["description"] = description
+            return_description = description or schema.description
+            if return_description:
+                return_schema["description"] = return_description
 
             if flavor != DICT and is_main_schema:
                 raise ValueError("The main schema must be a dict.")
