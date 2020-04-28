@@ -1326,11 +1326,17 @@ def test_json_schema_definitions():
 
 
 def test_json_schema_definitions_and_literals():
-    sub_schema = Schema({Literal("sub_key1", description="Sub key 1"): int}, name="sub_schema", as_reference=True)
+    sub_schema = Schema(
+        {Literal("sub_key1", description="Sub key 1"): int},
+        name="sub_schema",
+        as_reference=True,
+        description="Sub Schema",
+    )
     main_schema = Schema(
         {
             Literal("main_key1", description="Main Key 1"): str,
             Literal("main_key2", description="Main Key 2"): sub_schema,
+            Literal("main_key3", description="Main Key 3"): sub_schema,
         }
     )
 
@@ -1339,14 +1345,16 @@ def test_json_schema_definitions_and_literals():
         "type": "object",
         "properties": {
             "main_key1": {"description": "Main Key 1", "type": "string"},
-            "main_key2": {"$ref": "#/definitions/sub_schema"},
+            "main_key2": {"$ref": "#/definitions/sub_schema", "description": "Main Key 2"},
+            "main_key3": {"$ref": "#/definitions/sub_schema", "description": "Main Key 3"},
         },
-        "required": ["main_key1", "main_key2"],
+        "required": ["main_key1", "main_key2", "main_key3"],
         "additionalProperties": False,
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "definitions": {
             "sub_schema": {
+                "description": "Sub Schema",
                 "type": "object",
                 "properties": {"sub_key1": {"description": "Sub key 1", "type": "integer"}},
                 "required": ["sub_key1"],
