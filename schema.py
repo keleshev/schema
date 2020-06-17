@@ -160,7 +160,8 @@ class Or(And):
                     break
                 return validation
             except SchemaError as _x:
-                autos, errors = _x.autos, _x.errors
+                autos += _x.autos
+                errors += _x.errors
         raise SchemaError(
             ["%r did not validate %r" % (self, data)] + autos,
             [self._error.format(data) if self._error else None] + errors,

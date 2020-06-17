@@ -186,10 +186,9 @@ Now you can write your own validation-aware classes and data types.
 Lists, similar containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If ``Schema(...)`` encounters an instance of ``list``, ``tuple``, ``set`` or
-``frozenset``, it will validate contents of corresponding data container
-against schemas listed inside that container:
-
+If ``Schema(...)`` encounters an instance of ``list``, ``tuple``, ``set``
+or ``frozenset``, it will validate contents of corresponding data container
+against all schemas listed inside that container and aggregate all errors:
 
 .. code:: python
 
@@ -200,6 +199,7 @@ against schemas listed inside that container:
     Traceback (most recent call last):
     ...
     schema.SchemaError: Or(<class 'int'>, <class 'float'>) did not validate 'not int or float here'
+    'not int or float here' should be instance of 'int'
     'not int or float here' should be instance of 'float'
 
 Dictionaries
