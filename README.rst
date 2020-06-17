@@ -20,7 +20,7 @@ entries with personal information:
 
 .. code:: python
 
-    >>> from schema import Schema, And, Use, Optional
+    >>> from schema import Schema, And, Use, Optional, SchemaError
 
     >>> schema = Schema([{'name': And(str, len),
     ...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
@@ -79,7 +79,7 @@ otherwise it will raise ``SchemaError``.
     >>> Schema(int).validate('123')
     Traceback (most recent call last):
     ...
-    SchemaUnexpectedTypeError: '123' should be instance of 'int'
+    schema.SchemaUnexpectedTypeError: '123' should be instance of 'int'
 
     >>> Schema(object).validate('hai')
     'hai'
@@ -101,7 +101,7 @@ If ``Schema(...)`` encounters a callable (function, class, or object with
     >>> Schema(os.path.exists).validate('./non-existent/')
     Traceback (most recent call last):
     ...
-    SchemaError: exists('./non-existent/') should evaluate to True
+    schema.SchemaError: exists('./non-existent/') should evaluate to True
 
     >>> Schema(lambda n: n > 0).validate(123)
     123
@@ -109,7 +109,7 @@ If ``Schema(...)`` encounters a callable (function, class, or object with
     >>> Schema(lambda n: n > 0).validate(-12)
     Traceback (most recent call last):
     ...
-    SchemaError: <lambda>(-12) should evaluate to True
+    schema.SchemaError: <lambda>(-12) should evaluate to True
 
 "Validatables"
 ~~~~~~~~~~~~~~
@@ -134,7 +134,7 @@ compiled regex ``SRE_Pattern``):
     >>> Regex(r'^[A-Z]+$', flags=re.I).validate('those-dashes-dont-match')
     Traceback (most recent call last):
     ...
-    SchemaError: Regex('^[A-Z]+$', flags=re.IGNORECASE) does not match 'those-dashes-dont-match'
+    schema.SchemaError: Regex('^[A-Z]+$', flags=re.IGNORECASE) does not match 'those-dashes-dont-match'
 
 For a more general case, you can use ``Use`` for creating such objects.
 ``Use`` helps to use a function or type to convert a value while validating it:
@@ -147,7 +147,7 @@ For a more general case, you can use ``Use`` for creating such objects.
     123
 
     >>> Schema(Use(lambda f: open(f, 'a'))).validate('LICENSE-MIT')
-    <open file 'LICENSE-MIT', mode 'a' at 0x...>
+    <_io.TextIOWrapper name='LICENSE-MIT' mode='a' encoding='UTF-8'>
 
 Dropping the details, ``Use`` is basically:
 
@@ -186,10 +186,9 @@ Now you can write your own validation-aware classes and data types.
 Lists, similar containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If ``Schema(...)`` encounters an instance of ``list``, ``tuple``, ``set`` or
-``frozenset``, it will validate contents of corresponding data container
-against schemas listed inside that container:
-
+If ``Schema(...)`` encounters an instance of ``list``, ``tuple``, ``set``
+or ``frozenset``, it will validate contents of corresponding data container
+against all schemas listed inside that container and aggregate all errors:
 
 .. code:: python
 
@@ -199,7 +198,8 @@ against schemas listed inside that container:
     >>> Schema((int, float)).validate((5, 7, 8, 'not int or float here'))
     Traceback (most recent call last):
     ...
-    SchemaError: Or(<type 'int'>, <type 'float'>) did not validate 'not int or float here'
+    schema.SchemaError: Or(<class 'int'>, <class 'float'>) did not validate 'not int or float here'
+    'not int or float here' should be instance of 'int'
     'not int or float here' should be instance of 'float'
 
 Dictionaries
@@ -229,7 +229,7 @@ You can specify keys as schemas too:
     ...                   10: 'not None here'})
     Traceback (most recent call last):
     ...
-    SchemaError: Key '10' error:
+    schema.SchemaError: Key '10' error:
     None does not match 'not None here'
 
 This is useful if you want to check certain key-values, but don't care
@@ -300,7 +300,7 @@ for the same data:
     >>> Schema({'password': And(str, lambda s: len(s) > 6)}).validate({'password': 'hai'})
     Traceback (most recent call last):
     ...
-    SchemaError: Key 'password' error:
+    schema.SchemaError: Key 'password' error:
     <lambda>('hai') should evaluate to True
 
     >>> Schema(And(Or(int, float), lambda x: x > 0)).validate(3.1415)
@@ -322,11 +322,11 @@ so, use the `Or` class as a key:
     >>> schema.validate({"key1": "test", "key2": "test"}) # SchemaError
     Traceback (most recent call last):
     ...
-    SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
+    schema.SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
 Hooks
 ~~~~~~~~~~
-You can define hooks which are functions that are executed whenever a valid key:value is found. 
+You can define hooks which are functions that are executed whenever a valid key:value is found.
 The `Forbidden` class is an example of this.
 
 You can mark a key as forbidden as follows:
@@ -337,7 +337,7 @@ You can mark a key as forbidden as follows:
     >>> Schema({Forbidden('age'): object}).validate({'age': 50})
     Traceback (most recent call last):
     ...
-    SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
+    schema.SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
 
 A few things are worth noting. First, the value paired with the forbidden
 key determines whether it will be rejected:
@@ -358,7 +358,7 @@ This means we can do that:
     >>> Schema({Forbidden('age'): object, Optional(str): object}).validate({'age': 50})
     Traceback (most recent call last):
     ...
-    SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
+    schema.SchemaForbiddenKeyError: Forbidden key encountered: 'age' in {'age': 50}
 
 You can also define your own hooks. The following hook will call `_my_function` if `key` is encountered.
 
@@ -410,7 +410,7 @@ instead of a built-in one.
     >>> Schema(Use(int, error='Invalid year')).validate('XVII')
     Traceback (most recent call last):
     ...
-    SchemaError: Invalid year
+    schema.SchemaError: Invalid year
 
 You can see all errors that occurred by accessing exception's ``exc.autos``
 for auto-generated error messages, and ``exc.errors`` for errors
@@ -440,10 +440,10 @@ request from github API.
     >>> import json
 
     >>> gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
-    ...                          # use basestring since json returns unicode
-    ...                          {Optional('description'): basestring,
+    ...                          # use str since json returns unicode
+    ...                          {Optional('description'): str,
     ...                           'public': bool,
-    ...                           'files': {basestring: {'content': basestring}}}))
+    ...                           'files': {str: {'content': str}}}))
 
     >>> gist = gist_schema.validate(gist)
 
@@ -486,7 +486,7 @@ this is how you validate it using ``schema``:
     >>> args = s.validate(args)
 
     >>> args['<files>']
-    [<open file 'LICENSE-MIT', mode 'r' at 0x...>, <open file 'setup.py', mode 'r' at 0x...>]
+    [<_io.TextIOWrapper name='LICENSE-MIT' ...>, <_io.TextIOWrapper name='setup.py' ...]
 
     >>> args['<path>']
     '../'
