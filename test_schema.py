@@ -12,6 +12,7 @@ from operator import methodcaller
 
 from mock import Mock
 from pytest import mark, raises
+
 from schema import (
     And,
     Const,
@@ -1080,10 +1081,55 @@ def test_json_schema_forbidden_key_ignored():
     }
 
 
-def test_json_schema_not_a_dict():
-    s = Schema(int)
-    with raises(ValueError):
-        s.json_schema("my-id")
+@mark.parametrize(
+    "input_schema, expected_keyword, expected_value",
+    [
+        (int, "type", "integer"),
+        (float, "type", "number"),
+        (list, "type", "array"),
+        (bool, "type", "boolean"),
+        (dict, "type", "object"),
+        ("test", "const", "test"),
+        (Or(1, 2, 3), "enum", [1, 2, 3]),
+        (Or(str, int), "anyOf", [{"type": "string"}, {"type": "integer"}]),
+        (And(str, "value"), "allOf", [{"type": "string"}, {"const": "value"}]),
+    ],
+)
+def test_json_schema_root_not_dict(input_schema, expected_keyword, expected_value):
+    """Test generating simple JSON Schemas where the root element is not a dict"""
+    json_schema = Schema(input_schema).json_schema("my-id")
+
+    assert json_schema == {
+        expected_keyword: expected_value,
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+@mark.parametrize(
+    "input_schema, expected_keyword, expected_value",
+    [([1, 2, 3], "enum", [1, 2, 3]), ([1], "const", 1), ([str], "type", "string")],
+)
+def test_json_schema_array(input_schema, expected_keyword, expected_value):
+    json_schema = Schema(input_schema).json_schema("my-id")
+
+    assert json_schema == {
+        "type": "array",
+        "items": {expected_keyword: expected_value},
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_regex_root():
+    json_schema = Schema(Regex("^v\\d+")).json_schema("my-id")
+
+    assert json_schema == {
+        "type": "string",
+        "pattern": "^v\\d+",
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
 
 
 def test_json_schema_dict_type():
