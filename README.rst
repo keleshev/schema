@@ -630,11 +630,11 @@ Types
     ``{'type': 'array', 'items': {'type': 'string'}}``
 
 `Enumerated values <https://json-schema.org/understanding-json-schema/reference/generic.html#enumerated-values>`_
-    List the accepted values.
+    Use `Or`.
 
     Example:
 
-    ``Schema([1, 2, 3])`` becomes
+    ``Schema(Or(1, 2, 3))`` becomes
 
     ``{"enum": [1, 2, 3]}``
 
