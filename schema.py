@@ -538,9 +538,6 @@ class Schema(object):
             if return_description:
                 return_schema["description"] = return_description
 
-            if flavor != DICT and is_main_schema:
-                raise ValueError("The main schema must be a dict.")
-
             if flavor == TYPE:
                 # Handle type
                 return_schema["type"] = _get_type_name(s)
@@ -665,15 +662,15 @@ class Schema(object):
                         }
                     )
 
-                if is_main_schema:
-                    return_schema.update({"$id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
-                    if self._name:
-                        return_schema["title"] = self._name
+            if is_main_schema:
+                return_schema.update({"$id": schema_id, "$schema": "http://json-schema.org/draft-07/schema#"})
+                if self._name:
+                    return_schema["title"] = self._name
 
-                    if definitions_by_name:
-                        return_schema["definitions"] = {}
-                        for definition_name, definition in definitions_by_name.items():
-                            return_schema["definitions"][definition_name] = definition
+                if definitions_by_name:
+                    return_schema["definitions"] = {}
+                    for definition_name, definition in definitions_by_name.items():
+                        return_schema["definitions"][definition_name] = definition
 
             return _create_or_use_ref(return_schema)
 

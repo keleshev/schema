@@ -574,9 +574,6 @@ These will appear in IDEs to help your users write a configuration.
 JSON: Supported validations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The main schema must be a dict. i.e. ``Schema({"test": str})`` works but ``Schema(str)`` does not.
-The following examples will assume the main schema is a dict.
-
 The resulting JSON schema is not guaranteed to accept the same objects as the library would accept, since some validations are not implemented or
 have no JSON schema equivalent. This is the case of the ``Use`` and ``Hook`` objects for example.
 
@@ -652,7 +649,7 @@ Types
 
     Example:
 
-    ``Regex("^v\d+")`` becomes
+    ``Schema(Regex("^v\d+"))`` becomes
 
     ``{'type': 'string', 'pattern': '^v\\d+'}``
 
