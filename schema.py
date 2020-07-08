@@ -342,7 +342,7 @@ class Schema(object):
     def validate(self, data):
         Schema = self.__class__
         s = self._schema
-        e = self._error
+        e = self._error.format(data) if self._error else None
         i = self._ignore_extra_keys
 
         if isinstance(s, Literal):
@@ -412,7 +412,7 @@ class Schema(object):
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
                 message = "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data)
                 message = self._prepend_schema_name(message)
-                raise SchemaWrongKeyError(message, e.format(data) if e else None)
+                raise SchemaWrongKeyError(message, e)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and hasattr(k, "default")) - coverage
@@ -426,7 +426,7 @@ class Schema(object):
             else:
                 message = "%r should be instance of %r" % (data, s.__name__)
                 message = self._prepend_schema_name(message)
-                raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
+                raise SchemaUnexpectedTypeError(message, e)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
@@ -435,7 +435,7 @@ class Schema(object):
             except BaseException as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, self._error.format(data) if self._error else None)
+                raise SchemaError(message, e)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -446,7 +446,7 @@ class Schema(object):
             except BaseException as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, self._error.format(data) if self._error else None)
+                raise SchemaError(message, e)
             message = "%s(%r) should evaluate to True" % (f, data)
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e)
@@ -455,7 +455,7 @@ class Schema(object):
         else:
             message = "%r does not match %r" % (s, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e.format(data) if e else None)
+            raise SchemaError(message, e)
 
     def json_schema(self, schema_id, use_refs=False):
         """Generate a draft-07 JSON schema dict representing the Schema.
