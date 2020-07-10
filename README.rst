@@ -673,7 +673,7 @@ Types
 
     Example:
 
-    ``Schema(And(str, "value")``
+    ``Schema(And(str, "value"))``
 
     becomes
 
