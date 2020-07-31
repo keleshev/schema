@@ -17,6 +17,7 @@ jobs:
     - env: TOXENV=py38
       python: 3.8
     - env: TOXENV=coverage
+      python: 3.8
     - env: TOXENV=checks
       python: 3.8
 
