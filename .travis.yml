@@ -28,7 +28,7 @@ cache:
 install: pip install codecov tox
 
 script:
-  - if [ "$TOXENV" = "checks" ]; then pip install pre-commit ; pre-commit run -a; fi
+  - if [ "$TOXENV" = "checks" ]; then pip install pre-commit ; pre-commit run -a --hook-stage=manual; fi
   - tox
 
 # publish coverage only after a successful build

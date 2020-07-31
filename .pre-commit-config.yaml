@@ -1,5 +1,14 @@
 repos:
--   repo: https://github.com/ambv/black
-    rev: 18.9b0
-    hooks:
-    - id: black
+- repo: https://github.com/ambv/black
+  rev: 18.9b0
+  hooks:
+  - id: black
+- repo: local
+  hooks:
+  - id: gitchangelog
+    language: system
+    always_run: true
+    pass_filenames: false
+    name: Generate changelog
+    entry: bash -c "gitchangelog > CHANGELOG.md"
+    stages: [commit]
