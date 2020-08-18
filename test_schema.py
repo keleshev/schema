@@ -1082,6 +1082,40 @@ def test_json_schema_forbidden_key_ignored():
 
 
 @mark.parametrize(
+    "input_schema, ignore_extra_keys, additional_properties",
+    [
+        ({}, False, False),
+        ({str: str}, False, True),
+        ({Optional(str): str}, False, True),
+        ({object: int}, False, True),
+        ({}, True, True),
+    ],
+)
+def test_json_schema_additional_properties(input_schema, ignore_extra_keys, additional_properties):
+    s = Schema(input_schema, ignore_extra_keys=ignore_extra_keys)
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "required": [],
+        "properties": {},
+        "additionalProperties": additional_properties,
+        "type": "object",
+    }
+
+
+def test_json_schema_additional_properties_multiple():
+    s = Schema({"named_property": bool, object: int})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "required": ["named_property"],
+        "properties": {"named_property": {"type": "boolean"}},
+        "additionalProperties": True,
+        "type": "object",
+    }
+
+
+@mark.parametrize(
     "input_schema, expected_keyword, expected_value",
     [
         (int, "type", "integer"),

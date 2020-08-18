@@ -609,9 +609,17 @@ class Schema(object):
                 else:
                     required_keys = []
                     expanded_schema = {}
+                    additional_properties = i
                     for key in s:
                         if isinstance(key, Hook):
                             continue
+
+                        def _key_allows_additional_properties(key):
+                            """Check if a key is broad enough to allow additional properties"""
+                            if isinstance(key, Optional):
+                                return _key_allows_additional_properties(key.schema)
+
+                            return key == str or key == object
 
                         def _get_key_description(key):
                             """Get the description associated to a key (as specified in a Literal object). Return None if not a Literal"""
@@ -633,6 +641,7 @@ class Schema(object):
 
                             return key
 
+                        additional_properties = additional_properties or _key_allows_additional_properties(key)
                         sub_schema = _to_schema(s[key], ignore_extra_keys=i)
                         key_name = _get_key_name(key)
 
@@ -658,7 +667,7 @@ class Schema(object):
                             "type": "object",
                             "properties": expanded_schema,
                             "required": required_keys,
-                            "additionalProperties": i,
+                            "additionalProperties": additional_properties,
                         }
                     )
 
