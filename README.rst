@@ -599,7 +599,7 @@ Implemented
 
     ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': [], 'additionalProperties': False}``
 
-    additionalProperties is set to true when at least one of the condition is met:
+    additionalProperties is set to true when at least one of the conditions is met:
         - ignore_extra_keys is True
         - at least one key is `str` or `object`
 
