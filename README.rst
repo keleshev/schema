@@ -599,6 +599,26 @@ Implemented
 
     ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': [], 'additionalProperties': False}``
 
+    additionalProperties is set to true when at least one of the conditions is met:
+        - ignore_extra_keys is True
+        - at least one key is `str` or `object`
+
+    For example:
+
+    ``Schema({str: str})`` and ``Schema({}, ignore_extra_keys=True)``
+
+    both becomes
+
+    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': True}``
+
+    and
+
+    ``Schema({})``
+
+    becomes
+
+    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': False}``
+
 Types
     Use the Python type name directly. It will be converted to the JSON name:
 
@@ -717,6 +737,7 @@ The following JSON schema validations cannot be generated from this library.
 - `Combining schemas with oneOf <https://json-schema.org/understanding-json-schema/reference/combining.html#oneof>`_
 - `Not <https://json-schema.org/understanding-json-schema/reference/combining.html#not>`_
 - `Object size <https://json-schema.org/understanding-json-schema/reference/object.html#size>`_
+- `additionalProperties having a different schema (true and false is supported)`
 
 
 JSON: Minimizing output size
