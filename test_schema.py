@@ -1315,23 +1315,14 @@ def test_description_with_default():
 
 def test_json_schema_ref_in_list():
     s = Schema(
-        Or(
-            Schema([str], name="Inner test", as_reference=True),
-            Schema([str], name="Inner test2", as_reference=True),
-        )
+        Or(Schema([str], name="Inner test", as_reference=True), Schema([str], name="Inner test2", as_reference=True))
     )
     generated_json_schema = s.json_schema("my-id")
 
     assert generated_json_schema == {
         "definitions": {
-            "Inner test": {
-                "items": {"type": "string"},
-                "type": "array",
-            },
-            "Inner test2": {
-                "items": {"type": "string"},
-                "type": "array",
-            },
+            "Inner test": {"items": {"type": "string"}, "type": "array"},
+            "Inner test2": {"items": {"type": "string"}, "type": "array"},
         },
         "anyOf": [{"$ref": "#/definitions/Inner test"}, {"$ref": "#/definitions/Inner test2"}],
         "$id": "my-id",
