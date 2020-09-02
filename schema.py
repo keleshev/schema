@@ -533,80 +533,77 @@ class Schema(object):
 
             return_schema = {}
 
-            is_a_ref = allow_reference and schema.as_reference
             return_description = description or schema.description
             if return_description:
                 return_schema["description"] = return_description
 
-            if flavor == TYPE:
-                # Handle type
-                return_schema["type"] = _get_type_name(s)
-            elif flavor == ITERABLE:
-                # Handle arrays or dict schema
+            # Check if we have to create a common definition and use as reference
+            if allow_reference and schema.as_reference:
+                # Generate sub schema if not already done
+                if schema.name not in definitions_by_name:
+                    definitions_by_name[schema.name] = {}  # Avoid infinite loop
+                    definitions_by_name[schema.name] = _json_schema(schema, is_main_schema=False, allow_reference=False)
 
-                return_schema["type"] = "array"
-                if len(s) == 1:
-                    return_schema["items"] = _json_schema(_to_schema(s[0], i), is_main_schema=False)
-                elif len(s) > 1:
-                    return_schema["items"] = _json_schema(Schema(Or(*s)), is_main_schema=False)
-            elif isinstance(s, Or):
-                # Handle Or values
-
-                # Check if we can use an enum
-                if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
-                    or_values = [str(s) if isinstance(s, Literal) else s for s in s.args]
-                    # All values are simple, can use enum or const
-                    if len(or_values) == 1:
-                        return_schema["const"] = _to_json_type(or_values[0])
-                        return return_schema
-                    return_schema["enum"] = or_values
-                else:
-                    # No enum, let's go with recursive calls
-                    any_of_values = []
-                    for or_key in s.args:
-                        new_value = _json_schema(_to_schema(or_key, i), is_main_schema=False)
-                        if new_value != {} and new_value not in any_of_values:
-                            any_of_values.append(new_value)
-                    if len(any_of_values) == 1:
-                        # Only one representable condition remains, do not put under oneOf
-                        return_schema.update(any_of_values[0])
-                    else:
-                        return_schema["anyOf"] = any_of_values
-            elif isinstance(s, And):
-                # Handle And values
-                all_of_values = []
-                for and_key in s.args:
-                    new_value = _json_schema(_to_schema(and_key, i), is_main_schema=False)
-                    if new_value != {} and new_value not in all_of_values:
-                        all_of_values.append(new_value)
-                if len(all_of_values) == 1:
-                    # Only one representable condition remains, do not put under allOf
-                    return_schema.update(all_of_values[0])
-                else:
-                    return_schema["allOf"] = all_of_values
-            elif flavor == COMPARABLE:
-                return_schema["const"] = _to_json_type(s)
-            elif flavor == VALIDATOR and type(s) == Regex:
-                return_schema["type"] = "string"
-                return_schema["pattern"] = s.pattern_str
+                return_schema["$ref"] = "#/definitions/" + schema.name
             else:
-                if flavor != DICT:
-                    # If not handled, do not check
-                    return return_schema
+                if flavor == TYPE:
+                    # Handle type
+                    return_schema["type"] = _get_type_name(s)
+                elif flavor == ITERABLE:
+                    # Handle arrays or dict schema
 
-                # Schema is a dict
+                    return_schema["type"] = "array"
+                    if len(s) == 1:
+                        return_schema["items"] = _json_schema(_to_schema(s[0], i), is_main_schema=False)
+                    elif len(s) > 1:
+                        return_schema["items"] = _json_schema(Schema(Or(*s)), is_main_schema=False)
+                elif isinstance(s, Or):
+                    # Handle Or values
 
-                # Check if we have to create a common definition and use as reference
-                if is_a_ref:
-                    # Generate sub schema if not already done
-                    if schema.name not in definitions_by_name:
-                        definitions_by_name[schema.name] = {}  # Avoid infinite loop
-                        definitions_by_name[schema.name] = _json_schema(
-                            schema, is_main_schema=False, allow_reference=False
-                        )
-
-                    return_schema["$ref"] = "#/definitions/" + schema.name
+                    # Check if we can use an enum
+                    if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
+                        or_values = [str(s) if isinstance(s, Literal) else s for s in s.args]
+                        # All values are simple, can use enum or const
+                        if len(or_values) == 1:
+                            return_schema["const"] = _to_json_type(or_values[0])
+                            return return_schema
+                        return_schema["enum"] = or_values
+                    else:
+                        # No enum, let's go with recursive calls
+                        any_of_values = []
+                        for or_key in s.args:
+                            new_value = _json_schema(_to_schema(or_key, i), is_main_schema=False)
+                            if new_value != {} and new_value not in any_of_values:
+                                any_of_values.append(new_value)
+                        if len(any_of_values) == 1:
+                            # Only one representable condition remains, do not put under oneOf
+                            return_schema.update(any_of_values[0])
+                        else:
+                            return_schema["anyOf"] = any_of_values
+                elif isinstance(s, And):
+                    # Handle And values
+                    all_of_values = []
+                    for and_key in s.args:
+                        new_value = _json_schema(_to_schema(and_key, i), is_main_schema=False)
+                        if new_value != {} and new_value not in all_of_values:
+                            all_of_values.append(new_value)
+                    if len(all_of_values) == 1:
+                        # Only one representable condition remains, do not put under allOf
+                        return_schema.update(all_of_values[0])
+                    else:
+                        return_schema["allOf"] = all_of_values
+                elif flavor == COMPARABLE:
+                    return_schema["const"] = _to_json_type(s)
+                elif flavor == VALIDATOR and type(s) == Regex:
+                    return_schema["type"] = "string"
+                    return_schema["pattern"] = s.pattern_str
                 else:
+                    if flavor != DICT:
+                        # If not handled, do not check
+                        return return_schema
+
+                    # Schema is a dict
+
                     required_keys = []
                     expanded_schema = {}
                     additional_properties = i
