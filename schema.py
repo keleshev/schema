@@ -188,7 +188,9 @@ class Regex(object):
 
     def __init__(self, pattern_str, flags=0, error=None):
         self._pattern_str = pattern_str
-        flags_list = [Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(flags)) if f != "0"]  # Name for each bit
+        flags_list = [
+            Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(int(flags))) if f != "0"
+        ]  # Name for each bit
 
         if flags_list:
             self._flags_names = ", flags=" + "|".join(flags_list)
@@ -459,7 +461,6 @@ class Schema(object):
 
     def json_schema(self, schema_id, use_refs=False):
         """Generate a draft-07 JSON schema dict representing the Schema.
-        This method can only be called when the Schema's value is a dict.
         This method must be called with a schema_id.
 
         :param schema_id: The value of the $id on the main schema
@@ -576,7 +577,7 @@ class Schema(object):
                             if new_value != {} and new_value not in any_of_values:
                                 any_of_values.append(new_value)
                         if len(any_of_values) == 1:
-                            # Only one representable condition remains, do not put under oneOf
+                            # Only one representable condition remains, do not put under anyOf
                             return_schema.update(any_of_values[0])
                         else:
                             return_schema["anyOf"] = any_of_values
