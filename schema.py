@@ -220,7 +220,7 @@ class Regex(object):
             if self._pattern.search(data):
                 return data
             else:
-                raise SchemaError("%r does not match %r" % (self, data), e)
+                raise SchemaError("%r does not match %r" % (self, data), e.format(data) if e else None)
         except TypeError:
             raise SchemaError("%r is not string nor buffer" % data, e)
 
@@ -344,7 +344,7 @@ class Schema(object):
     def validate(self, data):
         Schema = self.__class__
         s = self._schema
-        e = self._error.format(data) if self._error else None
+        e = self._error
         i = self._ignore_extra_keys
 
         if isinstance(s, Literal):
@@ -397,7 +397,7 @@ class Schema(object):
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     message = self._prepend_schema_name(k)
-                                    raise SchemaError([message] + x.autos, [e] + x.errors)
+                                    raise SchemaError([message] + x.autos, [e.format(data) if e else None] + x.errors)
                                 else:
                                     new[nkey] = nvalue
                                     coverage.add(skey)
@@ -408,13 +408,13 @@ class Schema(object):
                 s_missing_keys = ", ".join(repr(k) for k in sorted(missing_keys, key=repr))
                 message = "Missing key%s: %s" % (_plural_s(missing_keys), s_missing_keys)
                 message = self._prepend_schema_name(message)
-                raise SchemaMissingKeyError(message, e)
+                raise SchemaMissingKeyError(message, e.format(data) if e else None)
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
                 message = "Wrong key%s %s in %r" % (_plural_s(wrong_keys), s_wrong_keys, data)
                 message = self._prepend_schema_name(message)
-                raise SchemaWrongKeyError(message, e)
+                raise SchemaWrongKeyError(message, e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if type(k) is Optional and hasattr(k, "default")) - coverage
@@ -428,36 +428,36 @@ class Schema(object):
             else:
                 message = "%r should be instance of %r" % (data, s.__name__)
                 message = self._prepend_schema_name(message)
-                raise SchemaUnexpectedTypeError(message, e)
+                raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
         if flavor == VALIDATOR:
             try:
                 return s.validate(data)
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise SchemaError([None] + x.autos, [e.format(data) if e else None] + x.errors)
             except BaseException as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e)
+                raise SchemaError(message, e.format(data) if e else None)
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
                 if s(data):
                     return data
             except SchemaError as x:
-                raise SchemaError([None] + x.autos, [e] + x.errors)
+                raise SchemaError([None] + x.autos, [e.format(data) if e else None] + x.errors)
             except BaseException as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e)
+                raise SchemaError(message, e.format(data) if e else None)
             message = "%s(%r) should evaluate to True" % (f, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e)
+            raise SchemaError(message, e.format(data) if e else None)
         if s == data:
             return data
         else:
             message = "%r does not match %r" % (s, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e)
+            raise SchemaError(message, e.format(data) if e else None)
 
     def json_schema(self, schema_id, use_refs=False):
         """Generate a draft-07 JSON schema dict representing the Schema.

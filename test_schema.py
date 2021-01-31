@@ -1600,3 +1600,18 @@ def test_prepend_schema_name():
         Schema(int, name="custom_schemaname").validate("a")
     except SchemaUnexpectedTypeError as e:
         assert str(e) == "'custom_schemaname' 'a' should be instance of 'int'"
+
+
+def test_dict_literal_error_string():
+    # this is a simplified regression test of the bug in github issue #240
+    assert Schema(Or({"a": 1}, error="error: {}")).is_valid(dict(a=1))
+
+
+def test_callable_error():
+    # this tests for the behavior desired in github pull request #238
+    e = None
+    try:
+        Schema(lambda d: False, error="{}").validate("This is the error message")
+    except SchemaError as ex:
+        e = ex
+    assert e.errors == ["This is the error message"]
