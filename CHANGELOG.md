@@ -1,6 +1,19 @@
 # Changelog
 
 
+## Unreleased
+
+### Fixes
+
+* Don't double-format errors. fixes #240 (#247) [Leif Ryge]
+
+* Fix "Unknown format code" in Python 3.8 (#245) [Denis Blanchette]
+
+* JSON Schema: Allow using $ref when schema is not a dict (#244) [Denis Blanchette]
+
+* JSON Schema: Set additionalProperties true when dict contains str as key (#243) [Denis Blanchette]
+
+
 ## v0.7.3 (2020-07-31)
 
 ### Fixes
