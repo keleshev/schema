@@ -459,7 +459,7 @@ class Schema(object):
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e.format(data) if e else None)
 
-    def json_schema(self, schema_id, use_refs=False):
+    def json_schema(self, schema_id, use_refs=False, **kwargs):
         """Generate a draft-07 JSON schema dict representing the Schema.
         This method must be called with a schema_id.
 
@@ -650,7 +650,7 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(key.default() if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(key.default(**kwargs) if callable(key.default) else key.default)
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
