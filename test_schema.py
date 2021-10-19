@@ -755,6 +755,21 @@ def test_optional_callable_default_get_inherited_schema_validate_kwargs():
     assert d["k"] == 1 and d["d"]["k"] == 12 and d["d"]["l"][0]["l"] == [3, 4, 5]
 
 
+def test_optional_callable_default_ignore_inherited_schema_validate_kwargs():
+
+    def convert(data, increment):
+        if isinstance(data, int):
+            return data + increment
+        return data
+
+    s = {"k": int, "d": {Optional("k", default=lambda: 42): int, "l": [{"l": [int]}]}}
+    v = {"k": 1, "d": {"l": [{"l": [3, 4, 5]}]}}
+    d = Schema(s).validate(v, increment=1)
+    assert d["k"] == 1 and d["d"]["k"] == 42 and d["d"]["l"][0]["l"] == [3, 4, 5]
+    d = Schema(s).validate(v, increment=10)
+    assert d["k"] == 1 and d["d"]["k"] == 42 and d["d"]["l"][0]["l"] == [3, 4, 5]
+
+
 def test_inheritance_optional():
     def convert(data, increment):
         if isinstance(data, int):
