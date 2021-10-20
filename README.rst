@@ -398,6 +398,55 @@ The ``Schema(...)`` parameter ``ignore_extra_keys`` causes validation to ignore 
 If you would like any extra keys returned, use ``object: object`` as one of the key/value pairs, which will match any key and any value.
 Otherwise, extra keys will raise a ``SchemaError``.
 
+
+Customized Validation
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``Schema.validate`` method accepts additional keyword arguments. The
+keyword arguments will be propagated to the ``validate`` method of any
+child validatables (including any ad-hoc ``Schema`` objects), or the default
+value callable (if a callable is specified) for ``Optional`` keys.
+
+This feature can be used together with inheritance of the ``Schema`` class
+for customized validation.
+
+Here is an example where a "post-validation" hook that runs after validation
+against a sub-schema in a larger schema:
+
+.. code:: python
+
+    class EventSchema(schema.Schema):
+
+        def validate(self, data, _is_event_schema=True):
+            data = super(EventSchema, self).validate(data, _is_event_schema=False)
+            if _is_event_schema and data.get("minimum", None) is None:
+                data["minimum"] = data["capacity"]
+            return data
+
+
+    events_schema = schema.Schema(
+        {
+            str: EventSchema({
+                "capacity": int,
+                schema.Optional("minimum"): int,  # default to capacity
+            })
+        }
+    )
+
+
+    data = {'event1': {'capacity': 1}, 'event2': {'capacity': 2, 'minimum': 3}}
+    events = events_schema.validate(data)
+
+    assert events['event1']['minimum'] == 1  # == capacity
+    assert events['event2']['minimum'] == 3
+
+
+Note that the additional keyword argument ``_is_event_schema`` is necessary to
+limit the customized behavior to the ``EventSchema`` object itself so that it
+won't affect any recursive invoke of the ``self.__class__.validate`` for the
+child schemas (e.g., the call to ``Schema("capacity").validate("capacity")``).
+
+
 User-friendly error reporting
 -------------------------------------------------------------------------------
 
