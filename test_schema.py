@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import copy
 import json
 import os
@@ -9,8 +7,8 @@ import sys
 from collections import defaultdict, namedtuple
 from functools import partial
 from operator import methodcaller
+from unittest.mock import Mock
 
-from mock import Mock
 from pytest import mark, raises
 
 from schema import (
@@ -30,11 +28,6 @@ from schema import (
     SchemaWrongKeyError,
     Use,
 )
-
-if sys.version_info[0] == 3:
-    basestring = str  # Python 3 does not have basestring
-    unicode = str  # Python 3 does not have unicode
-
 
 SE = raises(SchemaError)
 
@@ -150,7 +143,7 @@ def test_test():
         return len(_list) == len(set(_list))
 
     def dict_keys(key, _list):
-        return list(map(lambda d: d[key], _list))
+        return list([d[key] for d in _list])
 
     schema = Schema(Const(And(Use(partial(dict_keys, "index")), unique_list)))
     data = [{"index": 1, "value": "foo"}, {"index": 2, "value": "bar"}]
@@ -194,7 +187,7 @@ def test_regex():
 
     # Validate that the pattern has a buffer interface
     assert Regex(re.compile(r"foo")).validate("foo") == "foo"
-    assert Regex(unicode("foo")).validate("foo") == "foo"
+    assert Regex(str("foo")).validate("foo") == "foo"
     with raises(TypeError):
         Regex(1).validate("bar")
     with raises(TypeError):
@@ -353,7 +346,7 @@ def test_dict_optional_keys():
     assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1}) == {"a": 1}
     assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     # Make sure Optionals are favored over types:
-    assert Schema({basestring: 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+    assert Schema({str: 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     # Make sure Optionals hash based on their key:
     assert len({Optional("a"): 1, Optional("a"): 1, Optional("b"): 2}) == 2
 
@@ -364,7 +357,7 @@ def test_dict_optional_defaults():
 
     # Optionals take precedence over types. Here, the "a" is served by the
     # Optional:
-    assert Schema({Optional("a", default=1): 11, basestring: 22}).validate({"b": 22}) == {"a": 1, "b": 22}
+    assert Schema({Optional("a", default=1): 11, str: 22}).validate({"b": 22}) == {"a": 1, "b": 22}
 
     with raises(TypeError):
         Optional(And(str, Use(int)), default=7)
@@ -529,7 +522,7 @@ def test_use_json():
     gist_schema = Schema(
         And(
             Use(json.loads),  # first convert from JSON
-            {Optional("description"): basestring, "public": bool, "files": {basestring: {"content": basestring}}},
+            {Optional("description"): str, "public": bool, "files": {str: {"content": str}}},
         )
     )
     gist = """{"description": "the description for this gist",
@@ -667,7 +660,7 @@ def test_optional_key_convert_failed_randomly_while_with_another_optional_object
                 Optional("created_at"): _datetime_validator,
                 Optional("updated_at"): _datetime_validator,
                 Optional("birth"): _datetime_validator,
-                Optional(basestring): object,
+                Optional(str): object,
             }
         )
         data = {"created_at": "2015-10-10 00:00:00"}
