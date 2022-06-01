@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 import copy
 import json
 import os
@@ -221,11 +219,11 @@ def test_list_tuple_set_frozenset():
     assert Schema([int]).validate([1, 2])
     with SE:
         Schema([int]).validate(["1", 2])
-    assert Schema(set([int])).validate(set([1, 2])) == set([1, 2])
+    assert Schema({int}).validate({1, 2}) == {1, 2}
     with SE:
-        Schema(set([int])).validate([1, 2])  # not a set
+        Schema({int}).validate([1, 2])  # not a set
     with SE:
-        Schema(set([int])).validate(["1", 2])
+        Schema({int}).validate(["1", 2])
     assert Schema(tuple([int])).validate(tuple([1, 2])) == tuple([1, 2])
     with SE:
         Schema(tuple([int])).validate([1, 2])  # not a set
@@ -638,7 +636,7 @@ def test_exception_handling_with_bad_validators():
 def test_issue_83_iterable_validation_return_type():
     TestSetType = type("TestSetType", (set,), dict())
     data = TestSetType(["test", "strings"])
-    s = Schema(set([str]))
+    s = Schema({str})
     assert isinstance(s.validate(data), TestSetType)
 
 
@@ -709,8 +707,7 @@ def test_inheritance_validate_kwargs():
 
     class MySchema(Schema):
         def validate(self, data, increment=1):
-            return super(MySchema, self).validate(
-                convert(data, increment), increment=increment)
+            return super(MySchema, self).validate(convert(data, increment), increment=increment)
 
     s = {"k": int, "d": {"k": int, "l": [{"l": [int]}]}}
     v = {"k": 1, "d": {"k": 2, "l": [{"l": [3, 4, 5]}]}}
@@ -728,8 +725,7 @@ def test_inheritance_validate_kwargs_passed_to_nested_schema():
 
     class MySchema(Schema):
         def validate(self, data, increment=1):
-            return super(MySchema, self).validate(
-                convert(data, increment), increment=increment)
+            return super(MySchema, self).validate(convert(data, increment), increment=increment)
 
     # note only d.k is under MySchema, and all others are under Schema without
     # increment
@@ -747,7 +743,7 @@ def test_optional_callable_default_get_inherited_schema_validate_kwargs():
             return data + increment
         return data
 
-    s = {"k": int, "d": {Optional("k", default=lambda **kw: convert(2, kw['increment'])): int, "l": [{"l": [int]}]}}
+    s = {"k": int, "d": {Optional("k", default=lambda **kw: convert(2, kw["increment"])): int, "l": [{"l": [int]}]}}
     v = {"k": 1, "d": {"l": [{"l": [3, 4, 5]}]}}
     d = Schema(s).validate(v, increment=1)
     assert d["k"] == 1 and d["d"]["k"] == 3 and d["d"]["l"][0]["l"] == [3, 4, 5]
@@ -756,7 +752,6 @@ def test_optional_callable_default_get_inherited_schema_validate_kwargs():
 
 
 def test_optional_callable_default_ignore_inherited_schema_validate_kwargs():
-
     def convert(data, increment):
         if isinstance(data, int):
             return data + increment
@@ -781,13 +776,14 @@ def test_inheritance_optional():
         """This overrides the default property so it increments according
         to kwargs passed to validate()
         """
+
         @property
         def default(self):
-
             def wrapper(**kwargs):
-                if 'increment' in kwargs:
-                    return convert(self._default, kwargs['increment'])
+                if "increment" in kwargs:
+                    return convert(self._default, kwargs["increment"])
                 return self._default
+
             return wrapper
 
         @default.setter
@@ -1112,7 +1108,8 @@ def test_json_schema_default_is_custom_type():
 
 def test_json_schema_default_is_callable():
     def default_func():
-        return 'Hello!'
+        return "Hello!"
+
     s = Schema({Optional("test", default=default_func): str})
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1126,9 +1123,10 @@ def test_json_schema_default_is_callable():
 
 def test_json_schema_default_is_callable_with_args_passed_from_json_schema():
     def default_func(**kwargs):
-        return 'Hello, ' + kwargs['name']
+        return "Hello, " + kwargs["name"]
+
     s = Schema({Optional("test", default=default_func): str})
-    assert s.json_schema("my-id", name='World!') == {
+    assert s.json_schema("my-id", name="World!") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
         "properties": {"test": {"default": "Hello, World!", "type": "string"}},
