@@ -93,8 +93,7 @@ class And(object):
 
     def __repr__(self):
         return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join(repr(a) for a in self._args),
+            self.__class__.__name__, ", ".join(repr(a) for a in self._args)
         )
 
     @property
@@ -201,9 +200,7 @@ class Regex(object):
 
     def __repr__(self):
         return "{}({!r}{})".format(
-            self.__class__.__name__,
-            self._pattern_str,
-            self._flags_names,
+            self.__class__.__name__, self._pattern_str, self._flags_names
         )
 
     @property
@@ -445,8 +442,7 @@ class Schema(object):
                     repr(k) for k in sorted(missing_keys, key=repr)
                 )
                 message = "Missing key{}: {}".format(
-                    _plural_s(missing_keys),
-                    s_missing_keys,
+                    _plural_s(missing_keys), s_missing_keys
                 )
                 message = self._prepend_schema_name(message)
                 raise SchemaMissingKeyError(message, e.format(data) if e else None)
@@ -454,9 +450,7 @@ class Schema(object):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
                 message = "Wrong key{} {} in {!r}".format(
-                    _plural_s(wrong_keys),
-                    s_wrong_keys,
-                    data,
+                    _plural_s(wrong_keys), s_wrong_keys, data
                 )
                 message = self._prepend_schema_name(message)
                 raise SchemaWrongKeyError(message, e.format(data) if e else None)
