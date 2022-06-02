@@ -428,7 +428,11 @@ class Schema(object):
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = _invoke_with_optional_kwargs(default.default, **kwargs) if callable(default.default) else default.default
+                new[default.key] = (
+                    _invoke_with_optional_kwargs(default.default, **kwargs)
+                    if callable(default.default)
+                    else default.default
+                )
 
             return new
         if flavor == TYPE:
@@ -648,7 +652,6 @@ class Schema(object):
 
                             return key
 
-                        additional_properties = additional_properties or _key_allows_additional_properties(key)
                         sub_schema = _to_schema(s[key], ignore_extra_keys=i)
                         key_name = _get_key_name(key)
 
@@ -659,7 +662,11 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(_invoke_with_optional_kwargs(key.default, **kwargs) if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(
+                                    _invoke_with_optional_kwargs(key.default, **kwargs)
+                                    if callable(key.default)
+                                    else key.default
+                                )
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
