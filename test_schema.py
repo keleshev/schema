@@ -1214,10 +1214,33 @@ def test_json_schema_forbidden_key_ignored():
     "input_schema, ignore_extra_keys, additional_properties",
     [
         ({}, False, False),
-        ({str: str}, False, True),
-        ({Optional(str): str}, False, True),
-        ({object: int}, False, True),
+        ({str: str}, False, {"type": "string"}),
+        ({Optional(str): str}, False, {"type": "string"}),
+        ({int: str}, False, False),
+        ({object: int}, False, {"type": "integer"}),
         ({}, True, True),
+        (
+            {str: {object: bool}},
+            False,
+            {"type": "object", "properties": {}, "required": [], "additionalProperties": {"type": "boolean"}},
+        ),
+        (
+            {str: {"named_property": {object: int}}},
+            False,
+            {
+                "type": "object",
+                "properties": {
+                    "named_property": {
+                        "additionalProperties": {"type": "integer"},
+                        "properties": {},
+                        "required": [],
+                        "type": "object",
+                    }
+                },
+                "required": ["named_property"],
+                "additionalProperties": False,
+            },
+        ),
     ],
 )
 def test_json_schema_additional_properties(input_schema, ignore_extra_keys, additional_properties):
@@ -1239,7 +1262,7 @@ def test_json_schema_additional_properties_multiple():
         "$id": "my-id",
         "required": ["named_property"],
         "properties": {"named_property": {"type": "boolean"}},
-        "additionalProperties": True,
+        "additionalProperties": {"type": "integer"},
         "type": "object",
     }
 

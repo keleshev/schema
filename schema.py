@@ -668,7 +668,10 @@ class Schema(object):
                                 expanded_schema[_get_key_name(or_key)] = _json_schema(
                                     sub_schema, is_main_schema=False, description=_get_key_description(or_key)
                                 )
-
+                        elif _key_allows_additional_properties(key):
+                            additional_properties = _json_schema(
+                                sub_schema, is_main_schema=False, description=_get_key_description(key),
+                            )
                     return_schema.update(
                         {
                             "type": "object",
