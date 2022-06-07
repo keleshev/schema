@@ -621,6 +621,7 @@ class Schema(object):
                     required_keys = []
                     expanded_schema = {}
                     additional_properties = i
+                    _additional_properties_schemas = []
                     for key in s:
                         if isinstance(key, Hook):
                             continue
@@ -676,9 +677,22 @@ class Schema(object):
                                     sub_schema, is_main_schema=False, description=_get_key_description(or_key)
                                 )
                         elif _key_allows_additional_properties(key):
-                            additional_properties = _json_schema(
-                                sub_schema, is_main_schema=False, description=_get_key_description(key),
+                            # If the key is of type str or object, compose a list of subschemas to use as the "additionalProperties"
+                            # value.
+
+                            _additional_properties_schemas.append(
+                                _json_schema(sub_schema, is_main_schema=False, description=_get_key_description(key),)
                             )
+
+                    if not additional_properties and _additional_properties_schemas:
+                        if len(_additional_properties_schemas) > 1:
+                            # Because the additional properties are not 'named', we compose them as a list with "anyOf".
+                            # Note that the JSON schema is therefore less strict than the Schema object.
+
+                            additional_properties = {"anyOf": _additional_properties_schemas}
+                        else:
+                            additional_properties = _additional_properties_schemas[0]
+
                     return_schema.update(
                         {
                             "type": "object",

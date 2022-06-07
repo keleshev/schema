@@ -11,7 +11,7 @@ from functools import partial
 from operator import methodcaller
 
 from mock import Mock
-from pytest import mark, raises
+from pytest import mark, raises, param
 
 from schema import (
     And,
@@ -1213,18 +1213,32 @@ def test_json_schema_forbidden_key_ignored():
 @mark.parametrize(
     "input_schema, ignore_extra_keys, additional_properties",
     [
-        ({}, False, False),
-        ({str: str}, False, {"type": "string"}),
-        ({Optional(str): str}, False, {"type": "string"}),
-        ({int: str}, False, False),
-        ({object: int}, False, {"type": "integer"}),
-        ({}, True, True),
-        (
+        param({}, False, False, id="no additional properties, no extra keys"),
+        param({str: str}, False, {"type": "string"}, id="additional properties should be of type string"),
+        param({str: str}, True, True, id="all extra keys are allowed without restrictions"),
+        param({Optional(str): str}, False, {"type": "string"}, id="optional properties have type string"),
+        param({int: str}, False, False, id="integer key not expanded to 'additionalProperties' schema"),
+        param({object: int}, False, {"type": "integer"}, id="object key expanded to 'additionalProperties' schema"),
+        param(
+            {object: int, str: str},
+            False,
+            {"anyOf": [{"type": "integer"}, {"type": "string"}]},
+            id="multiple additional properties composed as 'anyOff' array",
+        ),
+        param(
+            {object: int, str: str},
+            True,
+            True,
+            id="all extra keys are allowed without restrictions, no 'anyOf' composition",
+        ),
+        param({}, True, True, id="all extra keys are allowed"),
+        param(
             {str: {object: bool}},
             False,
             {"type": "object", "properties": {}, "required": [], "additionalProperties": {"type": "boolean"}},
+            id="nested schema is expanded as 'additionalProperties'",
         ),
-        (
+        param(
             {str: {"named_property": {object: int}}},
             False,
             {
@@ -1240,6 +1254,7 @@ def test_json_schema_forbidden_key_ignored():
                 "required": ["named_property"],
                 "additionalProperties": False,
             },
+            id="nested 'additionalProperties' expanded within 'named' property",
         ),
     ],
 )
