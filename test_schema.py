@@ -747,7 +747,7 @@ def test_optional_callable_default_get_inherited_schema_validate_kwargs():
             return data + increment
         return data
 
-    s = {"k": int, "d": {Optional("k", default=lambda **kw: convert(2, kw['increment'])): int, "l": [{"l": [int]}]}}
+    s = {"k": int, "d": {Optional("k", default=lambda increment: convert(2, increment)): int, "l": [{"l": [int]}]}}
     v = {"k": 1, "d": {"l": [{"l": [3, 4, 5]}]}}
     d = Schema(s).validate(v, increment=1)
     assert d["k"] == 1 and d["d"]["k"] == 3 and d["d"]["l"][0]["l"] == [3, 4, 5]
@@ -783,12 +783,7 @@ def test_inheritance_optional():
         """
         @property
         def default(self):
-
-            def wrapper(**kwargs):
-                if 'increment' in kwargs:
-                    return convert(self._default, kwargs['increment'])
-                return self._default
-            return wrapper
+            return lambda increment: convert(self._default, increment)
 
         @default.setter
         def default(self, value):
@@ -1125,9 +1120,7 @@ def test_json_schema_default_is_callable():
 
 
 def test_json_schema_default_is_callable_with_args_passed_from_json_schema():
-    def default_func(**kwargs):
-        return 'Hello, ' + kwargs['name']
-    s = Schema({Optional("test", default=default_func): str})
+    s = Schema({Optional("test", default=lambda name: "Hello, " + name): str})
     assert s.json_schema("my-id", name='World!') == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
