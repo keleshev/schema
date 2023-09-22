@@ -101,15 +101,15 @@ class And(object):
     Utility function to combine validation directives in AND Boolean fashion.
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, error=None, ignore_extra_keys=False, schema=None):
         self._args = args
-        if not set(kw).issubset({"error", "schema", "ignore_extra_keys"}):
-            diff = {"error", "schema", "ignore_extra_keys"}.difference(kw)
-            raise TypeError("Unknown keyword arguments %r" % list(diff))
-        self._error = kw.get("error")
-        self._ignore_extra_keys = kw.get("ignore_extra_keys", False)
+        self._error = error
+        self._ignore_extra_keys = ignore_extra_keys
         # You can pass your inherited Schema class.
-        self._schema = kw.get("schema", Schema)
+        if schema is None:
+            self._schema_class = Schema
+        else:
+            self._schema_class = schema
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
@@ -126,9 +126,15 @@ class And(object):
         :param data: to be validated with sub defined schemas.
         :return: returns validated data
         """
-        for s in [self._schema(s, error=self._error, ignore_extra_keys=self._ignore_extra_keys) for s in self._args]:
-            data = s.validate(data, **kwargs)
+        for sub_schema in self._build_schemas():
+            data = sub_schema.validate(data, **kwargs)
         return data
+
+    def _build_schemas(self):
+        return [self._build_schema(s) for s in self._args]
+
+    def _build_schema(self, arg):
+        return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
 
 
 class Or(And):
@@ -154,9 +160,9 @@ class Or(And):
         :return: return validated data if not validation
         """
         autos, errors = [], []
-        for s in [self._schema(s, error=self._error, ignore_extra_keys=self._ignore_extra_keys) for s in self._args]:
+        for sub_schema in self._build_schemas():
             try:
-                validation = s.validate(data, **kwargs)
+                validation = sub_schema.validate(data, **kwargs)
                 self.match_count += 1
                 if self.match_count > 1 and self.only_one:
                     break
