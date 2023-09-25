@@ -101,15 +101,15 @@ class And(object):
     Utility function to combine validation directives in AND Boolean fashion.
     """
 
-    def __init__(self, *args, **kw):
+    def __init__(self, *args, **kwargs):
         self._args = args
-        if not set(kw).issubset({"error", "schema", "ignore_extra_keys"}):
-            diff = {"error", "schema", "ignore_extra_keys"}.difference(kw)
+        if not set(kwargs).issubset({"error", "schema", "ignore_extra_keys"}):
+            diff = {"error", "schema", "ignore_extra_keys"}.difference(kwargs)
             raise TypeError("Unknown keyword arguments %r" % list(diff))
-        self._error = kw.get("error")
-        self._ignore_extra_keys = kw.get("ignore_extra_keys", False)
+        self._error = kwargs.get("error")
+        self._ignore_extra_keys = kwargs.get("ignore_extra_keys", False)
         # You can pass your inherited Schema class.
-        self._schema = kw.get("schema", Schema)
+        self._schema = kwargs.get("schema", Schema)
 
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
@@ -242,7 +242,7 @@ class Use(object):
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, self._callable)
 
-    def validate(self, data, **kwargs):
+    def validate(self, data):
         try:
             return self._callable(data)
         except SchemaError as x:
