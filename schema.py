@@ -133,7 +133,12 @@ class And(object):
 
 class Or(And):
     """Utility function to combine validation directives in a OR Boolean
-    fashion."""
+    fashion.
+
+    If one wants to make an xor, one can provide only_one=True optional argument
+    to the constructor of this object. When a validation was performed for an
+    xor-ish Or instance and one wants to use it another time, one needs to call
+    reset() to put the match_count back to 0."""
 
     def __init__(self, *args, **kwargs):
         self.only_one = kwargs.pop("only_one", False)
