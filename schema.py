@@ -439,7 +439,11 @@ class Schema(object):
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = _invoke_with_optional_kwargs(default.default, **kwargs) if callable(default.default) else default.default
+                new[default.key] = (
+                    _invoke_with_optional_kwargs(default.default, **kwargs)
+                    if callable(default.default)
+                    else default.default
+                )
 
             return new
         if flavor == TYPE:
@@ -628,6 +632,7 @@ class Schema(object):
                     required_keys = []
                     expanded_schema = {}
                     additional_properties = i
+                    _additional_properties_schemas = []
                     for key in s:
                         if isinstance(key, Hook):
                             continue
@@ -659,7 +664,6 @@ class Schema(object):
 
                             return key
 
-                        additional_properties = additional_properties or _key_allows_additional_properties(key)
                         sub_schema = _to_schema(s[key], ignore_extra_keys=i)
                         key_name = _get_key_name(key)
 
@@ -670,7 +674,11 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(_invoke_with_optional_kwargs(key.default, **kwargs) if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(
+                                    _invoke_with_optional_kwargs(key.default, **kwargs)
+                                    if callable(key.default)
+                                    else key.default
+                                )
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
@@ -679,6 +687,22 @@ class Schema(object):
                                 expanded_schema[_get_key_name(or_key)] = _json_schema(
                                     sub_schema, is_main_schema=False, description=_get_key_description(or_key)
                                 )
+                        elif _key_allows_additional_properties(key):
+                            # If the key is of type str or object, compose a list of subschemas to use as the "additionalProperties"
+                            # value.
+
+                            _additional_properties_schemas.append(
+                                _json_schema(sub_schema, is_main_schema=False, description=_get_key_description(key),)
+                            )
+
+                    if not additional_properties and _additional_properties_schemas:
+                        if len(_additional_properties_schemas) > 1:
+                            # Because the additional properties are not 'named', we compose them as a list with "anyOf".
+                            # Note that the JSON schema is therefore less strict than the Schema object.
+
+                            additional_properties = {"anyOf": _additional_properties_schemas}
+                        else:
+                            additional_properties = _additional_properties_schemas[0]
 
                     return_schema.update(
                         {
