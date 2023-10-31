@@ -4,12 +4,7 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import inspect
 import re
-
-try:
-    from contextlib import ExitStack
-except ImportError:
-    from contextlib2 import ExitStack
-
+from contextlib import ExitStack
 
 __version__ = "0.7.5"
 __all__ = [
@@ -263,7 +258,7 @@ class Use(object):
             raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
 
 
-COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
+COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = list(range(6))
 
 
 def _priority(s):
