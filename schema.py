@@ -18,6 +18,8 @@ from typing import (
     TYPE_CHECKING,
     Iterable,
     TypeVar,
+    Tuple,
+    Generic,
 )
 
 
@@ -115,47 +117,51 @@ class SchemaUnexpectedTypeError(SchemaError):
 
 
 # Type variable to represent a Schema-like type
-T = TypeVar("T", bound="Schema")
+TSchema = TypeVar("TSchema", bound="Schema")
 
 
-class And(object):
+class And(Generic[TSchema]):
     """
     Utility function to combine validation directives in AND Boolean fashion.
     """
 
-    def __init__(self, *args, error=None, ignore_extra_keys=False, schema=None):
-        self._args = args
-        self._error = error
-        self._ignore_extra_keys = ignore_extra_keys
-        # You can pass your inherited Schema class.
-        if schema is None:
-            self._schema_class = Schema
-        else:
-            self._schema_class = schema
+    def __init__(
+        self,
+        *args: Union[TSchema, Callable[..., Any]],
+        error: str | None = None,
+        ignore_extra_keys: bool = False,
+        schema: Type[TSchema] | None = None,
+    ) -> None:
+        self._args: Tuple[Union[TSchema, Callable[..., Any]], ...] = args
+        self._error: str | None = error
+        self._ignore_extra_keys: bool = ignore_extra_keys
+        self._schema_class: Type[TSchema] = schema if schema is not None else Schema
 
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(repr(a) for a in self._args)})"
 
     @property
-    def args(self):
+    def args(self) -> Tuple[Union[TSchema, Callable[..., Any]], ...]:
         """The provided parameters"""
         return self._args
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         """
         Validate data using defined sub schema/expressions ensuring all
         values are valid.
-        :param data: to be validated with sub defined schemas.
-        :return: returns validated data
+        :param data: Data to be validated with sub defined schemas.
+        :return: Returns validated data.
         """
-        for sub_schema in self._build_schemas():
+        # Annotate sub_schema with the type returned by _build_schema
+        for sub_schema in self._build_schemas():  # type: TSchema
             data = sub_schema.validate(data, **kwargs)
         return data
 
-    def _build_schemas(self):
+    def _build_schemas(self) -> List[TSchema]:
         return [self._build_schema(s) for s in self._args]
 
-    def _build_schema(self, arg):
+    def _build_schema(self, arg: Any) -> TSchema:
+        # Assume self._schema_class(arg, ...) returns an instance of TSchema
         return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
 
 
