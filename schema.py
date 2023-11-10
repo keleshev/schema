@@ -5,10 +5,31 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 import inspect
 import re
 
-try:
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Type,
+    Union,
+    Optional as Opt,
+    Set,
+    Sequence,
+    TYPE_CHECKING,
+    Iterable,
+    TypeVar,
+)
+
+
+# Use TYPE_CHECKING to determine the correct type hint but avoid runtime import errors
+if TYPE_CHECKING:
+    # Only for type checking purposes, we import the standard ExitStack
     from contextlib import ExitStack
-except ImportError:
-    from contextlib2 import ExitStack
+else:
+    try:
+        from contextlib import ExitStack  # Python 3.3 and later
+    except ImportError:
+        from contextlib2 import ExitStack  # Python 2.x/3.0-3.2 fallback
 
 
 __version__ = "0.7.5"
@@ -34,32 +55,29 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos, errors=None):
-        self.autos = autos if type(autos) is list else [autos]
-        self.errors = errors if type(errors) is list else [errors]
+    def __init__(self, autos: List[str | None] | None, errors: List | None = None):
+        self.autos = autos if isinstance(autos, List) else [autos]
+        self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
 
     @property
-    def code(self):
-        """
-        Removes duplicates values in auto and error list.
-        parameters.
-        """
+    def code(self) -> str:
+        """Remove duplicates in autos and errors list and combine them into a single message."""
 
-        def uniq(seq):
-            """
-            Utility function that removes duplicate.
-            """
-            seen = set()
-            seen_add = seen.add
-            # This way removes duplicates while preserving the order.
-            return [x for x in seq if x not in seen and not seen_add(x)]
+        def uniq(seq: Iterable[str | None]) -> List[str]:
+            """Utility function to remove duplicates while preserving the order."""
+            seen: Set[str] = set()
+            unique_list: List[str] = []
+            for x in seq:
+                if x is not None and x not in seen:
+                    seen.add(x)
+                    unique_list.append(x)
+            return unique_list
 
-        data_set = uniq(i for i in self.autos if i is not None)
-        error_list = uniq(i for i in self.errors if i is not None)
-        if error_list:
-            return "\n".join(error_list)
-        return "\n".join(data_set)
+        data_set = uniq(self.autos)
+        error_list = uniq(self.errors)
+
+        return "\n".join(error_list if error_list else data_set)
 
 
 class SchemaWrongKeyError(SchemaError):
@@ -94,6 +112,10 @@ class SchemaUnexpectedTypeError(SchemaError):
     data set being validated."""
 
     pass
+
+
+# Type variable to represent a Schema-like type
+T = TypeVar("T", bound="Schema")
 
 
 class And(object):
@@ -439,7 +461,11 @@ class Schema(object):
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = _invoke_with_optional_kwargs(default.default, **kwargs) if callable(default.default) else default.default
+                new[default.key] = (
+                    _invoke_with_optional_kwargs(default.default, **kwargs)
+                    if callable(default.default)
+                    else default.default
+                )
 
             return new
         if flavor == TYPE:
@@ -670,7 +696,11 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(_invoke_with_optional_kwargs(key.default, **kwargs) if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(
+                                    _invoke_with_optional_kwargs(key.default, **kwargs)
+                                    if callable(key.default)
+                                    else key.default
+                                )
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
