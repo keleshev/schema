@@ -57,7 +57,7 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos: List[str | None] | None, errors: List | None = None):
+    def __init__(self, autos: Sequence[str | None] | None, errors: List | None = None):
         self.autos = autos if isinstance(autos, List) else [autos]
         self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
@@ -165,7 +165,7 @@ class And(Generic[TSchema]):
         return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
 
 
-class Or(And):
+class Or(And[TSchema]):
     """Utility function to combine validation directives in a OR Boolean
     fashion.
 
@@ -174,28 +174,29 @@ class Or(And):
     xor-ish Or instance and one wants to use it another time, one needs to call
     reset() to put the match_count back to 0."""
 
-    def __init__(self, *args, **kwargs):
-        self.only_one = kwargs.pop("only_one", False)
-        self.match_count = 0
-        super(Or, self).__init__(*args, **kwargs)
+    def __init__(self, *args: Union[TSchema, Callable[..., Any]], only_one: bool = False, **kwargs: Any) -> None:
+        self.only_one: bool = only_one
+        self.match_count: int = 0
+        super().__init__(*args, **kwargs)
 
-    def reset(self):
-        failed = self.match_count > 1 and self.only_one
+    def reset(self) -> None:
+        failed: bool = self.match_count > 1 and self.only_one
         self.match_count = 0
         if failed:
-            raise SchemaOnlyOneAllowedError(["There are multiple keys present " + "from the %r condition" % self])
+            raise SchemaOnlyOneAllowedError(["There are multiple keys present from the %r condition" % self])
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         """
         Validate data using sub defined schema/expressions ensuring at least
         one value is valid.
         :param data: data to be validated by provided schema.
         :return: return validated data if not validation
         """
-        autos, errors = [], []
+        autos: List[str] = []
+        errors: List[str | None] = []
         for sub_schema in self._build_schemas():
             try:
-                validation = sub_schema.validate(data, **kwargs)
+                validation: Any = sub_schema.validate(data, **kwargs)
                 self.match_count += 1
                 if self.match_count > 1 and self.only_one:
                     break
