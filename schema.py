@@ -210,7 +210,7 @@ class Or(And[TSchema]):
         )
 
 
-class Regex(object):
+class Regex:
     """
     Enables schema.py to validate string using regular expressions.
     """
@@ -228,33 +228,27 @@ class Regex(object):
         "re.TEMPLATE",
     ]
 
-    def __init__(self, pattern_str, flags=0, error=None):
-        self._pattern_str = pattern_str
-        flags_list = [
-            Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(int(flags))) if f != "0"
-        ]  # Name for each bit
+    def __init__(self, pattern_str: str, flags: int = 0, error: str | None = None) -> None:
+        self._pattern_str: str = pattern_str
+        flags_list = [Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"]  # Name for each bit
 
-        if flags_list:
-            self._flags_names = ", flags=" + "|".join(flags_list)
-        else:
-            self._flags_names = ""
+        self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""
+        self._pattern: re.Pattern = re.compile(pattern_str, flags=flags)
+        self._error: str | None = error
 
-        self._pattern = re.compile(pattern_str, flags=flags)
-        self._error = error
-
-    def __repr__(self):
-        return "%s(%r%s)" % (self.__class__.__name__, self._pattern_str, self._flags_names)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._pattern_str!r}{self._flags_names})"
 
     @property
-    def pattern_str(self):
-        """The pattern for the represented regular expression"""
+    def pattern_str(self) -> str:
+        """The pattern string for the represented regular expression"""
         return self._pattern_str
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: str, **kwargs: Any) -> str:
         """
-        Validated data using defined regex.
-        :param data: data to be validated
-        :return: return validated data.
+        Validates data using the defined regex.
+        :param data: Data to be validated.
+        :return: Returns validated data.
         """
         e = self._error
 
@@ -262,9 +256,11 @@ class Regex(object):
             if self._pattern.search(data):
                 return data
             else:
-                raise SchemaError("%r does not match %r" % (self, data), e.format(data) if e else None)
+                error_message = e.format(data) if e else f"{data!r} does not match {self._pattern_str!r}"
+                raise SchemaError(error_message)
         except TypeError:
-            raise SchemaError("%r is not string nor buffer" % data, e)
+            error_message = e.format(data) if e else f"{data!r} is not string nor buffer"
+            raise SchemaError(error_message)
 
 
 class Use(object):
