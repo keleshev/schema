@@ -57,7 +57,7 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos: Sequence[str | None] | None, errors: List | None = None):
+    def __init__(self, autos: Sequence[str | None] | None, errors: List | str | None = None):
         self.autos = autos if isinstance(autos, List) else [autos]
         self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
@@ -263,22 +263,22 @@ class Regex:
             raise SchemaError(error_message)
 
 
-class Use(object):
+class Use:
     """
     For more general use cases, you can use the Use class to transform
-    the data while it is being validate.
+    the data while it is being validated.
     """
 
-    def __init__(self, callable_, error=None):
+    def __init__(self, callable_: Callable[[Any], Any], error: str | None = None) -> None:
         if not callable(callable_):
-            raise TypeError("Expected a callable, not %r" % callable_)
-        self._callable = callable_
-        self._error = error
+            raise TypeError(f"Expected a callable, not {callable_!r}")
+        self._callable: Callable[[Any], Any] = callable_
+        self._error: str | None = error
 
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__, self._callable)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._callable!r})"
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         try:
             return self._callable(data)
         except SchemaError as x:
