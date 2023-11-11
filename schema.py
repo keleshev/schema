@@ -22,6 +22,8 @@ from typing import (
     TypeVar,
     Tuple,
     Generic,
+    NoReturn,
+    Sized,
 )
 
 
@@ -753,83 +755,82 @@ class Optional(Schema):
 
     _MARKER = object()
 
-    def __init__(self, *args, **kwargs):
-        default = kwargs.pop("default", self._MARKER)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        default: Any = kwargs.pop("default", self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not self._MARKER:
-            # See if I can come up with a static key to use for myself:
             if _priority(self._schema) != COMPARABLE:
                 raise TypeError(
                     "Optional keys with defaults must have simple, "
                     "predictable values, like literal strings or ints. "
-                    '"%r" is too complex.' % (self._schema,)
+                    f'"{self._schema!r}" is too complex.'
                 )
             self.default = default
             self.key = str(self._schema)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._schema)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             self.__class__ is other.__class__
             and getattr(self, "default", self._MARKER) == getattr(other, "default", self._MARKER)
             and self._schema == other._schema
         )
 
-    def reset(self):
+    def reset(self) -> None:
         if hasattr(self._schema, "reset"):
             self._schema.reset()
 
 
 class Hook(Schema):
-    def __init__(self, *args, **kwargs):
-        self.handler = kwargs.pop("handler", lambda *args: None)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.handler: Callable[..., Any] = kwargs.pop("handler", lambda *args: None)
         super(Hook, self).__init__(*args, **kwargs)
         self.key = self._schema
 
 
 class Forbidden(Hook):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs["handler"] = self._default_function
         super(Forbidden, self).__init__(*args, **kwargs)
 
     @staticmethod
-    def _default_function(nkey, data, error):
-        raise SchemaForbiddenKeyError("Forbidden key encountered: %r in %r" % (nkey, data), error)
+    def _default_function(nkey: Any, data: Any, error: Any) -> NoReturn:
+        raise SchemaForbiddenKeyError(f"Forbidden key encountered: {nkey!r} in {data!r}", error)
 
 
-class Literal(object):
-    def __init__(self, value, description=None):
-        self._schema = value
-        self._description = description
+class Literal:
+    def __init__(self, value: Any, description: str | None = None) -> None:
+        self._schema: Any = value
+        self._description: str | None = description
 
-    def __str__(self):
-        return self._schema
+    def __str__(self) -> str:
+        return str(self._schema)
 
-    def __repr__(self):
-        return 'Literal("' + self.schema + '", description="' + (self.description or "") + '")'
+    def __repr__(self) -> str:
+        return f'Literal("{self._schema}", description="{self._description or ""}")'
 
     @property
-    def description(self):
+    def description(self) -> str | None:
         return self._description
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         return self._schema
 
 
 class Const(Schema):
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         super(Const, self).validate(data, **kwargs)
         return data
 
 
-def _callable_str(callable_):
+def _callable_str(callable_: Callable[..., Any]) -> str:
     if hasattr(callable_, "__name__"):
         return callable_.__name__
     return str(callable_)
 
 
-def _plural_s(sized):
+def _plural_s(sized: Sized) -> str:
     return "s" if len(sized) > 1 else ""
