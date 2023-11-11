@@ -5,9 +5,11 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 import inspect
 import re
 
+from enum import IntEnum
 from typing import (
     Any,
     Callable,
+    cast,
     Dict,
     List,
     Type,
@@ -291,7 +293,7 @@ class Use:
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
 
 
-def _priority(s):
+def _priority(s: Any) -> int:
     """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
         return ITERABLE
@@ -309,7 +311,7 @@ def _priority(s):
         return COMPARABLE
 
 
-def _invoke_with_optional_kwargs(f, **kwargs):
+def _invoke_with_optional_kwargs(f: Callable[..., Any], **kwargs: Any) -> Any:
     s = inspect.signature(f)
     if len(s.parameters) == 0:
         return f()
@@ -322,14 +324,22 @@ class Schema(object):
     schema for the data that will be validated.
     """
 
-    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None, description=None, as_reference=False):
-        self._schema = schema
-        self._error = error
-        self._ignore_extra_keys = ignore_extra_keys
-        self._name = name
-        self._description = description
-        # Ask json_schema to create a definition for this schema and use it as part of another
-        self.as_reference = as_reference
+    def __init__(
+        self,
+        schema: Any,
+        error: str | None = None,
+        ignore_extra_keys: bool = False,
+        name: str | None = None,
+        description: str | None = None,
+        as_reference: bool = False,
+    ) -> None:
+        self._schema: Any = schema
+        self._error: str | None = error
+        self._ignore_extra_keys: bool = ignore_extra_keys
+        self._name: str | None = name
+        self._description: str | None = description
+        self.as_reference: bool = as_reference
+
         if as_reference and name is None:
             raise ValueError("Schema used as reference should have a name")
 
@@ -337,23 +347,23 @@ class Schema(object):
         return "%s(%r)" % (self.__class__.__name__, self._schema)
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         return self._schema
 
     @property
-    def description(self):
+    def description(self) -> Union[str, None]:
         return self._description
 
     @property
-    def name(self):
+    def name(self) -> Union[str, None]:
         return self._name
 
     @property
-    def ignore_extra_keys(self):
+    def ignore_extra_keys(self) -> bool:
         return self._ignore_extra_keys
 
     @staticmethod
-    def _dict_key_priority(s):
+    def _dict_key_priority(s) -> float:
         """Return priority for a given key object."""
         if isinstance(s, Hook):
             return _priority(s._schema) - 0.5
@@ -362,11 +372,11 @@ class Schema(object):
         return _priority(s)
 
     @staticmethod
-    def _is_optional_type(s):
+    def _is_optional_type(s: Any) -> bool:
         """Return True if the given key is optional (does not have to be found)"""
         return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
-    def is_valid(self, data, **kwargs):
+    def is_valid(self, data: Any, **kwargs: Dict[str, Any]) -> bool:
         """Return whether the given data has passed all the validations
         that were specified in the given schema.
         """
@@ -377,7 +387,7 @@ class Schema(object):
         else:
             return True
 
-    def _prepend_schema_name(self, message):
+    def _prepend_schema_name(self, message: str) -> str:
         """
         If a custom schema name has been defined, prepends it to the error
         message that gets raised when a schema error occurs.
@@ -386,11 +396,11 @@ class Schema(object):
             message = "{0!r} {1!s}".format(self._name, message)
         return message
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Dict[str, Any]) -> Any:
         Schema = self.__class__
-        s = self._schema
-        e = self._error
-        i = self._ignore_extra_keys
+        s: Any = self._schema
+        e: str | None = self._error
+        i: bool = self._ignore_extra_keys
 
         if isinstance(s, Literal):
             s = s.schema
@@ -398,13 +408,13 @@ class Schema(object):
         flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data, **kwargs)
-            o = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
+            o: Or = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
             return type(data)(o.validate(d, **kwargs) for d in data)
         if flavor == DICT:
             exitstack = ExitStack()
             data = Schema(dict, error=e).validate(data, **kwargs)
-            new = type(data)()  # new - is a dict of the validated values
-            coverage = set()  # matched schema keys
+            new: Dict = type(data)()  # new - is a dict of the validated values
+            coverage: Set = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for skey in sorted_skeys:
@@ -508,7 +518,7 @@ class Schema(object):
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e.format(data) if e else None)
 
-    def json_schema(self, schema_id, use_refs=False, **kwargs):
+    def json_schema(self, schema_id: str, use_refs: bool = False, **kwargs: Any) -> Dict[str, Any]:
         """Generate a draft-07 JSON schema dict representing the Schema.
         This method must be called with a schema_id.
 
@@ -518,13 +528,13 @@ class Schema(object):
                          is a lot of reuse
         """
 
-        seen = dict()  # For use_refs
-        definitions_by_name = {}
+        seen: Dict[int, Dict[str, Any]] = {}
+        definitions_by_name: Dict[str, Dict[str, Any]] = {}
 
-        def _json_schema(schema, is_main_schema=True, description=None, allow_reference=True):
-            Schema = self.__class__
-
-            def _create_or_use_ref(return_dict):
+        def _json_schema(
+            schema: "Schema", is_main_schema: bool = True, description: str | None = None, allow_reference: bool = True
+        ) -> Dict[str, Any]:
+            def _create_or_use_ref(return_dict: Dict[str, Any]) -> Dict[str, Any]:
                 """If not already seen, return the provided part of the schema unchanged.
                 If already seen, give an id to the already seen dict and return a reference to the previous part
                 of the schema instead.
@@ -533,7 +543,6 @@ class Schema(object):
                     return return_schema
 
                 hashed = hash(repr(sorted(return_dict.items())))
-
                 if hashed not in seen:
                     seen[hashed] = return_dict
                     return return_dict
@@ -542,7 +551,7 @@ class Schema(object):
                     seen[hashed]["$id"] = id_str
                     return {"$ref": id_str}
 
-            def _get_type_name(python_type):
+            def _get_type_name(python_type: Type) -> str:
                 """Return the JSON schema name for a Python type"""
                 if python_type == str:
                     return "string"
@@ -558,7 +567,7 @@ class Schema(object):
                     return "object"
                 return "string"
 
-            def _to_json_type(value):
+            def _to_json_type(value: Any) -> Any:
                 """Attempt to convert a constant value (for "const" and "default") to a JSON serializable value"""
                 if value is None or type(value) in (str, int, float, bool, list, dict):
                     return value
@@ -571,19 +580,19 @@ class Schema(object):
 
                 return str(value)
 
-            def _to_schema(s, ignore_extra_keys):
+            def _to_schema(s: Any, ignore_extra_keys: bool) -> Schema:
                 if not isinstance(s, Schema):
                     return Schema(s, ignore_extra_keys=ignore_extra_keys)
 
                 return s
 
-            s = schema.schema
-            i = schema.ignore_extra_keys
+            s: Any = schema.schema
+            i: bool = schema.ignore_extra_keys
             flavor = _priority(s)
 
-            return_schema = {}
+            return_schema: Dict[str, Any] = {}
 
-            return_description = description or schema.description
+            return_description: str | None = description or schema.description
             if return_description:
                 return_schema["description"] = return_description
 
@@ -591,10 +600,12 @@ class Schema(object):
             if allow_reference and schema.as_reference:
                 # Generate sub schema if not already done
                 if schema.name not in definitions_by_name:
-                    definitions_by_name[schema.name] = {}  # Avoid infinite loop
-                    definitions_by_name[schema.name] = _json_schema(schema, is_main_schema=False, allow_reference=False)
+                    definitions_by_name[cast(str, schema.name)] = {}  # Avoid infinite loop
+                    definitions_by_name[cast(str, schema.name)] = _json_schema(
+                        schema, is_main_schema=False, allow_reference=False
+                    )
 
-                return_schema["$ref"] = "#/definitions/" + schema.name
+                return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
             else:
                 if flavor == TYPE:
                     # Handle type
@@ -661,14 +672,14 @@ class Schema(object):
                         if isinstance(key, Hook):
                             continue
 
-                        def _key_allows_additional_properties(key):
+                        def _key_allows_additional_properties(key: Any) -> bool:
                             """Check if a key is broad enough to allow additional properties"""
                             if isinstance(key, Optional):
                                 return _key_allows_additional_properties(key.schema)
 
                             return key == str or key == object
 
-                        def _get_key_description(key):
+                        def _get_key_description(key: Any) -> str | None:
                             """Get the description associated to a key (as specified in a Literal object). Return None if not a Literal"""
                             if isinstance(key, Optional):
                                 return _get_key_description(key.schema)
@@ -678,7 +689,7 @@ class Schema(object):
 
                             return None
 
-                        def _get_key_name(key):
+                        def _get_key_name(key: Any) -> Any:
                             """Get the name of a key (as specified in a Literal object). Return the key unchanged if not a Literal"""
                             if isinstance(key, Optional):
                                 return _get_key_name(key.schema)
