@@ -1,4 +1,4 @@
-Schema validation just got Pythonic
+Schema validation just got Pythonic 
 ===============================================================================
 
 **schema** is a library for validating Python data structures, such as those
