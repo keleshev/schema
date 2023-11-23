@@ -19,23 +19,37 @@ Here is a quick example to get a feeling of **schema**, validating a list of
 entries with personal information:
 
 .. code:: python
+    
+    from schema import Schema, And, Use, Optional, SchemaError
+    
+    schema = Schema(
+        [
+            {
+                "name": And(str, len),
+                "age": And(Use(int), lambda n: 18 <= n <= 99),
+                Optional("gender"): And(
+                    str,
+                    Use(str.lower),
+                    lambda s: s in ("squid", "kid"),
+                ),
+            }
+        ]
+    )
+    
+    data = [
+        {"name": "Sue", "age": "28", "gender": "Squid"},
+        {"name": "Sam", "age": "42"},
+        {"name": "Sacha", "age": "20", "gender": "KID"},
+    ]
+    
+    validated = schema.validate(data)
+    
+    assert validated == [
+        {"name": "Sue", "age": 28, "gender": "squid"},
+        {"name": "Sam", "age": 42},
+        {"name": "Sacha", "age": 20, "gender": "kid"},
+    ]
 
-    >>> from schema import Schema, And, Use, Optional, SchemaError
-
-    >>> schema = Schema([{'name': And(str, len),
-    ...                   'age':  And(Use(int), lambda n: 18 <= n <= 99),
-    ...                   Optional('gender'): And(str, Use(str.lower),
-    ...                                           lambda s: s in ('squid', 'kid'))}])
-
-    >>> data = [{'name': 'Sue', 'age': '28', 'gender': 'Squid'},
-    ...         {'name': 'Sam', 'age': '42'},
-    ...         {'name': 'Sacha', 'age': '20', 'gender': 'KID'}]
-
-    >>> validated = schema.validate(data)
-
-    >>> assert validated == [{'name': 'Sue', 'age': 28, 'gender': 'squid'},
-    ...                      {'name': 'Sam', 'age': 42},
-    ...                      {'name': 'Sacha', 'age' : 20, 'gender': 'kid'}]
 
 
 If data is valid, ``Schema.validate`` will return the validated data
@@ -210,8 +224,11 @@ key-value pairs:
 
 .. code:: python
 
-    >>> d = Schema({'name': str,
-    ...             'age': lambda n: 18 <= n <= 99}).validate({'name': 'Sue', 'age': 28})
+    >>> d = Schema(
+    ...     {"name": str, "age": lambda n: 18 <= n <= 99}
+    ... ).validate(
+    ...     {"name": "Sue", "age": 28}
+    ... )
 
     >>> assert d == {'name': 'Sue', 'age': 28}
 
@@ -219,14 +236,22 @@ You can specify keys as schemas too:
 
 .. code:: python
 
-    >>> schema = Schema({str: int,  # string keys should have integer values
-    ...                  int: None})  # int keys should be always None
+    >>> schema = Schema({
+    ...     str: int,  # string keys should have integer values
+    ...     int: None,  # int keys should be always None
+    ... })
 
-    >>> data = schema.validate({'key1': 1, 'key2': 2,
-    ...                         10: None, 20: None})
+    >>> data = schema.validate({
+    ...     "key1": 1,
+    ...     "key2": 2,
+    ...     10: None,
+    ...     20: None,
+    ... })
 
-    >>> schema.validate({'key1': 1,
-    ...                   10: 'not None here'})
+    >>> schema.validate({
+    ...     "key1": 1,
+    ...     10: "not None here",
+    ... })
     Traceback (most recent call last):
     ...
     schema.SchemaError: Key '10' error:
@@ -237,21 +262,26 @@ about others:
 
 .. code:: python
 
-    >>> schema = Schema({'<id>': int,
-    ...                  '<file>': Use(open),
-    ...                  str: object})  # don't care about other str keys
+    >>> schema = Schema({
+    ...     "<id>": int,
+    ...     "<file>": Use(open),
+    ...     str: object,  # don't care about other str keys
+    ... })
 
-    >>> data = schema.validate({'<id>': 10,
-    ...                         '<file>': 'README.rst',
-    ...                         '--verbose': True})
+    >>> data = schema.validate({
+    ...     "<id>": 10,
+    ...     "<file>": "README.rst",
+    ...     "--verbose": True,
+    ... })
 
 You can mark a key as optional as follows:
 
 .. code:: python
 
-    >>> from schema import Optional
-    >>> Schema({'name': str,
-    ...         Optional('occupation'): str}).validate({'name': 'Sam'})
+    >>> Schema({
+    ...     "name": str,
+    ...     Optional("occupation"): str,
+    ... }).validate({"name": "Sam"})
     {'name': 'Sam'}
 
 ``Optional`` keys can also carry a ``default``, to be used when no key in the
@@ -259,10 +289,13 @@ data matches:
 
 .. code:: python
 
-    >>> from schema import Optional
-    >>> Schema({Optional('color', default='blue'): str,
-    ...         str: str}).validate({'texture': 'furry'}
-    ...       ) == {'color': 'blue', 'texture': 'furry'}
+    >>> Schema({
+    ...     Optional("color", default="blue"): str,
+    ...     str: str,
+    ... }).validate({"texture": "furry"}) == {
+    ...     "color": "blue",
+    ...     "texture": "furry",
+    ... }
     True
 
 Defaults are used verbatim, not passed through any validators specified in the
@@ -488,11 +521,17 @@ request from github API.
 
     >>> import json
 
-    >>> gist_schema = Schema(And(Use(json.loads),  # first convert from JSON
-    ...                          # use str since json returns unicode
-    ...                          {Optional('description'): str,
-    ...                           'public': bool,
-    ...                           'files': {str: {'content': str}}}))
+    >>> gist_schema = Schema(
+    ...     And(
+    ...         Use(json.loads),  # first convert from JSON
+    ...         # use str since json returns unicode
+    ...         {
+    ...             Optional("description"): str,
+    ...             "public": bool,
+    ...             "files": {str: {"content": str}},
+    ...         },
+    ...     )
+    ... )
 
     >>> gist = gist_schema.validate(gist)
 
@@ -517,9 +556,11 @@ Assuming **docopt** returns the following dict:
 
 .. code:: python
 
-    >>> args = {'<files>': ['LICENSE-MIT', 'setup.py'],
-    ...         '<path>': '../',
-    ...         '--count': '3'}
+    >>> args = {
+    ...     "<files>": ["LICENSE-MIT", "setup.py"],
+    ...     "<path>": "../",
+    ...     "--count": "3",
+    ... }
 
 this is how you validate it using ``schema``:
 
@@ -528,9 +569,12 @@ this is how you validate it using ``schema``:
     >>> from schema import Schema, And, Or, Use
     >>> import os
 
-    >>> s = Schema({'<files>': [Use(open)],
-    ...             '<path>': os.path.exists,
-    ...             '--count': Or(None, And(Use(int), lambda n: 0 < n < 5))})
+    >>> s = Schema({
+    ...     "<files>": [Use(open)],
+    ...     "<path>": os.path.exists,
+    ...     "--count": Or(None, And(Use(int), lambda n: 0 < n < 5)),
+    ... })
+
 
     >>> args = s.validate(args)
 
@@ -562,9 +606,10 @@ Just define your schema normally and call ``.json_schema()`` on it. The output i
 
     >>> from schema import Optional, Schema
     >>> import json
-    >>> s = Schema({"test": str,
-    ...             "nested": {Optional("other"): str}
-    ...             })
+    >>> s = Schema({
+    ...     "test": str,
+    ...     "nested": {Optional("other"): str},
+    ... })
     >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"))
 
     # json_schema
@@ -598,7 +643,10 @@ These will appear in IDEs to help your users write a configuration.
 
     >>> from schema import Literal, Schema
     >>> import json
-    >>> s = Schema({Literal("project_name", description="Names must be unique"): str}, description="Project schema")
+    >>> s = Schema(
+    ...     {Literal("project_name", description="Names must be unique"): str},
+    ...     description="Project schema",
+    ... )
     >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
 
     # json_schema
@@ -804,9 +852,10 @@ These references will be placed in a "definitions" section in the main schema.
 
     >>> from schema import Optional, Schema
     >>> import json
-    >>> s = Schema({"test": str,
-    ...             "nested": Schema({Optional("other"): str}, name="nested", as_reference=True)
-    ...             })
+    >>> s = Schema({
+    ...     "test": str,
+    ...     "nested": Schema({Optional("other"): str}, name="nested", as_reference=True)
+    ... })
     >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
 
     # json_schema
@@ -847,7 +896,11 @@ This becomes really useful when using the same object several times
 
     >>> from schema import Optional, Or, Schema
     >>> import json
-    >>> language_configuration = Schema({"autocomplete": bool, "stop_words": [str]}, name="language", as_reference=True)
+    >>> language_configuration = Schema(
+    ...     {"autocomplete": bool, "stop_words": [str]},
+    ...     name="language",
+    ...     as_reference=True,
+    ... )
     >>> s = Schema({Or("ar", "cs", "de", "el", "eu", "en", "es", "fr"): language_configuration})
     >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"), indent=4)
 
