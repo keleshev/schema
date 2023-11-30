@@ -2,8 +2,8 @@
 obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
-import inspect
 import re
+from inspect import signature
 
 try:
     from contextlib import ExitStack
@@ -284,11 +284,20 @@ def _priority(s):
         return COMPARABLE
 
 
-def _invoke_with_optional_kwargs(f, **kwargs):
-    s = inspect.signature(f)
-    if len(s.parameters) == 0:
+def _invoke_with_relevant_kwargs(f, **kwargs):
+    try:
+        sig = signature(f)
+    except ValueError as e:
+        if e.args[0].startswith("no signature found for builtin type"):
+            builtin = True
+        else:
+            raise
+    else:
+        builtin = False
+    if builtin:
         return f()
-    return f(**kwargs)
+    relevant_param_names = set(sig.parameters.keys()) & set(kwargs.keys())
+    return f(**{name: kwargs[name] for name in relevant_param_names})
 
 
 class Schema(object):
@@ -439,7 +448,11 @@ class Schema(object):
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = _invoke_with_optional_kwargs(default.default, **kwargs) if callable(default.default) else default.default
+                new[default.key] = (
+                    _invoke_with_relevant_kwargs(default.default, **kwargs)
+                    if callable(default.default)
+                    else default.default
+                )
 
             return new
         if flavor == TYPE:
@@ -670,7 +683,11 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(_invoke_with_optional_kwargs(key.default, **kwargs) if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(
+                                    _invoke_with_relevant_kwargs(key.default, **kwargs)
+                                    if callable(key.default)
+                                    else key.default
+                                )
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
