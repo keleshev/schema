@@ -412,6 +412,9 @@ class Schema(object):
                                     continue
                                 skey.handler(nkey, data, e)
                             else:
+                                if isinstance(skey, Optional):
+                                    if hasattr(skey, "ignore_none") and skey.ignore_none and value is None:
+                                        continue
                                 try:
                                     nvalue = Schema(svalue, error=e, ignore_extra_keys=i).validate(value, **kwargs)
                                 except SchemaError as x:
@@ -709,7 +712,8 @@ class Optional(Schema):
 
     _MARKER = object()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, ignore_none=False, **kwargs):
+        self.ignore_none = ignore_none
         default = kwargs.pop("default", self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not self._MARKER:
