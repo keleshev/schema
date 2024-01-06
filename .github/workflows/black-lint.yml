@@ -1,0 +1,32 @@
+name: Python Linting
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'schema.py'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'schema.py'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install Black
+      run: pip install black
+
+    - name: Run Black on schema.py
+      run: black --check schema.py

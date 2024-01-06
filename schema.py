@@ -5,10 +5,37 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 import inspect
 import re
 
-try:
+from enum import IntEnum
+from typing import (
+    Any,
+    Callable,
+    cast,
+    Dict,
+    List,
+    Type,
+    Union,
+    Optional as Opt,
+    Set,
+    Sequence,
+    TYPE_CHECKING,
+    Iterable,
+    TypeVar,
+    Tuple,
+    Generic,
+    NoReturn,
+    Sized,
+)
+
+
+# Use TYPE_CHECKING to determine the correct type hint but avoid runtime import errors
+if TYPE_CHECKING:
+    # Only for type checking purposes, we import the standard ExitStack
     from contextlib import ExitStack
-except ImportError:
-    from contextlib2 import ExitStack
+else:
+    try:
+        from contextlib import ExitStack  # Python 3.3 and later
+    except ImportError:
+        from contextlib2 import ExitStack  # Python 2.x/3.0-3.2 fallback
 
 
 __version__ = "0.7.5"
@@ -34,32 +61,29 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos, errors=None):
-        self.autos = autos if type(autos) is list else [autos]
-        self.errors = errors if type(errors) is list else [errors]
+    def __init__(self, autos: Union[Sequence[Union[str, None]],  None], errors: Union[List, str, None] = None):
+        self.autos = autos if isinstance(autos, List) else [autos]
+        self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
 
     @property
-    def code(self):
-        """
-        Removes duplicates values in auto and error list.
-        parameters.
-        """
+    def code(self) -> str:
+        """Remove duplicates in autos and errors list and combine them into a single message."""
 
-        def uniq(seq):
-            """
-            Utility function that removes duplicate.
-            """
-            seen = set()
-            seen_add = seen.add
-            # This way removes duplicates while preserving the order.
-            return [x for x in seq if x not in seen and not seen_add(x)]
+        def uniq(seq: Iterable[Union[str, None]]) -> List[str]:
+            """Utility function to remove duplicates while preserving the order."""
+            seen: Set[str] = set()
+            unique_list: List[str] = []
+            for x in seq:
+                if x is not None and x not in seen:
+                    seen.add(x)
+                    unique_list.append(x)
+            return unique_list
 
-        data_set = uniq(i for i in self.autos if i is not None)
-        error_list = uniq(i for i in self.errors if i is not None)
-        if error_list:
-            return "\n".join(error_list)
-        return "\n".join(data_set)
+        data_set = uniq(self.autos)
+        error_list = uniq(self.errors)
+
+        return "\n".join(error_list if error_list else data_set)
 
 
 class SchemaWrongKeyError(SchemaError):
@@ -96,48 +120,56 @@ class SchemaUnexpectedTypeError(SchemaError):
     pass
 
 
-class And(object):
+# Type variable to represent a Schema-like type
+TSchema = TypeVar("TSchema", bound="Schema")
+
+
+class And(Generic[TSchema]):
     """
     Utility function to combine validation directives in AND Boolean fashion.
     """
 
-    def __init__(self, *args, error=None, ignore_extra_keys=False, schema=None):
-        self._args = args
-        self._error = error
-        self._ignore_extra_keys = ignore_extra_keys
-        # You can pass your inherited Schema class.
-        if schema is None:
-            self._schema_class = Schema
-        else:
-            self._schema_class = schema
+    def __init__(
+        self,
+        *args: Union[TSchema, Callable[..., Any]],
+        error: Union[str, None] = None,
+        ignore_extra_keys: bool = False,
+        schema: Union[Type[TSchema], None] = None,
+    ) -> None:
+        self._args: Tuple[Union[TSchema, Callable[..., Any]], ...] = args
+        self._error: Union[str, None] = error
+        self._ignore_extra_keys: bool = ignore_extra_keys
+        self._schema_class: Type[TSchema] = schema if schema is not None else Schema
 
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, ", ".join(repr(a) for a in self._args))
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(repr(a) for a in self._args)})"
 
     @property
-    def args(self):
+    def args(self) -> Tuple[Union[TSchema, Callable[..., Any]], ...]:
         """The provided parameters"""
         return self._args
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         """
         Validate data using defined sub schema/expressions ensuring all
         values are valid.
-        :param data: to be validated with sub defined schemas.
-        :return: returns validated data
+        :param data: Data to be validated with sub defined schemas.
+        :return: Returns validated data.
         """
-        for sub_schema in self._build_schemas():
+        # Annotate sub_schema with the type returned by _build_schema
+        for sub_schema in self._build_schemas():  # type: TSchema
             data = sub_schema.validate(data, **kwargs)
         return data
 
-    def _build_schemas(self):
+    def _build_schemas(self) -> List[TSchema]:
         return [self._build_schema(s) for s in self._args]
 
-    def _build_schema(self, arg):
+    def _build_schema(self, arg: Any) -> TSchema:
+        # Assume self._schema_class(arg, ...) returns an instance of TSchema
         return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
 
 
-class Or(And):
+class Or(And[TSchema]):
     """Utility function to combine validation directives in a OR Boolean
     fashion.
 
@@ -146,28 +178,29 @@ class Or(And):
     xor-ish Or instance and one wants to use it another time, one needs to call
     reset() to put the match_count back to 0."""
 
-    def __init__(self, *args, **kwargs):
-        self.only_one = kwargs.pop("only_one", False)
-        self.match_count = 0
-        super(Or, self).__init__(*args, **kwargs)
+    def __init__(self, *args: Union[TSchema, Callable[..., Any]], only_one: bool = False, **kwargs: Any) -> None:
+        self.only_one: bool = only_one
+        self.match_count: int = 0
+        super().__init__(*args, **kwargs)
 
-    def reset(self):
-        failed = self.match_count > 1 and self.only_one
+    def reset(self) -> None:
+        failed: bool = self.match_count > 1 and self.only_one
         self.match_count = 0
         if failed:
-            raise SchemaOnlyOneAllowedError(["There are multiple keys present " + "from the %r condition" % self])
+            raise SchemaOnlyOneAllowedError(["There are multiple keys present from the %r condition" % self])
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         """
         Validate data using sub defined schema/expressions ensuring at least
         one value is valid.
         :param data: data to be validated by provided schema.
         :return: return validated data if not validation
         """
-        autos, errors = [], []
+        autos: List[str] = []
+        errors: List[Union[str, None]] = []
         for sub_schema in self._build_schemas():
             try:
-                validation = sub_schema.validate(data, **kwargs)
+                validation: Any = sub_schema.validate(data, **kwargs)
                 self.match_count += 1
                 if self.match_count > 1 and self.only_one:
                     break
@@ -181,7 +214,7 @@ class Or(And):
         )
 
 
-class Regex(object):
+class Regex:
     """
     Enables schema.py to validate string using regular expressions.
     """
@@ -199,33 +232,27 @@ class Regex(object):
         "re.TEMPLATE",
     ]
 
-    def __init__(self, pattern_str, flags=0, error=None):
-        self._pattern_str = pattern_str
-        flags_list = [
-            Regex.NAMES[i] for i, f in enumerate("{0:09b}".format(int(flags))) if f != "0"
-        ]  # Name for each bit
+    def __init__(self, pattern_str: str, flags: int = 0, error: Union[str, None] = None) -> None:
+        self._pattern_str: str = pattern_str
+        flags_list = [Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"]  # Name for each bit
 
-        if flags_list:
-            self._flags_names = ", flags=" + "|".join(flags_list)
-        else:
-            self._flags_names = ""
+        self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""
+        self._pattern: re.Pattern = re.compile(pattern_str, flags=flags)
+        self._error: Union[str, None] = error
 
-        self._pattern = re.compile(pattern_str, flags=flags)
-        self._error = error
-
-    def __repr__(self):
-        return "%s(%r%s)" % (self.__class__.__name__, self._pattern_str, self._flags_names)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._pattern_str!r}{self._flags_names})"
 
     @property
-    def pattern_str(self):
-        """The pattern for the represented regular expression"""
+    def pattern_str(self) -> str:
+        """The pattern string for the represented regular expression"""
         return self._pattern_str
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: str, **kwargs: Any) -> str:
         """
-        Validated data using defined regex.
-        :param data: data to be validated
-        :return: return validated data.
+        Validates data using the defined regex.
+        :param data: Data to be validated.
+        :return: Returns validated data.
         """
         e = self._error
 
@@ -233,27 +260,29 @@ class Regex(object):
             if self._pattern.search(data):
                 return data
             else:
-                raise SchemaError("%r does not match %r" % (self, data), e.format(data) if e else None)
+                error_message = e.format(data) if e else f"{data!r} does not match {self._pattern_str!r}"
+                raise SchemaError(error_message)
         except TypeError:
-            raise SchemaError("%r is not string nor buffer" % data, e)
+            error_message = e.format(data) if e else f"{data!r} is not string nor buffer"
+            raise SchemaError(error_message)
 
 
-class Use(object):
+class Use:
     """
     For more general use cases, you can use the Use class to transform
-    the data while it is being validate.
+    the data while it is being validated.
     """
 
-    def __init__(self, callable_, error=None):
+    def __init__(self, callable_: Callable[[Any], Any], error: Union[str, None] = None) -> None:
         if not callable(callable_):
-            raise TypeError("Expected a callable, not %r" % callable_)
-        self._callable = callable_
-        self._error = error
+            raise TypeError(f"Expected a callable, not {callable_!r}")
+        self._callable: Callable[[Any], Any] = callable_
+        self._error: Union[str, None] = error
 
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__, self._callable)
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._callable!r})"
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         try:
             return self._callable(data)
         except SchemaError as x:
@@ -266,7 +295,7 @@ class Use(object):
 COMPARABLE, CALLABLE, VALIDATOR, TYPE, DICT, ITERABLE = range(6)
 
 
-def _priority(s):
+def _priority(s: Any) -> int:
     """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
         return ITERABLE
@@ -284,7 +313,7 @@ def _priority(s):
         return COMPARABLE
 
 
-def _invoke_with_optional_kwargs(f, **kwargs):
+def _invoke_with_optional_kwargs(f: Callable[..., Any], **kwargs: Any) -> Any:
     s = inspect.signature(f)
     if len(s.parameters) == 0:
         return f()
@@ -297,14 +326,22 @@ class Schema(object):
     schema for the data that will be validated.
     """
 
-    def __init__(self, schema, error=None, ignore_extra_keys=False, name=None, description=None, as_reference=False):
-        self._schema = schema
-        self._error = error
-        self._ignore_extra_keys = ignore_extra_keys
-        self._name = name
-        self._description = description
-        # Ask json_schema to create a definition for this schema and use it as part of another
-        self.as_reference = as_reference
+    def __init__(
+        self,
+        schema: Any,
+        error: Union[str, None] = None,
+        ignore_extra_keys: bool = False,
+        name: Union[str, None] = None,
+        description: Union[str, None] = None,
+        as_reference: bool = False,
+    ) -> None:
+        self._schema: Any = schema
+        self._error: Union[str, None] = error
+        self._ignore_extra_keys: bool = ignore_extra_keys
+        self._name: Union[str, None] = name
+        self._description: Union[str, None] = description
+        self.as_reference: bool = as_reference
+
         if as_reference and name is None:
             raise ValueError("Schema used as reference should have a name")
 
@@ -312,23 +349,23 @@ class Schema(object):
         return "%s(%r)" % (self.__class__.__name__, self._schema)
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         return self._schema
 
     @property
-    def description(self):
+    def description(self) -> Union[str, None]:
         return self._description
 
     @property
-    def name(self):
+    def name(self) -> Union[str, None]:
         return self._name
 
     @property
-    def ignore_extra_keys(self):
+    def ignore_extra_keys(self) -> bool:
         return self._ignore_extra_keys
 
     @staticmethod
-    def _dict_key_priority(s):
+    def _dict_key_priority(s) -> float:
         """Return priority for a given key object."""
         if isinstance(s, Hook):
             return _priority(s._schema) - 0.5
@@ -337,11 +374,11 @@ class Schema(object):
         return _priority(s)
 
     @staticmethod
-    def _is_optional_type(s):
+    def _is_optional_type(s: Any) -> bool:
         """Return True if the given key is optional (does not have to be found)"""
         return any(isinstance(s, optional_type) for optional_type in [Optional, Hook])
 
-    def is_valid(self, data, **kwargs):
+    def is_valid(self, data: Any, **kwargs: Dict[str, Any]) -> bool:
         """Return whether the given data has passed all the validations
         that were specified in the given schema.
         """
@@ -352,7 +389,7 @@ class Schema(object):
         else:
             return True
 
-    def _prepend_schema_name(self, message):
+    def _prepend_schema_name(self, message: str) -> str:
         """
         If a custom schema name has been defined, prepends it to the error
         message that gets raised when a schema error occurs.
@@ -361,11 +398,11 @@ class Schema(object):
             message = "{0!r} {1!s}".format(self._name, message)
         return message
 
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Dict[str, Any]) -> Any:
         Schema = self.__class__
-        s = self._schema
-        e = self._error
-        i = self._ignore_extra_keys
+        s: Any = self._schema
+        e: Union[str, None] = self._error
+        i: bool = self._ignore_extra_keys
 
         if isinstance(s, Literal):
             s = s.schema
@@ -373,13 +410,13 @@ class Schema(object):
         flavor = _priority(s)
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data, **kwargs)
-            o = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
+            o: Or = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
             return type(data)(o.validate(d, **kwargs) for d in data)
         if flavor == DICT:
             exitstack = ExitStack()
             data = Schema(dict, error=e).validate(data, **kwargs)
-            new = type(data)()  # new - is a dict of the validated values
-            coverage = set()  # matched schema keys
+            new: Dict = type(data)()  # new - is a dict of the validated values
+            coverage: Set = set()  # matched schema keys
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for skey in sorted_skeys:
@@ -439,7 +476,11 @@ class Schema(object):
             # Apply default-having optionals that haven't been used:
             defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
-                new[default.key] = _invoke_with_optional_kwargs(default.default, **kwargs) if callable(default.default) else default.default
+                new[default.key] = (
+                    _invoke_with_optional_kwargs(default.default, **kwargs)
+                    if callable(default.default)
+                    else default.default
+                )
 
             return new
         if flavor == TYPE:
@@ -479,7 +520,7 @@ class Schema(object):
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e.format(data) if e else None)
 
-    def json_schema(self, schema_id, use_refs=False, **kwargs):
+    def json_schema(self, schema_id: str, use_refs: bool = False, **kwargs: Any) -> Dict[str, Any]:
         """Generate a draft-07 JSON schema dict representing the Schema.
         This method must be called with a schema_id.
 
@@ -489,13 +530,13 @@ class Schema(object):
                          is a lot of reuse
         """
 
-        seen = dict()  # For use_refs
-        definitions_by_name = {}
+        seen: Dict[int, Dict[str, Any]] = {}
+        definitions_by_name: Dict[str, Dict[str, Any]] = {}
 
-        def _json_schema(schema, is_main_schema=True, description=None, allow_reference=True):
-            Schema = self.__class__
-
-            def _create_or_use_ref(return_dict):
+        def _json_schema(
+            schema: "Schema", is_main_schema: bool = True, description: Union[str, None] = None, allow_reference: bool = True
+        ) -> Dict[str, Any]:
+            def _create_or_use_ref(return_dict: Dict[str, Any]) -> Dict[str, Any]:
                 """If not already seen, return the provided part of the schema unchanged.
                 If already seen, give an id to the already seen dict and return a reference to the previous part
                 of the schema instead.
@@ -504,7 +545,6 @@ class Schema(object):
                     return return_schema
 
                 hashed = hash(repr(sorted(return_dict.items())))
-
                 if hashed not in seen:
                     seen[hashed] = return_dict
                     return return_dict
@@ -513,7 +553,7 @@ class Schema(object):
                     seen[hashed]["$id"] = id_str
                     return {"$ref": id_str}
 
-            def _get_type_name(python_type):
+            def _get_type_name(python_type: Type) -> str:
                 """Return the JSON schema name for a Python type"""
                 if python_type == str:
                     return "string"
@@ -529,7 +569,7 @@ class Schema(object):
                     return "object"
                 return "string"
 
-            def _to_json_type(value):
+            def _to_json_type(value: Any) -> Any:
                 """Attempt to convert a constant value (for "const" and "default") to a JSON serializable value"""
                 if value is None or type(value) in (str, int, float, bool, list, dict):
                     return value
@@ -542,19 +582,19 @@ class Schema(object):
 
                 return str(value)
 
-            def _to_schema(s, ignore_extra_keys):
+            def _to_schema(s: Any, ignore_extra_keys: bool) -> Schema:
                 if not isinstance(s, Schema):
                     return Schema(s, ignore_extra_keys=ignore_extra_keys)
 
                 return s
 
-            s = schema.schema
-            i = schema.ignore_extra_keys
+            s: Any = schema.schema
+            i: bool = schema.ignore_extra_keys
             flavor = _priority(s)
 
-            return_schema = {}
+            return_schema: Dict[str, Any] = {}
 
-            return_description = description or schema.description
+            return_description: Union[str, None] = description or schema.description
             if return_description:
                 return_schema["description"] = return_description
 
@@ -562,10 +602,12 @@ class Schema(object):
             if allow_reference and schema.as_reference:
                 # Generate sub schema if not already done
                 if schema.name not in definitions_by_name:
-                    definitions_by_name[schema.name] = {}  # Avoid infinite loop
-                    definitions_by_name[schema.name] = _json_schema(schema, is_main_schema=False, allow_reference=False)
+                    definitions_by_name[cast(str, schema.name)] = {}  # Avoid infinite loop
+                    definitions_by_name[cast(str, schema.name)] = _json_schema(
+                        schema, is_main_schema=False, allow_reference=False
+                    )
 
-                return_schema["$ref"] = "#/definitions/" + schema.name
+                return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
             else:
                 if flavor == TYPE:
                     # Handle type
@@ -632,14 +674,14 @@ class Schema(object):
                         if isinstance(key, Hook):
                             continue
 
-                        def _key_allows_additional_properties(key):
+                        def _key_allows_additional_properties(key: Any) -> bool:
                             """Check if a key is broad enough to allow additional properties"""
                             if isinstance(key, Optional):
                                 return _key_allows_additional_properties(key.schema)
 
                             return key == str or key == object
 
-                        def _get_key_description(key):
+                        def _get_key_description(key: Any) -> Union[str, None]:
                             """Get the description associated to a key (as specified in a Literal object). Return None if not a Literal"""
                             if isinstance(key, Optional):
                                 return _get_key_description(key.schema)
@@ -649,7 +691,7 @@ class Schema(object):
 
                             return None
 
-                        def _get_key_name(key):
+                        def _get_key_name(key: Any) -> Any:
                             """Get the name of a key (as specified in a Literal object). Return the key unchanged if not a Literal"""
                             if isinstance(key, Optional):
                                 return _get_key_name(key.schema)
@@ -670,7 +712,11 @@ class Schema(object):
                                 sub_schema, is_main_schema=False, description=_get_key_description(key)
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
-                                expanded_schema[key_name]["default"] = _to_json_type(_invoke_with_optional_kwargs(key.default, **kwargs) if callable(key.default) else key.default)
+                                expanded_schema[key_name]["default"] = _to_json_type(
+                                    _invoke_with_optional_kwargs(key.default, **kwargs)
+                                    if callable(key.default)
+                                    else key.default
+                                )
                         elif isinstance(key_name, Or):
                             # JSON schema does not support having a key named one name or another, so we just add both options
                             # This is less strict because we cannot enforce that one or the other is required
@@ -709,83 +755,82 @@ class Optional(Schema):
 
     _MARKER = object()
 
-    def __init__(self, *args, **kwargs):
-        default = kwargs.pop("default", self._MARKER)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        default: Any = kwargs.pop("default", self._MARKER)
         super(Optional, self).__init__(*args, **kwargs)
         if default is not self._MARKER:
-            # See if I can come up with a static key to use for myself:
             if _priority(self._schema) != COMPARABLE:
                 raise TypeError(
                     "Optional keys with defaults must have simple, "
                     "predictable values, like literal strings or ints. "
-                    '"%r" is too complex.' % (self._schema,)
+                    f'"{self._schema!r}" is too complex.'
                 )
             self.default = default
             self.key = str(self._schema)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self._schema)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             self.__class__ is other.__class__
             and getattr(self, "default", self._MARKER) == getattr(other, "default", self._MARKER)
             and self._schema == other._schema
         )
 
-    def reset(self):
+    def reset(self) -> None:
         if hasattr(self._schema, "reset"):
             self._schema.reset()
 
 
 class Hook(Schema):
-    def __init__(self, *args, **kwargs):
-        self.handler = kwargs.pop("handler", lambda *args: None)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.handler: Callable[..., Any] = kwargs.pop("handler", lambda *args: None)
         super(Hook, self).__init__(*args, **kwargs)
         self.key = self._schema
 
 
 class Forbidden(Hook):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs["handler"] = self._default_function
         super(Forbidden, self).__init__(*args, **kwargs)
 
     @staticmethod
-    def _default_function(nkey, data, error):
-        raise SchemaForbiddenKeyError("Forbidden key encountered: %r in %r" % (nkey, data), error)
+    def _default_function(nkey: Any, data: Any, error: Any) -> NoReturn:
+        raise SchemaForbiddenKeyError(f"Forbidden key encountered: {nkey!r} in {data!r}", error)
 
 
-class Literal(object):
-    def __init__(self, value, description=None):
-        self._schema = value
-        self._description = description
+class Literal:
+    def __init__(self, value: Any, description: Union[str, None] = None) -> None:
+        self._schema: Any = value
+        self._description: Union[str, None] = description
 
-    def __str__(self):
-        return self._schema
+    def __str__(self) -> str:
+        return str(self._schema)
 
-    def __repr__(self):
-        return 'Literal("' + self.schema + '", description="' + (self.description or "") + '")'
+    def __repr__(self) -> str:
+        return f'Literal("{self._schema}", description="{self._description or ""}")'
 
     @property
-    def description(self):
+    def description(self) -> Union[str, None]:
         return self._description
 
     @property
-    def schema(self):
+    def schema(self) -> Any:
         return self._schema
 
 
 class Const(Schema):
-    def validate(self, data, **kwargs):
+    def validate(self, data: Any, **kwargs: Any) -> Any:
         super(Const, self).validate(data, **kwargs)
         return data
 
 
-def _callable_str(callable_):
+def _callable_str(callable_: Callable[..., Any]) -> str:
     if hasattr(callable_, "__name__"):
         return callable_.__name__
     return str(callable_)
 
 
-def _plural_s(sized):
+def _plural_s(sized: Sized) -> str:
     return "s" if len(sized) > 1 else ""
