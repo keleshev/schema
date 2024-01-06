@@ -61,7 +61,7 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos: Sequence[str | None] | None, errors: List | str | None = None):
+    def __init__(self, autos: Union[Sequence[Union[str, None]],  None], errors: Union[List, str, None] = None):
         self.autos = autos if isinstance(autos, List) else [autos]
         self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
@@ -70,7 +70,7 @@ class SchemaError(Exception):
     def code(self) -> str:
         """Remove duplicates in autos and errors list and combine them into a single message."""
 
-        def uniq(seq: Iterable[str | None]) -> List[str]:
+        def uniq(seq: Iterable[Union[str, None]]) -> List[str]:
             """Utility function to remove duplicates while preserving the order."""
             seen: Set[str] = set()
             unique_list: List[str] = []
@@ -132,12 +132,12 @@ class And(Generic[TSchema]):
     def __init__(
         self,
         *args: Union[TSchema, Callable[..., Any]],
-        error: str | None = None,
+        error: Union[str, None] = None,
         ignore_extra_keys: bool = False,
-        schema: Type[TSchema] | None = None,
+        schema: Union[Type[TSchema], None] = None,
     ) -> None:
         self._args: Tuple[Union[TSchema, Callable[..., Any]], ...] = args
-        self._error: str | None = error
+        self._error: Union[str, None] = error
         self._ignore_extra_keys: bool = ignore_extra_keys
         self._schema_class: Type[TSchema] = schema if schema is not None else Schema
 
@@ -197,7 +197,7 @@ class Or(And[TSchema]):
         :return: return validated data if not validation
         """
         autos: List[str] = []
-        errors: List[str | None] = []
+        errors: List[Union[str, None]] = []
         for sub_schema in self._build_schemas():
             try:
                 validation: Any = sub_schema.validate(data, **kwargs)
@@ -232,13 +232,13 @@ class Regex:
         "re.TEMPLATE",
     ]
 
-    def __init__(self, pattern_str: str, flags: int = 0, error: str | None = None) -> None:
+    def __init__(self, pattern_str: str, flags: int = 0, error: Union[str, None] = None) -> None:
         self._pattern_str: str = pattern_str
         flags_list = [Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"]  # Name for each bit
 
         self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""
         self._pattern: re.Pattern = re.compile(pattern_str, flags=flags)
-        self._error: str | None = error
+        self._error: Union[str, None] = error
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._pattern_str!r}{self._flags_names})"
@@ -273,11 +273,11 @@ class Use:
     the data while it is being validated.
     """
 
-    def __init__(self, callable_: Callable[[Any], Any], error: str | None = None) -> None:
+    def __init__(self, callable_: Callable[[Any], Any], error: Union[str, None] = None) -> None:
         if not callable(callable_):
             raise TypeError(f"Expected a callable, not {callable_!r}")
         self._callable: Callable[[Any], Any] = callable_
-        self._error: str | None = error
+        self._error: Union[str, None] = error
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._callable!r})"
@@ -329,17 +329,17 @@ class Schema(object):
     def __init__(
         self,
         schema: Any,
-        error: str | None = None,
+        error: Union[str, None] = None,
         ignore_extra_keys: bool = False,
-        name: str | None = None,
-        description: str | None = None,
+        name: Union[str, None] = None,
+        description: Union[str, None] = None,
         as_reference: bool = False,
     ) -> None:
         self._schema: Any = schema
-        self._error: str | None = error
+        self._error: Union[str, None] = error
         self._ignore_extra_keys: bool = ignore_extra_keys
-        self._name: str | None = name
-        self._description: str | None = description
+        self._name: Union[str, None] = name
+        self._description: Union[str, None] = description
         self.as_reference: bool = as_reference
 
         if as_reference and name is None:
@@ -401,7 +401,7 @@ class Schema(object):
     def validate(self, data: Any, **kwargs: Dict[str, Any]) -> Any:
         Schema = self.__class__
         s: Any = self._schema
-        e: str | None = self._error
+        e: Union[str, None] = self._error
         i: bool = self._ignore_extra_keys
 
         if isinstance(s, Literal):
@@ -534,7 +534,7 @@ class Schema(object):
         definitions_by_name: Dict[str, Dict[str, Any]] = {}
 
         def _json_schema(
-            schema: "Schema", is_main_schema: bool = True, description: str | None = None, allow_reference: bool = True
+            schema: "Schema", is_main_schema: bool = True, description: Union[str, None] = None, allow_reference: bool = True
         ) -> Dict[str, Any]:
             def _create_or_use_ref(return_dict: Dict[str, Any]) -> Dict[str, Any]:
                 """If not already seen, return the provided part of the schema unchanged.
@@ -594,7 +594,7 @@ class Schema(object):
 
             return_schema: Dict[str, Any] = {}
 
-            return_description: str | None = description or schema.description
+            return_description: Union[str, None] = description or schema.description
             if return_description:
                 return_schema["description"] = return_description
 
@@ -681,7 +681,7 @@ class Schema(object):
 
                             return key == str or key == object
 
-                        def _get_key_description(key: Any) -> str | None:
+                        def _get_key_description(key: Any) -> Union[str, None]:
                             """Get the description associated to a key (as specified in a Literal object). Return None if not a Literal"""
                             if isinstance(key, Optional):
                                 return _get_key_description(key.schema)
@@ -801,9 +801,9 @@ class Forbidden(Hook):
 
 
 class Literal:
-    def __init__(self, value: Any, description: str | None = None) -> None:
+    def __init__(self, value: Any, description: Union[str, None] = None) -> None:
         self._schema: Any = value
-        self._description: str | None = description
+        self._description: Union[str, None] = description
 
     def __str__(self) -> str:
         return str(self._schema)
@@ -812,7 +812,7 @@ class Literal:
         return f'Literal("{self._schema}", description="{self._description or ""}")'
 
     @property
-    def description(self) -> str | None:
+    def description(self) -> Union[str, None]:
         return self._description
 
     @property
