@@ -38,7 +38,7 @@ else:
         from contextlib2 import ExitStack  # Python 2.x/3.0-3.2 fallback
 
 
-__version__ = "0.7.5"
+__version__ = "0.7.6"
 __all__ = [
     "Schema",
     "And",
