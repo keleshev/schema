@@ -61,7 +61,7 @@ __all__ = [
 class SchemaError(Exception):
     """Error during Schema validation."""
 
-    def __init__(self, autos: Union[Sequence[Union[str, None]],  None], errors: Union[List, str, None] = None):
+    def __init__(self, autos: Union[Sequence[Union[str, None]], None], errors: Union[List, str, None] = None):
         self.autos = autos if isinstance(autos, List) else [autos]
         self.errors = errors if isinstance(errors, List) else [errors]
         Exception.__init__(self, self.code)
@@ -534,7 +534,10 @@ class Schema(object):
         definitions_by_name: Dict[str, Dict[str, Any]] = {}
 
         def _json_schema(
-            schema: "Schema", is_main_schema: bool = True, description: Union[str, None] = None, allow_reference: bool = True
+            schema: "Schema",
+            is_main_schema: bool = True,
+            description: Union[str, None] = None,
+            allow_reference: bool = True,
         ) -> Dict[str, Any]:
             def _create_or_use_ref(return_dict: Dict[str, Any]) -> Dict[str, Any]:
                 """If not already seen, return the provided part of the schema unchanged.

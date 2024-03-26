@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v0.7.6 (2024-03-26)
+
+### Fixes
+
+* Trim trailing whitespace. [Stavros Korokithakis]
+
+
 ## v0.7.4 (2021-02-01)
 
 ### Fixes
