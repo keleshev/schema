@@ -1,6 +1,13 @@
 # Changelog
 
 
+## Unreleased
+
+### Fixes
+
+* Fix setuptools not finding the schema package (fixes #311) [Stavros Korokithakis]
+
+
 ## v0.7.6 (2024-03-26)
 
 ### Fixes
