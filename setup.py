@@ -1,6 +1,7 @@
 import codecs
 import sys
-from setuptools import setup, find_packages
+
+from setuptools import setup
 
 version_file = "schema.py"
 with open(version_file) as f:
@@ -21,7 +22,7 @@ setup(
     license="MIT",
     keywords="schema json validation",
     url="https://github.com/keleshev/schema",
-    packages=find_packages(),
+    py_modules=["schema"],
     package_data={"": ["py.typed"]},  # Include py.typed file
     include_package_data=True,
     long_description=codecs.open("README.rst", "r", "utf-8").read(),
