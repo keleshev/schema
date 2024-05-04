@@ -6,7 +6,8 @@ import os
 import platform
 import re
 import sys
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from collections import namedtuple
 from functools import partial
 from operator import methodcaller
 
@@ -66,7 +67,6 @@ def sorted_dict(to_sort):
 
 
 def test_schema():
-
     assert Schema(1).validate(1) == 1
     with SE:
         Schema(1).validate(9)
@@ -130,14 +130,18 @@ def test_or():
 
 def test_or_only_one():
     or_rule = Or("test1", "test2", only_one=True)
-    schema = Schema({or_rule: str, Optional("sub_schema"): {Optional(copy.deepcopy(or_rule)): str}})
+    schema = Schema(
+        {or_rule: str, Optional("sub_schema"): {Optional(copy.deepcopy(or_rule)): str}}
+    )
     assert schema.validate({"test1": "value"})
     assert schema.validate({"test1": "value", "sub_schema": {"test2": "value"}})
     assert schema.validate({"test2": "other_value"})
     with SE:
         schema.validate({"test1": "value", "test2": "other_value"})
     with SE:
-        schema.validate({"test1": "value", "sub_schema": {"test1": "value", "test2": "value"}})
+        schema.validate(
+            {"test1": "value", "sub_schema": {"test1": "value", "test2": "value"}}
+        )
     with SE:
         schema.validate({"othertest": "value"})
 
@@ -176,12 +180,16 @@ def test_regex():
         Regex(r"^[a-z]+$").validate("letters + spaces") == "letters + spaces"
 
     # Validate dict key
-    assert Schema({Regex(r"^foo"): str}).validate({"fookey": "value"}) == {"fookey": "value"}
+    assert Schema({Regex(r"^foo"): str}).validate({"fookey": "value"}) == {
+        "fookey": "value"
+    }
     with SE:
         Schema({Regex(r"^foo"): str}).validate({"barkey": "value"})
 
     # Validate dict value
-    assert Schema({str: Regex(r"^foo")}).validate({"key": "foovalue"}) == {"key": "foovalue"}
+    assert Schema({str: Regex(r"^foo")}).validate({"key": "foovalue"}) == {
+        "key": "foovalue"
+    }
     with SE:
         Schema({str: Regex(r"^foo")}).validate({"key": "barvalue"})
 
@@ -215,9 +223,9 @@ def test_validate_list():
         Schema([1, 0]).validate(0)
     with SE:
         Schema([1, 0]).validate([2])
-    assert And([1, 0], lambda l: len(l) > 2).validate([0, 1, 0]) == [0, 1, 0]
+    assert And([1, 0], lambda lst: len(lst) > 2).validate([0, 1, 0]) == [0, 1, 0]
     with SE:
-        And([1, 0], lambda l: len(l) > 2).validate([0, 1])
+        And([1, 0], lambda lst: len(lst) > 2).validate([0, 1])
 
 
 def test_list_tuple_set_frozenset():
@@ -247,7 +255,10 @@ def test_dict():
     with SE:
         Schema({"key": 5}).validate(["key", 5])
     assert Schema({"key": int}).validate({"key": 5}) == {"key": 5}
-    assert Schema({"n": int, "f": float}).validate({"n": 5, "f": 3.14}) == {"n": 5, "f": 3.14}
+    assert Schema({"n": int, "f": float}).validate({"n": 5, "f": 3.14}) == {
+        "n": 5,
+        "f": 3.14,
+    }
     with SE:
         Schema({"n": int, "f": float}).validate({"n": 3.14, "f": 5})
     with SE:
@@ -284,13 +295,19 @@ def test_dict():
         try:
             Schema({"key": 5}).validate({"key": 5, "bad": 5})
         except SchemaWrongKeyError as e:
-            assert e.args[0] in ["Wrong key 'bad' in {'key': 5, 'bad': 5}", "Wrong key 'bad' in {'bad': 5, 'key': 5}"]
+            assert e.args[0] in [
+                "Wrong key 'bad' in {'key': 5, 'bad': 5}",
+                "Wrong key 'bad' in {'bad': 5, 'key': 5}",
+            ]
             raise
     with SE:
         try:
             Schema({}).validate({"a": 5, "b": 5})
         except SchemaError as e:
-            assert e.args[0] in ["Wrong keys 'a', 'b' in {'a': 5, 'b': 5}", "Wrong keys 'a', 'b' in {'b': 5, 'a': 5}"]
+            assert e.args[0] in [
+                "Wrong keys 'a', 'b' in {'a': 5, 'b': 5}",
+                "Wrong keys 'a', 'b' in {'b': 5, 'a': 5}",
+            ]
             raise
 
     with SE:
@@ -304,26 +321,40 @@ def test_dict_keys():
     assert Schema({str: int}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
     with SE:
         Schema({str: int}).validate({1: 1, "b": 2})
-    assert Schema({Use(str): Use(int)}).validate({1: 3.14, 3.14: 1}) == {"1": 3, "3.14": 1}
+    assert Schema({Use(str): Use(int)}).validate({1: 3.14, 3.14: 1}) == {
+        "1": 3,
+        "3.14": 1,
+    }
 
 
 def test_ignore_extra_keys():
-    assert Schema({"key": 5}, ignore_extra_keys=True).validate({"key": 5, "bad": 4}) == {"key": 5}
+    assert Schema({"key": 5}, ignore_extra_keys=True).validate(
+        {"key": 5, "bad": 4}
+    ) == {"key": 5}
     assert Schema({"key": 5, "dk": {"a": "a"}}, ignore_extra_keys=True).validate(
         {"key": 5, "bad": "b", "dk": {"a": "a", "bad": "b"}}
     ) == {"key": 5, "dk": {"a": "a"}}
-    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate([{"key": "v", "bad": "bad"}]) == [{"key": "v"}]
-    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate([{"key": "v", "bad": "bad"}]) == [{"key": "v"}]
+    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate(
+        [{"key": "v", "bad": "bad"}]
+    ) == [{"key": "v"}]
+    assert Schema([{"key": "v"}], ignore_extra_keys=True).validate(
+        [{"key": "v", "bad": "bad"}]
+    ) == [{"key": "v"}]
 
 
 def test_ignore_extra_keys_validation_and_return_keys():
-    assert Schema({"key": 5, object: object}, ignore_extra_keys=True).validate({"key": 5, "bad": 4}) == {
+    assert Schema({"key": 5, object: object}, ignore_extra_keys=True).validate(
+        {"key": 5, "bad": 4}
+    ) == {
         "key": 5,
         "bad": 4,
     }
-    assert Schema({"key": 5, "dk": {"a": "a", object: object}}, ignore_extra_keys=True).validate(
-        {"key": 5, "dk": {"a": "a", "bad": "b"}}
-    ) == {"key": 5, "dk": {"a": "a", "bad": "b"}}
+    assert Schema(
+        {"key": 5, "dk": {"a": "a", object: object}}, ignore_extra_keys=True
+    ).validate({"key": 5, "dk": {"a": "a", "bad": "b"}}) == {
+        "key": 5,
+        "dk": {"a": "a", "bad": "b"},
+    }
 
 
 def test_dict_forbidden_keys():
@@ -331,7 +362,9 @@ def test_dict_forbidden_keys():
         Schema({Forbidden("b"): object}).validate({"b": "bye"})
     with raises(SchemaWrongKeyError):
         Schema({Forbidden("b"): int}).validate({"b": "bye"})
-    assert Schema({Forbidden("b"): int, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({Forbidden("b"): int, Optional("b"): object}).validate(
+        {"b": "bye"}
+    ) == {"b": "bye"}
     with raises(SchemaForbiddenKeyError):
         Schema({Forbidden("b"): object, Optional("b"): object}).validate({"b": "bye"})
 
@@ -340,10 +373,14 @@ def test_dict_hook():
     function_mock = Mock(return_value=None)
     hook = Hook("b", handler=function_mock)
 
-    assert Schema({hook: str, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({hook: str, Optional("b"): object}).validate({"b": "bye"}) == {
+        "b": "bye"
+    }
     function_mock.assert_called_once()
 
-    assert Schema({hook: int, Optional("b"): object}).validate({"b": "bye"}) == {"b": "bye"}
+    assert Schema({hook: int, Optional("b"): object}).validate({"b": "bye"}) == {
+        "b": "bye"
+    }
     function_mock.assert_called_once()
 
     assert Schema({hook: str, "b": object}).validate({"b": "bye"}) == {"b": "bye"}
@@ -354,20 +391,30 @@ def test_dict_optional_keys():
     with SE:
         Schema({"a": 1, "b": 2}).validate({"a": 1})
     assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1}) == {"a": 1}
-    assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+    assert Schema({"a": 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {
+        "a": 1,
+        "b": 2,
+    }
     # Make sure Optionals are favored over types:
-    assert Schema({basestring: 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {"a": 1, "b": 2}
+    assert Schema({basestring: 1, Optional("b"): 2}).validate({"a": 1, "b": 2}) == {
+        "a": 1,
+        "b": 2,
+    }
     # Make sure Optionals hash based on their key:
     assert len({Optional("a"): 1, Optional("a"): 1, Optional("b"): 2}) == 2
 
 
 def test_dict_optional_defaults():
     # Optionals fill out their defaults:
-    assert Schema({Optional("a", default=1): 11, Optional("b", default=2): 22}).validate({"a": 11}) == {"a": 11, "b": 2}
+    assert Schema(
+        {Optional("a", default=1): 11, Optional("b", default=2): 22}
+    ).validate({"a": 11}) == {"a": 11, "b": 2}
 
     # Optionals take precedence over types. Here, the "a" is served by the
     # Optional:
-    assert Schema({Optional("a", default=1): 11, basestring: 22}).validate({"b": 22}) == {"a": 1, "b": 22}
+    assert Schema({Optional("a", default=1): 11, basestring: 22}).validate(
+        {"b": 22}
+    ) == {"a": 1, "b": 22}
 
     with raises(TypeError):
         Optional(And(str, Use(int)), default=7)
@@ -393,7 +440,9 @@ def test_dict_key_error():
         code = "Key 'k' error:\nKey 'k2' error:\n'x' should be instance of 'int'"
         assert e.code == code
     try:
-        Schema({"k": {"k2": int}}, error="k2 should be int").validate({"k": {"k2": "x"}})
+        Schema({"k": {"k2": int}}, error="k2 should be int").validate(
+            {"k": {"k2": "x"}}
+        )
     except SchemaError as e:
         assert e.code == "k2 should be int"
 
@@ -401,7 +450,7 @@ def test_dict_key_error():
 def test_complex():
     s = Schema(
         {
-            "<file>": And([Use(open)], lambda l: len(l)),
+            "<file>": And([Use(open)], lambda lst: len(lst)),
             "<path>": os.path.exists,
             Optional("--count"): And(int, lambda n: 0 <= n <= 5),
         }
@@ -423,7 +472,9 @@ def test_nice_errors():
     except SchemaError as e:
         assert e.code == "should be a number"
     try:
-        Schema({Optional("i"): Use(int, error="should be a number")}).validate({"i": "x"})
+        Schema({Optional("i"): Use(int, error="should be a number")}).validate(
+            {"i": "x"}
+        )
     except SchemaError as e:
         assert e.code == "should be a number"
 
@@ -532,7 +583,11 @@ def test_use_json():
     gist_schema = Schema(
         And(
             Use(json.loads),  # first convert from JSON
-            {Optional("description"): basestring, "public": bool, "files": {basestring: {"content": basestring}}},
+            {
+                Optional("description"): basestring,
+                "public": bool,
+                "files": {basestring: {"content": basestring}},
+            },
         )
     )
     gist = """{"description": "the description for this gist",
@@ -548,7 +603,11 @@ def test_error_reporting():
         {
             "<files>": [Use(open, error="<files> should be readable")],
             "<path>": And(os.path.exists, error="<path> should exist"),
-            "--count": Or(None, And(Use(int), lambda n: 0 < n < 5), error="--count should be integer 0 < n < 5"),
+            "--count": Or(
+                None,
+                And(Use(int), lambda n: 0 < n < 5),
+                error="--count should be integer 0 < n < 5",
+            ),
         },
         error="Error:",
     )
@@ -712,7 +771,9 @@ def test_inheritance_validate_kwargs():
 
     class MySchema(Schema):
         def validate(self, data, increment=1):
-            return super(MySchema, self).validate(convert(data, increment), increment=increment)
+            return super(MySchema, self).validate(
+                convert(data, increment), increment=increment
+            )
 
     s = {"k": int, "d": {"k": int, "l": [{"l": [int]}]}}
     v = {"k": 1, "d": {"k": 2, "l": [{"l": [3, 4, 5]}]}}
@@ -730,7 +791,9 @@ def test_inheritance_validate_kwargs_passed_to_nested_schema():
 
     class MySchema(Schema):
         def validate(self, data, increment=1):
-            return super(MySchema, self).validate(convert(data, increment), increment=increment)
+            return super(MySchema, self).validate(
+                convert(data, increment), increment=increment
+            )
 
     # note only d.k is under MySchema, and all others are under Schema without
     # increment
@@ -748,7 +811,13 @@ def test_optional_callable_default_get_inherited_schema_validate_kwargs():
             return data + increment
         return data
 
-    s = {"k": int, "d": {Optional("k", default=lambda **kw: convert(2, kw["increment"])): int, "l": [{"l": [int]}]}}
+    s = {
+        "k": int,
+        "d": {
+            Optional("k", default=lambda **kw: convert(2, kw["increment"])): int,
+            "l": [{"l": [int]}],
+        },
+    }
     v = {"k": 1, "d": {"l": [{"l": [3, 4, 5]}]}}
     d = Schema(s).validate(v, increment=1)
     assert d["k"] == 1 and d["d"]["k"] == 3 and d["d"]["l"][0]["l"] == [3, 4, 5]
@@ -777,7 +846,6 @@ def test_inheritance_optional():
         return data
 
     class MyOptional(Optional):
-
         """This overrides the default property so it increments according
         to kwargs passed to validate()
         """
@@ -804,7 +872,10 @@ def test_inheritance_optional():
 
 
 def test_literal_repr():
-    assert repr(Literal("test", description="testing")) == 'Literal("test", description="testing")'
+    assert (
+        repr(Literal("test", description="testing"))
+        == 'Literal("test", description="testing")'
+    )
     assert repr(Literal("test")) == 'Literal("test", description="")'
 
 
@@ -970,7 +1041,10 @@ def test_json_schema_or_values_nested():
         "$id": "my-id",
         "properties": {
             "param": {
-                "anyOf": [{"type": "array", "items": {"type": "string"}}, {"type": "array", "items": {"type": "array"}}]
+                "anyOf": [
+                    {"type": "array", "items": {"type": "string"}},
+                    {"type": "array", "items": {"type": "array"}},
+                ]
             }
         },
         "required": ["param"],
@@ -996,7 +1070,9 @@ def test_json_schema_regex():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
-        "properties": {"username": {"type": "string", "pattern": "[a-zA-Z][a-zA-Z0-9]{3,}"}},
+        "properties": {
+            "username": {"type": "string", "pattern": "[a-zA-Z][a-zA-Z0-9]{3,}"}
+        },
         "required": [],
         "additionalProperties": False,
         "type": "object",
@@ -1153,7 +1229,10 @@ def test_json_schema_object_or_array_of_object():
                 "anyOf": [
                     {
                         "additionalProperties": False,
-                        "properties": {"param1": {"const": "test1"}, "param2": {"const": "test2"}},
+                        "properties": {
+                            "param1": {"const": "test1"},
+                            "param2": {"const": "test2"},
+                        },
                         "required": ["param1"],
                         "type": "object",
                     },
@@ -1161,7 +1240,10 @@ def test_json_schema_object_or_array_of_object():
                         "type": "array",
                         "items": {
                             "additionalProperties": False,
-                            "properties": {"param1": {"const": "test1"}, "param2": {"const": "test2"}},
+                            "properties": {
+                                "param1": {"const": "test1"},
+                                "param2": {"const": "test2"},
+                            },
                             "required": ["param1"],
                             "type": "object",
                         },
@@ -1193,7 +1275,12 @@ def test_json_schema_and_list():
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
         "properties": {
-            "param1": {"allOf": [{"type": "array", "items": {"enum": ["choice1", "choice2"]}}, {"type": "array"}]}
+            "param1": {
+                "allOf": [
+                    {"type": "array", "items": {"enum": ["choice1", "choice2"]}},
+                    {"type": "array"},
+                ]
+            }
         },
         "required": ["param1"],
         "additionalProperties": False,
@@ -1223,7 +1310,9 @@ def test_json_schema_forbidden_key_ignored():
         ({}, True, True),
     ],
 )
-def test_json_schema_additional_properties(input_schema, ignore_extra_keys, additional_properties):
+def test_json_schema_additional_properties(
+    input_schema, ignore_extra_keys, additional_properties
+):
     s = Schema(input_schema, ignore_extra_keys=ignore_extra_keys)
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1322,7 +1411,12 @@ def test_json_schema_title_and_description():
         "$id": "my-id",
         "title": "Product",
         "description": "A product in the catalog",
-        "properties": {"productId": {"description": "The unique identifier for a product", "type": "integer"}},
+        "properties": {
+            "productId": {
+                "description": "The unique identifier for a product",
+                "type": "integer",
+            }
+        },
         "required": ["productId"],
         "additionalProperties": False,
         "type": "object",
@@ -1330,7 +1424,13 @@ def test_json_schema_title_and_description():
 
 
 def test_json_schema_description_nested():
-    s = Schema({Optional(Literal("test1", description="A description here"), default={}): Or([str], [list])})
+    s = Schema(
+        {
+            Optional(
+                Literal("test1", description="A description here"), default={}
+            ): Or([str], [list])
+        }
+    )
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
@@ -1354,7 +1454,10 @@ def test_json_schema_description_or_nested():
     s = Schema(
         {
             Optional(
-                Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))
+                Or(
+                    Literal("test1", description="A description here"),
+                    Literal("test2", description="Another"),
+                )
             ): Or([str], [list])
         }
     )
@@ -1394,7 +1497,9 @@ def test_json_schema_literal_with_enum():
     )
     assert s.json_schema("my-id") == {
         "type": "object",
-        "properties": {"test": {"description": "A test", "enum": ["literal1", "literal2"]}},
+        "properties": {
+            "test": {"description": "A test", "enum": ["literal1", "literal2"]}
+        },
         "required": ["test"],
         "additionalProperties": False,
         "$id": "my-id",
@@ -1406,7 +1511,10 @@ def test_json_schema_description_and_nested():
     s = Schema(
         {
             Optional(
-                Or(Literal("test1", description="A description here"), Literal("test2", description="Another"))
+                Or(
+                    Literal("test1", description="A description here"),
+                    Literal("test2", description="Another"),
+                )
             ): And([str], [list])
         }
     )
@@ -1436,18 +1544,25 @@ def test_json_schema_description_and_nested():
 
 
 def test_description():
-    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
+    s = Schema(
+        {Optional(Literal("test1", description="A description here"), default={}): dict}
+    )
     assert s.validate({"test1": {}})
 
 
 def test_description_with_default():
-    s = Schema({Optional(Literal("test1", description="A description here"), default={}): dict})
+    s = Schema(
+        {Optional(Literal("test1", description="A description here"), default={}): dict}
+    )
     assert s.validate({}) == {"test1": {}}
 
 
 def test_json_schema_ref_in_list():
     s = Schema(
-        Or(Schema([str], name="Inner test", as_reference=True), Schema([str], name="Inner test2", as_reference=True))
+        Or(
+            Schema([str], name="Inner test", as_reference=True),
+            Schema([str], name="Inner test2", as_reference=True),
+        )
     )
     generated_json_schema = s.json_schema("my-id")
 
@@ -1456,7 +1571,10 @@ def test_json_schema_ref_in_list():
             "Inner test": {"items": {"type": "string"}, "type": "array"},
             "Inner test2": {"items": {"type": "string"}, "type": "array"},
         },
-        "anyOf": [{"$ref": "#/definitions/Inner test"}, {"$ref": "#/definitions/Inner test2"}],
+        "anyOf": [
+            {"$ref": "#/definitions/Inner test"},
+            {"$ref": "#/definitions/Inner test2"},
+        ],
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
     }
@@ -1490,18 +1608,106 @@ def test_json_schema_refs():
 
 
 def test_json_schema_refs_is_smaller():
-    key_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]
-    key_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "value1", "value2", "value3", "value4", "value5", None]
-    s = Schema({Literal(Or(*key_names), description="A key that can have many names"): key_values})
+    key_names = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+    ]
+    key_values = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        "value1",
+        "value2",
+        "value3",
+        "value4",
+        "value5",
+        None,
+    ]
+    s = Schema(
+        {
+            Literal(
+                Or(*key_names), description="A key that can have many names"
+            ): key_values
+        }
+    )
     assert len(json.dumps(s.json_schema("my-id", use_refs=False))) > len(
         json.dumps(s.json_schema("my-id", use_refs=True))
     )
 
 
 def test_json_schema_refs_no_missing():
-    key_names = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t"]
-    key_values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "value1", "value2", "value3", "value4", "value5", None]
-    s = Schema({Literal(Or(*key_names), description="A key that can have many names"): key_values})
+    key_names = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+    ]
+    key_values = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        "value1",
+        "value2",
+        "value3",
+        "value4",
+        "value5",
+        None,
+    ]
+    s = Schema(
+        {
+            Literal(
+                Or(*key_names), description="A key that can have many names"
+            ): key_values
+        }
+    )
     json_s = s.json_schema("my-id", use_refs=True)
     schema_ids = []
     refs = []
@@ -1538,7 +1744,10 @@ def test_json_schema_definitions():
     json_schema = main_schema.json_schema("my-id")
     assert sorted_dict(json_schema) == {
         "type": "object",
-        "properties": {"main_key1": {"type": "string"}, "main_key2": {"$ref": "#/definitions/sub_schema"}},
+        "properties": {
+            "main_key1": {"type": "string"},
+            "main_key2": {"$ref": "#/definitions/sub_schema"},
+        },
         "required": ["main_key1", "main_key2"],
         "additionalProperties": False,
         "$id": "my-id",
@@ -1574,8 +1783,14 @@ def test_json_schema_definitions_and_literals():
         "type": "object",
         "properties": {
             "main_key1": {"description": "Main Key 1", "type": "string"},
-            "main_key2": {"$ref": "#/definitions/sub_schema", "description": "Main Key 2"},
-            "main_key3": {"$ref": "#/definitions/sub_schema", "description": "Main Key 3"},
+            "main_key2": {
+                "$ref": "#/definitions/sub_schema",
+                "description": "Main Key 2",
+            },
+            "main_key3": {
+                "$ref": "#/definitions/sub_schema",
+                "description": "Main Key 3",
+            },
         },
         "required": ["main_key1", "main_key2", "main_key3"],
         "additionalProperties": False,
@@ -1585,7 +1800,9 @@ def test_json_schema_definitions_and_literals():
             "sub_schema": {
                 "description": "Sub Schema",
                 "type": "object",
-                "properties": {"sub_key1": {"description": "Sub key 1", "type": "integer"}},
+                "properties": {
+                    "sub_key1": {"description": "Sub key 1", "type": "integer"}
+                },
                 "required": ["sub_key1"],
                 "additionalProperties": False,
             }
@@ -1594,14 +1811,23 @@ def test_json_schema_definitions_and_literals():
 
 
 def test_json_schema_definitions_nested():
-    sub_sub_schema = Schema({"sub_sub_key1": int}, name="sub_sub_schema", as_reference=True)
-    sub_schema = Schema({"sub_key1": int, "sub_key2": sub_sub_schema}, name="sub_schema", as_reference=True)
+    sub_sub_schema = Schema(
+        {"sub_sub_key1": int}, name="sub_sub_schema", as_reference=True
+    )
+    sub_schema = Schema(
+        {"sub_key1": int, "sub_key2": sub_sub_schema},
+        name="sub_schema",
+        as_reference=True,
+    )
     main_schema = Schema({"main_key1": str, "main_key2": sub_schema})
 
     json_schema = main_schema.json_schema("my-id")
     assert sorted_dict(json_schema) == {
         "type": "object",
-        "properties": {"main_key1": {"type": "string"}, "main_key2": {"$ref": "#/definitions/sub_schema"}},
+        "properties": {
+            "main_key1": {"type": "string"},
+            "main_key2": {"$ref": "#/definitions/sub_schema"},
+        },
         "required": ["main_key1", "main_key2"],
         "additionalProperties": False,
         "$id": "my-id",
@@ -1609,7 +1835,10 @@ def test_json_schema_definitions_nested():
         "definitions": {
             "sub_schema": {
                 "type": "object",
-                "properties": {"sub_key1": {"type": "integer"}, "sub_key2": {"$ref": "#/definitions/sub_sub_schema"}},
+                "properties": {
+                    "sub_key1": {"type": "integer"},
+                    "sub_key2": {"$ref": "#/definitions/sub_sub_schema"},
+                },
                 "required": ["sub_key1", "sub_key2"],
                 "additionalProperties": False,
             },
@@ -1629,7 +1858,11 @@ def test_json_schema_definitions_recursive():
     This is the example from here: https://json-schema.org/understanding-json-schema/structuring.html#recursion
     """
     children = []
-    person = Schema({Optional("name"): str, Optional("children"): children}, name="person", as_reference=True)
+    person = Schema(
+        {Optional("name"): str, Optional("children"): children},
+        name="person",
+        as_reference=True,
+    )
     children.append(person)
 
     json_schema = person.json_schema("my-id")
@@ -1643,7 +1876,10 @@ def test_json_schema_definitions_recursive():
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "children": {"type": "array", "items": {"$ref": "#/definitions/person"}},
+                    "children": {
+                        "type": "array",
+                        "items": {"$ref": "#/definitions/person"},
+                    },
                 },
                 "required": [],
                 "additionalProperties": False,
@@ -1726,7 +1962,10 @@ def test_prepend_schema_name():
     try:
         Schema({"key1": int}, name="custom_schemaname").validate({"key1": "a"})
     except SchemaError as e:
-        assert str(e) == "'custom_schemaname' Key 'key1' error:\n'a' should be instance of 'int'"
+        assert (
+            str(e)
+            == "'custom_schemaname' Key 'key1' error:\n'a' should be instance of 'int'"
+        )
 
     try:
         Schema(int, name="custom_schemaname").validate("a")
