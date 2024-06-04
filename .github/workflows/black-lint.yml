@@ -5,12 +5,14 @@ on:
     branches:
       - master
     paths:
-      - 'schema.py'
+      - 'schema/**'
+      - 'pyproject.toml'
   pull_request:
     branches:
       - master
     paths:
-      - 'schema.py'
+      - 'schema/**'
+      - 'pyproject.toml'
 
 jobs:
   lint:
@@ -28,5 +30,5 @@ jobs:
     - name: Install Black
       run: pip install black
 
-    - name: Run Black on schema.py
-      run: black --check schema.py
+    - name: Run Black on schema package
+      run: black --check schema

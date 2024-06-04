@@ -165,9 +165,7 @@ class And(Generic[TSchema]):
 
     def _build_schema(self, arg: Any) -> TSchema:
         # Assume self._schema_class(arg, ...) returns an instance of TSchema
-        return self._schema_class(
-            arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys
-        )
+        return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
 
 
 class Or(And[TSchema]):
@@ -193,9 +191,7 @@ class Or(And[TSchema]):
         failed: bool = self.match_count > 1 and self.only_one
         self.match_count = 0
         if failed:
-            raise SchemaOnlyOneAllowedError(
-                ["There are multiple keys present from the %r condition" % self]
-            )
+            raise SchemaOnlyOneAllowedError(["There are multiple keys present from the %r condition" % self])
 
     def validate(self, data: Any, **kwargs: Any) -> Any:
         """
@@ -240,13 +236,9 @@ class Regex:
         "re.TEMPLATE",
     ]
 
-    def __init__(
-        self, pattern_str: str, flags: int = 0, error: Union[str, None] = None
-    ) -> None:
+    def __init__(self, pattern_str: str, flags: int = 0, error: Union[str, None] = None) -> None:
         self._pattern_str: str = pattern_str
-        flags_list = [
-            Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"
-        ]  # Name for each bit
+        flags_list = [Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"]  # Name for each bit
 
         self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""
         self._pattern: re.Pattern = re.compile(pattern_str, flags=flags)
@@ -272,16 +264,10 @@ class Regex:
             if self._pattern.search(data):
                 return data
             else:
-                error_message = (
-                    e.format(data)
-                    if e
-                    else f"{data!r} does not match {self._pattern_str!r}"
-                )
+                error_message = e.format(data) if e else f"{data!r} does not match {self._pattern_str!r}"
                 raise SchemaError(error_message)
         except TypeError:
-            error_message = (
-                e.format(data) if e else f"{data!r} is not string nor buffer"
-            )
+            error_message = e.format(data) if e else f"{data!r} is not string nor buffer"
             raise SchemaError(error_message)
 
 
@@ -291,9 +277,7 @@ class Use:
     the data while it is being validated.
     """
 
-    def __init__(
-        self, callable_: Callable[[Any], Any], error: Union[str, None] = None
-    ) -> None:
+    def __init__(self, callable_: Callable[[Any], Any], error: Union[str, None] = None) -> None:
         if not callable(callable_):
             raise TypeError(f"Expected a callable, not {callable_!r}")
         self._callable: Callable[[Any], Any] = callable_
@@ -451,9 +435,7 @@ class Schema(object):
 
             with exitstack:
                 # Evaluate dictionaries last
-                data_items = sorted(
-                    data.items(), key=lambda value: isinstance(value[1], dict)
-                )
+                data_items = sorted(data.items(), key=lambda value: isinstance(value[1], dict))
                 for key, value in data_items:
                     for skey in sorted_skeys:
                         svalue = s[skey]
@@ -472,17 +454,13 @@ class Schema(object):
                                 # value has a certain type, and allowing Forbidden to
                                 # work well in combination with Optional.
                                 try:
-                                    nvalue = Schema(svalue, error=e).validate(
-                                        value, **kwargs
-                                    )
+                                    nvalue = Schema(svalue, error=e).validate(value, **kwargs)
                                 except SchemaError:
                                     continue
                                 skey.handler(nkey, data, e)
                             else:
                                 try:
-                                    nvalue = Schema(
-                                        svalue, error=e, ignore_extra_keys=i
-                                    ).validate(value, **kwargs)
+                                    nvalue = Schema(svalue, error=e, ignore_extra_keys=i).validate(value, **kwargs)
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     message = self._prepend_schema_name(k)
@@ -497,9 +475,7 @@ class Schema(object):
             required = set(k for k in s if not self._is_optional_type(k))
             if not required.issubset(coverage):
                 missing_keys = required - coverage
-                s_missing_keys = ", ".join(
-                    repr(k) for k in sorted(missing_keys, key=repr)
-                )
+                s_missing_keys = ", ".join(repr(k) for k in sorted(missing_keys, key=repr))
                 message = "Missing key%s: %s" % (
                     _plural_s(missing_keys),
                     s_missing_keys,
@@ -518,10 +494,7 @@ class Schema(object):
                 raise SchemaWrongKeyError(message, e.format(data) if e else None)
 
             # Apply default-having optionals that haven't been used:
-            defaults = (
-                set(k for k in s if isinstance(k, Optional) and hasattr(k, "default"))
-                - coverage
-            )
+            defaults = set(k for k in s if isinstance(k, Optional) and hasattr(k, "default")) - coverage
             for default in defaults:
                 new[default.key] = (
                     _invoke_with_optional_kwargs(default.default, **kwargs)
@@ -541,9 +514,7 @@ class Schema(object):
             try:
                 return s.validate(data, **kwargs)
             except SchemaError as x:
-                raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
-                )
+                raise SchemaError([None] + x.autos, [e.format(data) if e else None] + x.errors)
             except BaseException as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
@@ -554,9 +525,7 @@ class Schema(object):
                 if s(data):
                     return data
             except SchemaError as x:
-                raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
-                )
+                raise SchemaError([None] + x.autos, [e.format(data) if e else None] + x.errors)
             except BaseException as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
@@ -571,9 +540,7 @@ class Schema(object):
             message = self._prepend_schema_name(message)
             raise SchemaError(message, e.format(data) if e else None)
 
-    def json_schema(
-        self, schema_id: str, use_refs: bool = False, **kwargs: Any
-    ) -> Dict[str, Any]:
+    def json_schema(self, schema_id: str, use_refs: bool = False, **kwargs: Any) -> Dict[str, Any]:
         """Generate a draft-07 JSON schema dict representing the Schema.
         This method must be called with a schema_id.
 
@@ -658,9 +625,7 @@ class Schema(object):
             if allow_reference and schema.as_reference:
                 # Generate sub schema if not already done
                 if schema.name not in definitions_by_name:
-                    definitions_by_name[
-                        cast(str, schema.name)
-                    ] = {}  # Avoid infinite loop
+                    definitions_by_name[cast(str, schema.name)] = {}  # Avoid infinite loop
                     definitions_by_name[cast(str, schema.name)] = _json_schema(
                         schema, is_main_schema=False, allow_reference=False
                     )
@@ -675,24 +640,15 @@ class Schema(object):
 
                     return_schema["type"] = "array"
                     if len(s) == 1:
-                        return_schema["items"] = _json_schema(
-                            _to_schema(s[0], i), is_main_schema=False
-                        )
+                        return_schema["items"] = _json_schema(_to_schema(s[0], i), is_main_schema=False)
                     elif len(s) > 1:
-                        return_schema["items"] = _json_schema(
-                            Schema(Or(*s)), is_main_schema=False
-                        )
+                        return_schema["items"] = _json_schema(Schema(Or(*s)), is_main_schema=False)
                 elif isinstance(s, Or):
                     # Handle Or values
 
                     # Check if we can use an enum
-                    if all(
-                        priority == COMPARABLE
-                        for priority in [_priority(value) for value in s.args]
-                    ):
-                        or_values = [
-                            str(s) if isinstance(s, Literal) else s for s in s.args
-                        ]
+                    if all(priority == COMPARABLE for priority in [_priority(value) for value in s.args]):
+                        or_values = [str(s) if isinstance(s, Literal) else s for s in s.args]
                         # All values are simple, can use enum or const
                         if len(or_values) == 1:
                             return_schema["const"] = _to_json_type(or_values[0])
@@ -702,9 +658,7 @@ class Schema(object):
                         # No enum, let's go with recursive calls
                         any_of_values = []
                         for or_key in s.args:
-                            new_value = _json_schema(
-                                _to_schema(or_key, i), is_main_schema=False
-                            )
+                            new_value = _json_schema(_to_schema(or_key, i), is_main_schema=False)
                             if new_value != {} and new_value not in any_of_values:
                                 any_of_values.append(new_value)
                         if len(any_of_values) == 1:
@@ -716,9 +670,7 @@ class Schema(object):
                     # Handle And values
                     all_of_values = []
                     for and_key in s.args:
-                        new_value = _json_schema(
-                            _to_schema(and_key, i), is_main_schema=False
-                        )
+                        new_value = _json_schema(_to_schema(and_key, i), is_main_schema=False)
                         if new_value != {} and new_value not in all_of_values:
                             all_of_values.append(new_value)
                     if len(all_of_values) == 1:
@@ -772,10 +724,7 @@ class Schema(object):
 
                             return key
 
-                        additional_properties = (
-                            additional_properties
-                            or _key_allows_additional_properties(key)
-                        )
+                        additional_properties = additional_properties or _key_allows_additional_properties(key)
                         sub_schema = _to_schema(s[key], ignore_extra_keys=i)
                         key_name = _get_key_name(key)
 
@@ -857,8 +806,7 @@ class Optional(Schema):
     def __eq__(self, other: Any) -> bool:
         return (
             self.__class__ is other.__class__
-            and getattr(self, "default", self._MARKER)
-            == getattr(other, "default", self._MARKER)
+            and getattr(self, "default", self._MARKER) == getattr(other, "default", self._MARKER)
             and self._schema == other._schema
         )
 
@@ -881,9 +829,7 @@ class Forbidden(Hook):
 
     @staticmethod
     def _default_function(nkey: Any, data: Any, error: Any) -> NoReturn:
-        raise SchemaForbiddenKeyError(
-            f"Forbidden key encountered: {nkey!r} in {data!r}", error
-        )
+        raise SchemaForbiddenKeyError(f"Forbidden key encountered: {nkey!r} in {data!r}", error)
 
 
 class Literal:
