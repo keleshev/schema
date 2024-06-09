@@ -1,7 +1,7 @@
 # Changelog
 
 
-## Unreleased
+## v0.7.7 (2024-05-04)
 
 ### Fixes
 
