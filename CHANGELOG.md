@@ -1,6 +1,13 @@
 # Changelog
 
 
+## Unreleased
+
+### Fixes
+
+* Include py.typed module when building package. [Stavros Korokithakis]
+
+
 ## v0.7.7 (2024-05-04)
 
 ### Fixes
