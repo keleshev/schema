@@ -1,6 +1,7 @@
 import codecs
 import os
 import sys
+import re
 
 from setuptools import setup
 
