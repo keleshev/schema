@@ -9,7 +9,9 @@ version_file = os.path.join("schema", "__init__.py")
 with open(version_file) as f:
     for line in f.read().split("\n"):
         if line.startswith("__version__ ="):
-            version = eval(line.split("=", 1)[1])
+            version = line.split("=", 1)[1]
+            version = version.replace("'", "").replace('"', '')
+            version = version.strip()
             break
     else:
         print("No __version__ attribute found in %r" % version_file)
