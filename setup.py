@@ -1,6 +1,7 @@
 import codecs
 import os
 import sys
+import re
 
 from setuptools import setup
 
@@ -9,7 +10,9 @@ version_file = os.path.join("schema", "__init__.py")
 with open(version_file) as f:
     for line in f.read().split("\n"):
         if line.startswith("__version__ ="):
-            version = eval(line.split("=", 1)[1])
+            version = re.match(
+                r"^\s*__version__\s*=\s*['\"](.*?)['\"]\s*$", line
+            ).group(1)
             break
     else:
         print("No __version__ attribute found in %r" % version_file)
