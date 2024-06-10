@@ -4,23 +4,24 @@ parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
 import inspect
 import re
-from typing import Any
-from typing import Callable
-from typing import cast
-from typing import Dict
-from typing import Generic
-from typing import Iterable
-from typing import List
-from typing import NoReturn
-from typing import Sequence
-from typing import Set
-from typing import Sized
-from typing import Tuple
-from typing import Type
-from typing import TYPE_CHECKING
-from typing import TypeVar
-from typing import Union
-
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    NoReturn,
+    Sequence,
+    Set,
+    Sized,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 # Use TYPE_CHECKING to determine the correct type hint but avoid runtime import errors
 if TYPE_CHECKING:

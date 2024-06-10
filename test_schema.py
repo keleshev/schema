@@ -6,8 +6,7 @@ import os
 import platform
 import re
 import sys
-from collections import defaultdict
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from functools import partial
 from operator import methodcaller
 
