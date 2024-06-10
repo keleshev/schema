@@ -1,2 +1,3 @@
 include README.rst requirements.txt LICENSE-MIT *.py
+include schema/py.typed
 include tox.ini

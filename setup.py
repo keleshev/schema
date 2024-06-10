@@ -1,9 +1,11 @@
 import codecs
+import os
 import sys
 
 from setuptools import setup
 
-version_file = "schema.py"
+version_file = os.path.join("schema", "__init__.py")
+
 with open(version_file) as f:
     for line in f.read().split("\n"):
         if line.startswith("__version__ ="):
@@ -22,8 +24,7 @@ setup(
     license="MIT",
     keywords="schema json validation",
     url="https://github.com/keleshev/schema",
-    py_modules=["schema"],
-    package_data={"": ["py.typed"]},  # Include py.typed file
+    packages=["schema"],
     include_package_data=True,
     long_description=codecs.open("README.rst", "r", "utf-8").read(),
     long_description_content_type="text/x-rst",

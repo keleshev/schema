@@ -1,20 +1,2 @@
-[tool.black]
-line-length = 120
-target-version = ['py37']
-include = '\.pyi?$'
-exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-  )/
-)
-'''
+[tool.ruff]
+lint.ignore = ["F403", "E501", "N802", "N803", "N806", "C901", "D100", "D102", "D102", "D10"]

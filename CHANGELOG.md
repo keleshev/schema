@@ -5,6 +5,13 @@
 
 ### Fixes
 
+* Include py.typed module when building package. [Stavros Korokithakis]
+
+
+## v0.7.7 (2024-05-04)
+
+### Fixes
+
 * Fix setuptools not finding the schema package (fixes #311) [Stavros Korokithakis]
 
 
