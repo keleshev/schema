@@ -9,7 +9,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Generic,
     Iterable,
     List,
     NoReturn,
@@ -649,7 +648,9 @@ class And(Schema):
 
     def _build_schema(self, arg: Any) -> Schema:
         # Assume self._schema_class(arg, ...) returns an instance of Schema
-        return self._schema_class(arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys)
+        return self._schema_class(
+            arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys
+        )
 
 
 class Or(And):
@@ -661,7 +662,12 @@ class Or(And):
     xor-ish Or instance and one wants to use it another time, one needs to call
     reset() to put the match_count back to 0."""
 
-    def __init__(self, *args: Union[Schema, Callable[..., Any]], only_one: bool = False, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Union[Schema, Callable[..., Any]],
+        only_one: bool = False,
+        **kwargs: Any,
+    ) -> None:
         self.only_one: bool = only_one
         self.match_count: int = 0
         super().__init__(*args, **kwargs)
@@ -670,7 +676,9 @@ class Or(And):
         failed: bool = self.match_count > 1 and self.only_one
         self.match_count = 0
         if failed:
-            raise SchemaOnlyOneAllowedError(["There are multiple keys present from the %r condition" % self])
+            raise SchemaOnlyOneAllowedError(
+                ["There are multiple keys present from the %r condition" % self]
+            )
 
     def validate(self, data: Any, **kwargs: Any) -> Any:
         """
@@ -715,9 +723,13 @@ class Regex:
         "re.TEMPLATE",
     ]
 
-    def __init__(self, pattern_str: str, flags: int = 0, error: Union[str, None] = None) -> None:
+    def __init__(
+        self, pattern_str: str, flags: int = 0, error: Union[str, None] = None
+    ) -> None:
         self._pattern_str: str = pattern_str
-        flags_list = [Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"]  # Name for each bit
+        flags_list = [
+            Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"
+        ]  # Name for each bit
 
         self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""
         self._pattern: re.Pattern = re.compile(pattern_str, flags=flags)
@@ -743,10 +755,16 @@ class Regex:
             if self._pattern.search(data):
                 return data
             else:
-                error_message = e.format(data) if e else f"{data!r} does not match {self._pattern_str!r}"
+                error_message = (
+                    e.format(data)
+                    if e
+                    else f"{data!r} does not match {self._pattern_str!r}"
+                )
                 raise SchemaError(error_message)
         except TypeError:
-            error_message = e.format(data) if e else f"{data!r} is not string nor buffer"
+            error_message = (
+                e.format(data) if e else f"{data!r} is not string nor buffer"
+            )
             raise SchemaError(error_message)
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
@@ -759,7 +777,9 @@ class Use:
     the data while it is being validated.
     """
 
-    def __init__(self, callable_: Callable[[Any], Any], error: Union[str, None] = None) -> None:
+    def __init__(
+        self, callable_: Callable[[Any], Any], error: Union[str, None] = None
+    ) -> None:
         if not callable(callable_):
             raise TypeError(f"Expected a callable, not {callable_!r}")
         self._callable: Callable[[Any], Any] = callable_
@@ -772,10 +792,16 @@ class Use:
         try:
             return self._callable(data)
         except SchemaError as x:
-            raise SchemaError([None] + x.autos, [self._error.format(data) if self._error else None] + x.errors)
+            raise SchemaError(
+                [None] + x.autos,
+                [self._error.format(data) if self._error else None] + x.errors,
+            )
         except BaseException as x:
             f = _callable_str(self._callable)
-            raise SchemaError("%s(%r) raised %r" % (f, data, x), self._error.format(data) if self._error else None)
+            raise SchemaError(
+                "%s(%r) raised %r" % (f, data, x),
+                self._error.format(data) if self._error else None,
+            )
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         pass
@@ -788,7 +814,7 @@ def _priority(s: Any) -> int:
     """Return priority for a given object."""
     if type(s) in (list, tuple, set, frozenset):
         return ITERABLE
-    if type(s) is dict:
+    if isinstance(s, dict):
         return DICT
     if issubclass(type(s), type):
         return TYPE
@@ -807,8 +833,6 @@ def _invoke_with_optional_kwargs(f: Callable[..., Any], **kwargs: Any) -> Any:
     if len(s.parameters) == 0:
         return f()
     return f(**kwargs)
-
-
 
 
 class Optional(Schema):
