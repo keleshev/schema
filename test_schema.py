@@ -1985,3 +1985,25 @@ def test_callable_error():
     except SchemaError as ex:
         e = ex
     assert e.errors == ["This is the error message"]
+
+
+def test_tuple_key_of_dict():
+    # this is a simplified regression test of the bug in github issue #312
+    assert Schema({('map_point', 'to', 'map_polygon'): {}}).validate(
+        {('map_point', 'to', 'map_polygon'): {}}
+    ) == {('map_point', 'to', 'map_polygon'): {}}
+    with SE:
+        assert Schema({('map_point', 'to', 'map_polygon'): {}}).validate(
+            {('map_polygon', 'to', 'map_polygon'): {}}
+        ) == {('map_polygon', 'to', 'map_polygon'): {}}
+
+
+def test_frozenset_key_of_dict():
+    # this is a simplified regression test of the bug in github issue #312
+    assert Schema({frozenset(('map_point', 'to', 'map_polygon')): {}}).validate(
+        {frozenset(('map_point', 'to', 'map_polygon')): {}}
+    ) == {frozenset(('map_point', 'to', 'map_polygon')): {}}
+    with SE:
+        assert Schema({frozenset(('map_point', 'to', 'map_polygon')): {}}).validate(
+            {frozenset(('map_polygon', 'to', 'map_polygon')): {}}
+        ) == {frozenset(('map_polygon', 'to', 'map_polygon')): {}}
