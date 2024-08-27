@@ -749,6 +749,9 @@ class Regex:
             error_message = e.format(data) if e else f"{data!r} is not string nor buffer"
             raise SchemaError(error_message)
 
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        pass
+
 
 class Use:
     """
