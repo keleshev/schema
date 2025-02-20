@@ -743,7 +743,9 @@ class Schema(object):
                     return_schema["type"] = "string"
                     # JSON schema uses ECMAScript regex syntax
                     # Translating one to another is not easy, but this should work for simple cases
-                    return_schema["pattern"] = re.sub(r"\(\?P<[a-z\d_]+>", "(", s.pattern_str).replace("/", r"\/")
+                    return_schema["pattern"] = re.sub(
+                        r"\(\?P<[a-z\d_]+>", "(", s.pattern_str
+                    ).replace("/", r"\/")
                 else:
                     if flavor != DICT:
                         # If not handled, do not check
@@ -911,7 +913,12 @@ class Forbidden(Hook):
 
 
 class Literal:
-    def __init__(self, value: Any, description: Union[str, None] = None, title: Union[str, None] = None) -> None:
+    def __init__(
+        self,
+        value: Any,
+        description: Union[str, None] = None,
+        title: Union[str, None] = None,
+    ) -> None:
         self._schema: Any = value
         self._description: Union[str, None] = description
         self._title: Union[str, None] = title

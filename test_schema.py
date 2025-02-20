@@ -1077,6 +1077,7 @@ def test_json_schema_regex():
         "type": "object",
     }
 
+
 def test_json_schema_ecma_compliant_regex():
     s = Schema({Optional("username"): Regex("^(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)/$")})
     assert s.json_schema("my-id") == {
@@ -1414,7 +1415,13 @@ def test_json_schema_dict_type():
 
 def test_regex_json_schema():
     s = Schema(
-        {Literal("productId", title="Product ID", description="The unique identifier for a product"): int},
+        {
+            Literal(
+                "productId",
+                title="Product ID",
+                description="The unique identifier for a product",
+            ): int
+        },
         name="Product",
         description="A product in the catalog",
     )
