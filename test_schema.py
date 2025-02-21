@@ -1078,6 +1078,20 @@ def test_json_schema_regex():
     }
 
 
+def test_json_schema_ecma_compliant_regex():
+    s = Schema({Optional("username"): Regex("^(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)/$")})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {
+            "username": {"type": "string", "pattern": "^([a-zA-Z_][a-zA-Z0-9_]*)\/$"}
+        },
+        "required": [],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
 def test_json_schema_or_types():
     s = Schema({"test": Or(str, int)})
     assert s.json_schema("my-id") == {
@@ -1132,7 +1146,7 @@ def test_json_schema_const_is_none():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
-        "properties": {"test": {"const": None}},
+        "properties": {"test": {"type": None}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
@@ -1399,9 +1413,15 @@ def test_json_schema_dict_type():
     }
 
 
-def test_json_schema_title_and_description():
+def test_regex_json_schema():
     s = Schema(
-        {Literal("productId", description="The unique identifier for a product"): int},
+        {
+            Literal(
+                "productId",
+                title="Product ID",
+                description="The unique identifier for a product",
+            ): int
+        },
         name="Product",
         description="A product in the catalog",
     )
@@ -1412,6 +1432,7 @@ def test_json_schema_title_and_description():
         "description": "A product in the catalog",
         "properties": {
             "productId": {
+                "title": "Product ID",
                 "description": "The unique identifier for a product",
                 "type": "integer",
             }

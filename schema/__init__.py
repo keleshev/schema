@@ -590,6 +590,7 @@ class Schema(object):
         def _json_schema(
             schema: "Schema",
             is_main_schema: bool = True,
+            title: Union[str, None] = None,
             description: Union[str, None] = None,
             allow_reference: bool = True,
         ) -> Dict[str, Any]:
@@ -654,6 +655,8 @@ class Schema(object):
             return_description: Union[str, None] = description or schema.description
             if return_description:
                 return_schema["description"] = return_description
+            if title:
+                return_schema["title"] = title
 
             # Check if we have to create a common definition and use as reference
             if allow_reference and schema.as_reference:
@@ -696,7 +699,11 @@ class Schema(object):
                         ]
                         # All values are simple, can use enum or const
                         if len(or_values) == 1:
-                            return_schema["const"] = _to_json_type(or_values[0])
+                            or_value = or_values[0]
+                            if or_value is None:
+                                return_schema["type"] = None
+                            else:
+                                return_schema["const"] = _to_json_type(or_value)
                             return return_schema
                         return_schema["enum"] = or_values
                     else:
@@ -728,10 +735,17 @@ class Schema(object):
                     else:
                         return_schema["allOf"] = all_of_values
                 elif flavor == COMPARABLE:
-                    return_schema["const"] = _to_json_type(s)
+                    if s is None:
+                        return_schema["type"] = None
+                    else:
+                        return_schema["const"] = _to_json_type(s)
                 elif flavor == VALIDATOR and type(s) == Regex:
                     return_schema["type"] = "string"
-                    return_schema["pattern"] = s.pattern_str
+                    # JSON schema uses ECMAScript regex syntax
+                    # Translating one to another is not easy, but this should work for simple cases
+                    return_schema["pattern"] = re.sub(
+                        r"\(\?P<[a-z\d_]+>", "(", s.pattern_str
+                    ).replace("/", r"\/")
                 else:
                     if flavor != DICT:
                         # If not handled, do not check
@@ -752,6 +766,16 @@ class Schema(object):
                                 return _key_allows_additional_properties(key.schema)
 
                             return key == str or key == object
+
+                        def _get_key_title(key: Any) -> Union[str, None]:
+                            """Get the title associated to a key (as specified in a Literal object). Return None if not a Literal"""
+                            if isinstance(key, Optional):
+                                return _get_key_title(key.schema)
+
+                            if isinstance(key, Literal):
+                                return key.title
+
+                            return None
 
                         def _get_key_description(key: Any) -> Union[str, None]:
                             """Get the description associated to a key (as specified in a Literal object). Return None if not a Literal"""
@@ -786,6 +810,7 @@ class Schema(object):
                             expanded_schema[key_name] = _json_schema(
                                 sub_schema,
                                 is_main_schema=False,
+                                title=_get_key_title(key),
                                 description=_get_key_description(key),
                             )
                             if isinstance(key, Optional) and hasattr(key, "default"):
@@ -888,9 +913,15 @@ class Forbidden(Hook):
 
 
 class Literal:
-    def __init__(self, value: Any, description: Union[str, None] = None) -> None:
+    def __init__(
+        self,
+        value: Any,
+        description: Union[str, None] = None,
+        title: Union[str, None] = None,
+    ) -> None:
         self._schema: Any = value
         self._description: Union[str, None] = description
+        self._title: Union[str, None] = title
 
     def __str__(self) -> str:
         return str(self._schema)
@@ -901,6 +932,10 @@ class Literal:
     @property
     def description(self) -> Union[str, None]:
         return self._description
+
+    @property
+    def title(self) -> Union[str, None]:
+        return self._title
 
     @property
     def schema(self) -> Any:
