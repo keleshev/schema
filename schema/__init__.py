@@ -459,7 +459,11 @@ class Schema(object):
                     for skey in sorted_skeys:
                         svalue = s[skey]
                         try:
-                            nkey = Schema(skey, error=e).validate(key, **kwargs)
+                            if isinstance(skey, (tuple, frozenset)):
+                                Schema(hash(skey), error=e).validate(hash(key), **kwargs)
+                                nkey = skey
+                            else:
+                                nkey = Schema(skey, error=e).validate(key, **kwargs)
                         except SchemaError:
                             pass
                         else:
