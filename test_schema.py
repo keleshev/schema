@@ -1146,7 +1146,7 @@ def test_json_schema_const_is_none():
     assert s.json_schema("my-id") == {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
-        "properties": {"test": {"type": None}},
+        "properties": {"test": {"type": "null"}},
         "required": ["test"],
         "additionalProperties": False,
         "type": "object",
@@ -1413,7 +1413,7 @@ def test_json_schema_dict_type():
     }
 
 
-def test_regex_json_schema():
+def test_json_schema_title_and_description():
     s = Schema(
         {
             Literal(
