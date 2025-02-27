@@ -671,6 +671,9 @@ class Schema(object):
 
                 return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
             else:
+                if schema.name and not title:
+                    return_schema["title"] = schema.name
+
                 if flavor == TYPE:
                     # Handle type
                     return_schema["type"] = _get_type_name(s)

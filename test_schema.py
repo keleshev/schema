@@ -1443,6 +1443,46 @@ def test_json_schema_title_and_description():
     }
 
 
+def test_json_schema_title_in_or():
+    s = Schema(
+        {
+            "test": Or(
+                Schema(
+                    "option1", name="Option 1", description="This is the first option"
+                ),
+                Schema(
+                    "option2",
+                    name="Option 2",
+                    description="This is the second option",
+                ),
+            )
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "properties": {
+            "test": {
+                "anyOf": [
+                    {
+                        "const": "option1",
+                        "title": "Option 1",
+                        "description": "This is the first option",
+                    },
+                    {
+                        "const": "option2",
+                        "title": "Option 2",
+                        "description": "This is the second option",
+                    },
+                ]
+            }
+        },
+        "required": ["test"],
+        "additionalProperties": False,
+        "type": "object",
+    }
+
+
 def test_json_schema_description_nested():
     s = Schema(
         {
@@ -1588,8 +1628,16 @@ def test_json_schema_ref_in_list():
 
     assert generated_json_schema == {
         "definitions": {
-            "Inner test": {"items": {"type": "string"}, "type": "array"},
-            "Inner test2": {"items": {"type": "string"}, "type": "array"},
+            "Inner test": {
+                "items": {"type": "string"},
+                "type": "array",
+                "title": "Inner test",
+            },
+            "Inner test2": {
+                "items": {"type": "string"},
+                "type": "array",
+                "title": "Inner test2",
+            },
         },
         "anyOf": [
             {"$ref": "#/definitions/Inner test"},
@@ -1775,6 +1823,7 @@ def test_json_schema_definitions():
         "definitions": {
             "sub_schema": {
                 "type": "object",
+                "title": "sub_schema",
                 "properties": {"sub_key1": {"type": "integer"}},
                 "required": ["sub_key1"],
                 "additionalProperties": False,
@@ -1824,6 +1873,7 @@ def test_json_schema_definitions_and_literals():
                     "sub_key1": {"description": "Sub key 1", "type": "integer"}
                 },
                 "required": ["sub_key1"],
+                "title": "sub_schema",
                 "additionalProperties": False,
             }
         },
@@ -1855,6 +1905,7 @@ def test_json_schema_definitions_nested():
         "definitions": {
             "sub_schema": {
                 "type": "object",
+                "title": "sub_schema",
                 "properties": {
                     "sub_key1": {"type": "integer"},
                     "sub_key2": {"$ref": "#/definitions/sub_sub_schema"},
@@ -1864,6 +1915,7 @@ def test_json_schema_definitions_nested():
             },
             "sub_sub_schema": {
                 "type": "object",
+                "title": "sub_sub_schema",
                 "properties": {"sub_sub_key1": {"type": "integer"}},
                 "required": ["sub_sub_key1"],
                 "additionalProperties": False,
@@ -1894,6 +1946,7 @@ def test_json_schema_definitions_recursive():
         "definitions": {
             "person": {
                 "type": "object",
+                "title": "person",
                 "properties": {
                     "name": {"type": "string"},
                     "children": {
