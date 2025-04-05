@@ -5,6 +5,9 @@ import sys
 
 from setuptools import setup
 
+print("Test")
+print("Test2")
+
 version_file = os.path.join("schema", "__init__.py")
 
 with open(version_file) as f:
