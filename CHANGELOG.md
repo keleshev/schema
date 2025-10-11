@@ -3,7 +3,17 @@
 
 ## Unreleased
 
+### Features
+
+* [JSON Schema] Add title for Literal. [Denis Blanchette]
+
 ### Fixes
+
+* JSON Schema missing title in subschemas. [Denis Blanchette]
+
+* [JSON Schema] Type "null" should be string. [Denis Blanchette]
+
+* Ruff format. [Denis Blanchette]
 
 * Include py.typed module when building package. [Stavros Korokithakis]
 
