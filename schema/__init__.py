@@ -303,6 +303,15 @@ class Use:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._callable!r})"
 
+    def __call__(self, data: Any) -> Any:
+        """Make Use instances callable by delegating to the wrapped callable.
+
+        This allows Use to work properly with And, Or, and other combinators
+        that expect callable arguments, while maintaining the validate() method
+        for the validator pattern.
+        """
+        return self._callable(data)
+
     def validate(self, data: Any, **kwargs: Any) -> Any:
         try:
             return self._callable(data)
