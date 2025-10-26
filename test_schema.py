@@ -1084,7 +1084,7 @@ def test_json_schema_ecma_compliant_regex():
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "my-id",
         "properties": {
-            "username": {"type": "string", "pattern": "^([a-zA-Z_][a-zA-Z0-9_]*)\/$"}
+            "username": {"type": "string", "pattern": r"^([a-zA-Z_][a-zA-Z0-9_]*)\/$"}
         },
         "required": [],
         "additionalProperties": False,
