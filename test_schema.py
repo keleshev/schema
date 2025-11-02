@@ -1603,6 +1603,105 @@ def test_json_schema_description_and_nested():
     }
 
 
+def test_json_schema_regex_properties():
+    s = Schema(
+        {
+            Regex(r"^[A-Z]+$"): {
+                "test1": int,
+                Optional("test2"): str,
+            },
+            Regex(r"^[0-9]+$"): int,
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": False,
+        "patternProperties": {
+            "^[A-Z]+$": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+            "^[0-9]+$": {
+                "type": "integer",
+            },
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_regex_properties_with_or_keys():
+    s = Schema(
+        {
+            Or(Regex(r"^[A-Z]+$"), "/"): {
+                "test1": int,
+                Optional("test2"): str,
+            },
+            Or(Regex(r"^[0-9]+$"), Regex(r"^abc[0-9]+$")): int,
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "/": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+        "patternProperties": {
+            "^[A-Z]+$": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+            "^[0-9]+$": {
+                "type": "integer",
+            },
+            "^abc[0-9]+$": {
+                "type": "integer",
+            },
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
 def test_description():
     s = Schema(
         {Optional(Literal("test1", description="A description here"), default={}): dict}

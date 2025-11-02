@@ -768,6 +768,7 @@ class Schema(object):
                     required_keys = []
                     expanded_schema = {}
                     additional_properties = i
+                    pattern_properties = {}
                     for key in s:
                         if isinstance(key, Hook):
                             continue
@@ -836,11 +837,30 @@ class Schema(object):
                             # This is less strict because we cannot enforce that one or the other is required
 
                             for or_key in key_name.args:
+                                if isinstance(or_key, Regex):
+                                    or_key_name = re.sub(
+                                        r"\(\?P<[a-z\d_]+>", "(", or_key.pattern_str
+                                    ).replace("/", r"\/")
+                                    pattern_properties[or_key_name] = _json_schema(
+                                        sub_schema,
+                                        is_main_schema=False,
+                                        description=_get_key_description(or_key),
+                                    )
+                                    continue
                                 expanded_schema[_get_key_name(or_key)] = _json_schema(
                                     sub_schema,
                                     is_main_schema=False,
                                     description=_get_key_description(or_key),
                                 )
+                        elif isinstance(key_name, Regex):
+                            key_name = re.sub(
+                                r"\(\?P<[a-z\d_]+>", "(", key_name.pattern_str
+                            ).replace("/", r"\/")
+                            pattern_properties[key_name] = _json_schema(
+                                sub_schema,
+                                is_main_schema=False,
+                                description=_get_key_description(key),
+                            )
 
                     return_schema.update(
                         {
@@ -850,6 +870,9 @@ class Schema(object):
                             "additionalProperties": additional_properties,
                         }
                     )
+
+                    if len(pattern_properties) > 0:
+                        return_schema["patternProperties"] = pattern_properties
 
             if is_main_schema:
                 return_schema.update(
