@@ -1317,9 +1317,9 @@ def test_json_schema_forbidden_key_ignored():
     "input_schema, ignore_extra_keys, additional_properties",
     [
         ({}, False, False),
-        ({str: str}, False, True),
-        ({Optional(str): str}, False, True),
-        ({object: int}, False, True),
+        ({str: str}, False, {"type": "string"}),
+        ({Optional(str): str}, False, {"type": "string"}),
+        ({object: int}, False, False),
         ({}, True, True),
     ],
 )
@@ -1344,7 +1344,7 @@ def test_json_schema_additional_properties_multiple():
         "$id": "my-id",
         "required": ["named_property"],
         "properties": {"named_property": {"type": "boolean"}},
-        "additionalProperties": True,
+        "additionalProperties": False,
         "type": "object",
     }
 
@@ -1699,6 +1699,144 @@ def test_json_schema_regex_properties_with_or_keys():
         },
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_properties_and_additional_properties():
+    s = Schema(
+        {
+            "test": int,
+            "abc": bool,
+            str: {
+                "abc": bool,
+                Optional("test1"): bool,
+                "test2": int,
+                "test3": {
+                    "test": bool,
+                },
+            },
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "test": {
+                "type": "integer",
+            },
+            "abc": {
+                "type": "boolean",
+            },
+        },
+        "required": [
+            "test",
+            "abc",
+        ],
+        "additionalProperties": {
+            "type": "object",
+            "properties": {
+                "abc": {
+                    "type": "boolean",
+                },
+                "test1": {
+                    "type": "boolean",
+                },
+                "test2": {
+                    "type": "integer",
+                },
+                "test3": {
+                    "type": "object",
+                    "required": ["test"],
+                    "properties": {
+                        "test": {
+                            "type": "boolean",
+                        }
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            "required": [
+                "abc",
+                "test2",
+                "test3",
+            ],
+            "additionalProperties": False,
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_additional_properties_with_refs():
+    s = Schema(
+        {
+            "test": int,
+            "abc": bool,
+            str: Schema(
+                {
+                    "abc": bool,
+                    Optional("test1"): bool,
+                    "test2": int,
+                    "test3": {
+                        "test": bool,
+                    },
+                },
+                name="test4",
+                as_reference=True,
+            ),
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "test": {
+                "type": "integer",
+            },
+            "abc": {
+                "type": "boolean",
+            },
+        },
+        "required": [
+            "test",
+            "abc",
+        ],
+        "additionalProperties": {
+            "$ref": "#/definitions/test4",
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "test4": {
+                "type": "object",
+                "properties": {
+                    "abc": {
+                        "type": "boolean",
+                    },
+                    "test1": {
+                        "type": "boolean",
+                    },
+                    "test2": {
+                        "type": "integer",
+                    },
+                    "test3": {
+                        "type": "object",
+                        "required": ["test"],
+                        "properties": {
+                            "test": {
+                                "type": "boolean",
+                            }
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "required": [
+                    "abc",
+                    "test2",
+                    "test3",
+                ],
+                "additionalProperties": False,
+                "title": "test4",
+            },
+        },
     }
 
 

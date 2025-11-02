@@ -778,7 +778,7 @@ class Schema(object):
                             if isinstance(key, Optional):
                                 return _key_allows_additional_properties(key.schema)
 
-                            return key == str or key == object
+                            return key == str
 
                         def _get_key_title(key: Any) -> Union[str, None]:
                             """Get the title associated to a key (as specified in a Literal object). Return None if not a Literal"""
@@ -859,6 +859,21 @@ class Schema(object):
                             pattern_properties[key_name] = _json_schema(
                                 sub_schema,
                                 is_main_schema=False,
+                                description=_get_key_description(key),
+                            )
+                        elif _key_allows_additional_properties(key):
+                            if i:
+                                # Don't generate sub-schema when extra keys are already ignored
+                                continue
+                            if isinstance(additional_properties, dict):
+                                raise TypeError(
+                                    "For JSON schema generation only one key can be str."
+                                )
+
+                            additional_properties = _json_schema(
+                                sub_schema,
+                                is_main_schema=False,
+                                title=_get_key_title(key),
                                 description=_get_key_description(key),
                             )
 

@@ -696,25 +696,35 @@ Implemented
 
     ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': [], 'additionalProperties': False}``
 
-    additionalProperties is set to true when at least one of the conditions is met:
-        - ignore_extra_keys is True
-        - at least one key is `str` or `object`
+    additionalProperties is set to True when ignore_extra_keys is True.
+
+    additionalProperties is set to a schema when the following conditions are met:
+        - ignore_extra_keys is False
+        - only one key is `str`
 
     For example:
 
-    ``Schema({str: str})`` and ``Schema({}, ignore_extra_keys=True)``
+    ``Schema({}, ignore_extra_keys=True)``
 
-    both becomes
+    becomes
 
-    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': True}``
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': True}``
 
     and
+
+    ``Schema({str: int})``
+
+    becomes
+
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': {'type': 'integer'}}``
+
+    while
 
     ``Schema({})``
 
     becomes
 
-    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': False}``
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}``
 
 Types
     Use the Python type name directly. It will be converted to the JSON name:
