@@ -679,6 +679,19 @@ class Schema(object):
                     )
 
                 return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
+
+                # NOTE: Any application parsing the draft-07 dialect must ignore any other properties when $ref is present.
+                #       See: https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
+                #       Starting with draft-2019, applications *may* allow overriding the referenced properties in these cases.
+                #       See: https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.7.7.1.1
+
+                # Remove description key when the referenced description is the same
+                if (
+                    return_description
+                    and definitions_by_name[schema.name].get("description")
+                    == return_description
+                ):
+                    del return_schema["description"]
             else:
                 if schema.name and not title:
                     return_schema["title"] = schema.name
