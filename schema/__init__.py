@@ -778,6 +778,9 @@ class Schema(object):
                             if isinstance(key, Optional):
                                 return _key_allows_additional_properties(key.schema)
 
+                            if isinstance(key, Literal):
+                                return _key_allows_additional_properties(key.schema)
+
                             return key == str
 
                         def _get_key_title(key: Any) -> Union[str, None]:
