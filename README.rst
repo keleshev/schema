@@ -700,7 +700,7 @@ Implemented
 
     additionalProperties is set to a schema when the following conditions are met:
         - ignore_extra_keys is False
-        - only one key is `str`
+        - only one key is `str`, `Optional(str)` or `Literal(str)`
 
     For example:
 
@@ -844,7 +844,6 @@ The following JSON schema validations cannot be generated from this library.
 - `Combining schemas with oneOf <https://json-schema.org/understanding-json-schema/reference/combining.html#oneof>`_
 - `Not <https://json-schema.org/understanding-json-schema/reference/combining.html#not>`_
 - `Object size <https://json-schema.org/understanding-json-schema/reference/object.html#size>`_
-- `additionalProperties having a different schema (true and false is supported)`
 
 
 JSON: Minimizing output size
