@@ -1766,23 +1766,55 @@ def test_json_schema_properties_and_additional_properties():
     }
 
 
-def test_json_schema_additional_properties_with_refs():
+@mark.parametrize(
+    "sub_schema_key, expected_additional_pairs",
+    [
+        # Any string key
+        (str, {}),
+        # Any Literal key
+        (
+            Literal(str, title="My title", description="My description"),
+            {"title": "My title", "description": "My description"},
+        ),
+        # Any Optional key
+        (Optional(str), {}),
+        # Any nested Literal & Optional key
+        (
+            Literal(
+                Optional(str), title="My second title", description="New description"
+            ),
+            {"title": "My second title", "description": "New description"},
+        ),
+        # Any nested Optional & Literal key
+        (
+            Optional(
+                Literal(str, title="My third title", description="Test description")
+            ),
+            {"title": "My third title", "description": "Test description"},
+        ),
+    ],
+)
+def test_json_schema_additional_properties_with_refs(
+    sub_schema_key, expected_additional_pairs
+):
+    sub_schema = Schema(
+        {
+            "abc": bool,
+            Optional("test1"): bool,
+            "test2": int,
+            "test3": {
+                "test": bool,
+            },
+        },
+        name="sub-schema",
+        description="A sub schema description",
+        as_reference=True,
+    )
     s = Schema(
         {
             "test": int,
             "abc": bool,
-            str: Schema(
-                {
-                    "abc": bool,
-                    Optional("test1"): bool,
-                    "test2": int,
-                    "test3": {
-                        "test": bool,
-                    },
-                },
-                name="test4",
-                as_reference=True,
-            ),
+            sub_schema_key: sub_schema,
         }
     )
     assert s.json_schema("my-id") == {
@@ -1800,12 +1832,16 @@ def test_json_schema_additional_properties_with_refs():
             "abc",
         ],
         "additionalProperties": {
-            "$ref": "#/definitions/test4",
+            "$ref": "#/definitions/sub-schema",
+            # NOTE: Although application parsing the draft-07 dialect
+            #       must ignore any other properties when $ref is present,
+            #       we are still allowed to add them.
+            **expected_additional_pairs,
         },
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
         "definitions": {
-            "test4": {
+            "sub-schema": {
                 "type": "object",
                 "properties": {
                     "abc": {
@@ -1834,7 +1870,8 @@ def test_json_schema_additional_properties_with_refs():
                     "test3",
                 ],
                 "additionalProperties": False,
-                "title": "test4",
+                "title": "sub-schema",
+                "description": "A sub schema description",
             },
         },
     }
