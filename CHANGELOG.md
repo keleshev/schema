@@ -3,6 +3,9 @@
 
 ## Unreleased
 
+
+## v0.7.8 (2025-10-11)
+
 ### Features
 
 * [JSON Schema] Add title for Literal. [Denis Blanchette]
