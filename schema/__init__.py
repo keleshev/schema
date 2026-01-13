@@ -679,6 +679,19 @@ class Schema(object):
                     )
 
                 return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
+
+                # NOTE: Any application parsing the draft-07 dialect must ignore any other properties when $ref is present.
+                #       See: https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
+                #       Starting with draft-2019, applications *may* allow overriding the referenced properties in these cases.
+                #       See: https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.7.7.1.1
+
+                # Remove description key when the referenced description is the same
+                if (
+                    return_description
+                    and definitions_by_name[schema.name].get("description")
+                    == return_description
+                ):
+                    del return_schema["description"]
             else:
                 if schema.name and not title:
                     return_schema["title"] = schema.name
@@ -768,6 +781,7 @@ class Schema(object):
                     required_keys = []
                     expanded_schema = {}
                     additional_properties = i
+                    pattern_properties = {}
                     for key in s:
                         if isinstance(key, Hook):
                             continue
@@ -777,7 +791,10 @@ class Schema(object):
                             if isinstance(key, Optional):
                                 return _key_allows_additional_properties(key.schema)
 
-                            return key == str or key == object
+                            if isinstance(key, Literal):
+                                return _key_allows_additional_properties(key.schema)
+
+                            return key == str
 
                         def _get_key_title(key: Any) -> Union[str, None]:
                             """Get the title associated to a key (as specified in a Literal object). Return None if not a Literal"""
@@ -836,11 +853,45 @@ class Schema(object):
                             # This is less strict because we cannot enforce that one or the other is required
 
                             for or_key in key_name.args:
+                                if isinstance(or_key, Regex):
+                                    or_key_name = re.sub(
+                                        r"\(\?P<[a-z\d_]+>", "(", or_key.pattern_str
+                                    ).replace("/", r"\/")
+                                    pattern_properties[or_key_name] = _json_schema(
+                                        sub_schema,
+                                        is_main_schema=False,
+                                        description=_get_key_description(or_key),
+                                    )
+                                    continue
                                 expanded_schema[_get_key_name(or_key)] = _json_schema(
                                     sub_schema,
                                     is_main_schema=False,
                                     description=_get_key_description(or_key),
                                 )
+                        elif isinstance(key_name, Regex):
+                            key_name = re.sub(
+                                r"\(\?P<[a-z\d_]+>", "(", key_name.pattern_str
+                            ).replace("/", r"\/")
+                            pattern_properties[key_name] = _json_schema(
+                                sub_schema,
+                                is_main_schema=False,
+                                description=_get_key_description(key),
+                            )
+                        elif _key_allows_additional_properties(key):
+                            if i:
+                                # Don't generate sub-schema when extra keys are already ignored
+                                continue
+                            if isinstance(additional_properties, dict):
+                                raise TypeError(
+                                    "For JSON schema generation only one key can be str."
+                                )
+
+                            additional_properties = _json_schema(
+                                sub_schema,
+                                is_main_schema=False,
+                                title=_get_key_title(key),
+                                description=_get_key_description(key),
+                            )
 
                     return_schema.update(
                         {
@@ -850,6 +901,9 @@ class Schema(object):
                             "additionalProperties": additional_properties,
                         }
                     )
+
+                    if len(pattern_properties) > 0:
+                        return_schema["patternProperties"] = pattern_properties
 
             if is_main_schema:
                 return_schema.update(
