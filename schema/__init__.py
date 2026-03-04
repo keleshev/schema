@@ -131,7 +131,7 @@ class And(Generic[TSchema]):
 
     def __init__(
         self,
-        *args: Union[TSchema, Callable[..., Any]],
+        *args: Any,
         error: Union[str, None] = None,
         ignore_extra_keys: bool = False,
         schema: Union[Type[TSchema], None] = None,
@@ -182,7 +182,7 @@ class Or(And[TSchema]):
 
     def __init__(
         self,
-        *args: Union[TSchema, Callable[..., Any]],
+        *args: Any,
         only_one: bool = False,
         **kwargs: Any,
     ) -> None:
