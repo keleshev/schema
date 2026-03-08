@@ -696,25 +696,35 @@ Implemented
 
     ``{'type': 'object', 'properties': {'test': {'type': 'string'}}, 'required': [], 'additionalProperties': False}``
 
-    additionalProperties is set to true when at least one of the conditions is met:
-        - ignore_extra_keys is True
-        - at least one key is `str` or `object`
+    additionalProperties is set to True when ignore_extra_keys is True.
+
+    additionalProperties is set to a schema when the following conditions are met:
+        - ignore_extra_keys is False
+        - only one key is `str`, `Optional(str)` or `Literal(str)`
 
     For example:
 
-    ``Schema({str: str})`` and ``Schema({}, ignore_extra_keys=True)``
+    ``Schema({}, ignore_extra_keys=True)``
 
-    both becomes
+    becomes
 
-    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': True}``
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': True}``
 
     and
+
+    ``Schema({str: int})``
+
+    becomes
+
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': {'type': 'integer'}}``
+
+    while
 
     ``Schema({})``
 
     becomes
 
-    ``{'type': 'object', 'properties' : {}, 'required': [], 'additionalProperties': False}``
+    ``{'type': 'object', 'properties': {}, 'required': [], 'additionalProperties': False}``
 
 Types
     Use the Python type name directly. It will be converted to the JSON name:
@@ -834,7 +844,6 @@ The following JSON schema validations cannot be generated from this library.
 - `Combining schemas with oneOf <https://json-schema.org/understanding-json-schema/reference/combining.html#oneof>`_
 - `Not <https://json-schema.org/understanding-json-schema/reference/combining.html#not>`_
 - `Object size <https://json-schema.org/understanding-json-schema/reference/object.html#size>`_
-- `additionalProperties having a different schema (true and false is supported)`
 
 
 JSON: Minimizing output size

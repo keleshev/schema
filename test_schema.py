@@ -1317,9 +1317,9 @@ def test_json_schema_forbidden_key_ignored():
     "input_schema, ignore_extra_keys, additional_properties",
     [
         ({}, False, False),
-        ({str: str}, False, True),
-        ({Optional(str): str}, False, True),
-        ({object: int}, False, True),
+        ({str: str}, False, {"type": "string"}),
+        ({Optional(str): str}, False, {"type": "string"}),
+        ({object: int}, False, False),
         ({}, True, True),
     ],
 )
@@ -1344,7 +1344,7 @@ def test_json_schema_additional_properties_multiple():
         "$id": "my-id",
         "required": ["named_property"],
         "properties": {"named_property": {"type": "boolean"}},
-        "additionalProperties": True,
+        "additionalProperties": False,
         "type": "object",
     }
 
@@ -1600,6 +1600,280 @@ def test_json_schema_description_and_nested():
         "additionalProperties": False,
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_regex_properties():
+    s = Schema(
+        {
+            Regex(r"^[A-Z]+$"): {
+                "test1": int,
+                Optional("test2"): str,
+            },
+            Regex(r"^[0-9]+$"): int,
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": False,
+        "patternProperties": {
+            "^[A-Z]+$": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+            "^[0-9]+$": {
+                "type": "integer",
+            },
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_regex_properties_with_or_keys():
+    s = Schema(
+        {
+            Or(Regex(r"^[A-Z]+$"), "/"): {
+                "test1": int,
+                Optional("test2"): str,
+            },
+            Or(Regex(r"^[0-9]+$"), Regex(r"^abc[0-9]+$")): int,
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "/": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+        "patternProperties": {
+            "^[A-Z]+$": {
+                "type": "object",
+                "properties": {
+                    "test1": {
+                        "type": "integer",
+                    },
+                    "test2": {
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "test1",
+                ],
+                "additionalProperties": False,
+            },
+            "^[0-9]+$": {
+                "type": "integer",
+            },
+            "^abc[0-9]+$": {
+                "type": "integer",
+            },
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+def test_json_schema_properties_and_additional_properties():
+    s = Schema(
+        {
+            "test": int,
+            "abc": bool,
+            str: {
+                "abc": bool,
+                Optional("test1"): bool,
+                "test2": int,
+                "test3": {
+                    "test": bool,
+                },
+            },
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "test": {
+                "type": "integer",
+            },
+            "abc": {
+                "type": "boolean",
+            },
+        },
+        "required": [
+            "test",
+            "abc",
+        ],
+        "additionalProperties": {
+            "type": "object",
+            "properties": {
+                "abc": {
+                    "type": "boolean",
+                },
+                "test1": {
+                    "type": "boolean",
+                },
+                "test2": {
+                    "type": "integer",
+                },
+                "test3": {
+                    "type": "object",
+                    "required": ["test"],
+                    "properties": {
+                        "test": {
+                            "type": "boolean",
+                        }
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            "required": [
+                "abc",
+                "test2",
+                "test3",
+            ],
+            "additionalProperties": False,
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+
+
+@mark.parametrize(
+    "sub_schema_key, expected_additional_pairs",
+    [
+        # Any string key
+        (str, {}),
+        # Any Literal key
+        (
+            Literal(str, title="My title", description="My description"),
+            {"title": "My title", "description": "My description"},
+        ),
+        # Any Optional key
+        (Optional(str), {}),
+        # Any nested Literal & Optional key
+        (
+            Literal(
+                Optional(str), title="My second title", description="New description"
+            ),
+            {"title": "My second title", "description": "New description"},
+        ),
+        # Any nested Optional & Literal key
+        (
+            Optional(
+                Literal(str, title="My third title", description="Test description")
+            ),
+            {"title": "My third title", "description": "Test description"},
+        ),
+    ],
+)
+def test_json_schema_additional_properties_with_refs(
+    sub_schema_key, expected_additional_pairs
+):
+    sub_schema = Schema(
+        {
+            "abc": bool,
+            Optional("test1"): bool,
+            "test2": int,
+            "test3": {
+                "test": bool,
+            },
+        },
+        name="sub-schema",
+        description="A sub schema description",
+        as_reference=True,
+    )
+    s = Schema(
+        {
+            "test": int,
+            "abc": bool,
+            sub_schema_key: sub_schema,
+        }
+    )
+    assert s.json_schema("my-id") == {
+        "type": "object",
+        "properties": {
+            "test": {
+                "type": "integer",
+            },
+            "abc": {
+                "type": "boolean",
+            },
+        },
+        "required": [
+            "test",
+            "abc",
+        ],
+        "additionalProperties": {
+            "$ref": "#/definitions/sub-schema",
+            # NOTE: Although application parsing the draft-07 dialect
+            #       must ignore any other properties when $ref is present,
+            #       we are still allowed to add them.
+            **expected_additional_pairs,
+        },
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {
+            "sub-schema": {
+                "type": "object",
+                "properties": {
+                    "abc": {
+                        "type": "boolean",
+                    },
+                    "test1": {
+                        "type": "boolean",
+                    },
+                    "test2": {
+                        "type": "integer",
+                    },
+                    "test3": {
+                        "type": "object",
+                        "required": ["test"],
+                        "properties": {
+                            "test": {
+                                "type": "boolean",
+                            }
+                        },
+                        "additionalProperties": False,
+                    },
+                },
+                "required": [
+                    "abc",
+                    "test2",
+                    "test3",
+                ],
+                "additionalProperties": False,
+                "title": "sub-schema",
+                "description": "A sub schema description",
+            },
+        },
     }
 
 
