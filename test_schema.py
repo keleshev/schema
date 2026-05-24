@@ -1349,6 +1349,23 @@ def test_json_schema_additional_properties_multiple():
     }
 
 
+def test_json_schema_dict_of_dicts_additional_properties():
+    s = Schema({str: {"property-1": str}})
+    assert s.json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "required": [],
+        "properties": {},
+        "additionalProperties": {
+            "type": "object",
+            "properties": {"property-1": {"type": "string"}},
+            "required": ["property-1"],
+            "additionalProperties": False,
+        },
+        "type": "object",
+    }
+
+
 @mark.parametrize(
     "input_schema, expected_keyword, expected_value",
     [

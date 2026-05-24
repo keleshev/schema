@@ -809,12 +809,19 @@ class Schema(object):
 
                             return key
 
-                        additional_properties = (
-                            additional_properties
-                            or _key_allows_additional_properties(key)
-                        )
+                        key_allows_additional = _key_allows_additional_properties(key)
                         sub_schema = _to_schema(s[key], ignore_extra_keys=i)
                         key_name = _get_key_name(key)
+
+                        if key_allows_additional and isinstance(s[key], dict):
+                            # Preserve the value schema of dict-of-dicts type keys
+                            additional_properties = _json_schema(
+                                sub_schema, is_main_schema=False
+                            )
+                        else:
+                            additional_properties = (
+                                additional_properties or key_allows_additional
+                            )
 
                         if isinstance(key_name, str):
                             if not isinstance(key, Optional):
