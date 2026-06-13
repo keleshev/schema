@@ -2059,3 +2059,13 @@ def test_callable_error():
     except SchemaError as ex:
         e = ex
     assert e.errors == ["This is the error message"]
+
+
+def test_tuple_key_error_message_does_not_crash():
+    # Regression test for #253: a tuple dict key (including the empty tuple) must not raise
+    # "TypeError: not enough arguments for format string" when building the key error message.
+    assert Schema({(): [(str,)]}).is_valid({(): ["foo", ("bar",)]}) is False
+
+    with raises(SchemaError) as exc_info:
+        Schema({("a", "b"): int}).validate({("a", "b"): "not-an-int"})
+    assert "Key '('a', 'b')' error:" in exc_info.value.code

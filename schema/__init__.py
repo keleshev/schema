@@ -494,7 +494,7 @@ class Schema(object):
                                         svalue, error=e, ignore_extra_keys=i
                                     ).validate(value, **kwargs)
                                 except SchemaError as x:
-                                    k = "Key '%s' error:" % nkey
+                                    k = "Key '%s' error:" % (nkey,)
                                     message = self._prepend_schema_name(k)
                                     raise SchemaError(
                                         [message] + x.autos,
