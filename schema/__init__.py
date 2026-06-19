@@ -350,7 +350,15 @@ def _priority(s: Any) -> int:
 
 
 def _invoke_with_optional_kwargs(f: Callable[..., Any], **kwargs: Any) -> Any:
-    s = inspect.signature(f)
+    try:
+        s = inspect.signature(f)
+    except (ValueError, TypeError):
+        # Some callables -- notably C-implemented built-ins such as ``dict``
+        # or ``int`` -- do not expose an introspectable signature. We cannot
+        # tell whether they accept keyword arguments, so fall back to calling
+        # them without any, matching how such defaults behaved before
+        # validate() keyword arguments were forwarded to them.
+        return f()
     if len(s.parameters) == 0:
         return f()
     return f(**kwargs)
