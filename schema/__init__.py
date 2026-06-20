@@ -459,6 +459,9 @@ class Schema(object):
                 if hasattr(skey, "reset"):
                     exitstack.callback(skey.reset)
 
+            # Custom errors from key schemas that rejected a data key, kept so
+            # they can be surfaced if that key ends up being a wrong key.
+            key_errors: Dict = {}
             with exitstack:
                 # Evaluate dictionaries last
                 data_items = sorted(
@@ -469,8 +472,11 @@ class Schema(object):
                         svalue = s[skey]
                         try:
                             nkey = Schema(skey, error=e).validate(key, **kwargs)
-                        except SchemaError:
-                            pass
+                        except SchemaError as x:
+                            # If the rejecting key schema carries a custom error,
+                            # remember it in case this data key is reported as wrong.
+                            if getattr(skey, "_error", None) is not None:
+                                key_errors[key] = x.code
                         else:
                             if isinstance(skey, Hook):
                                 # As the content of the value makes little sense for
@@ -525,7 +531,19 @@ class Schema(object):
                     data,
                 )
                 message = self._prepend_schema_name(message)
-                raise SchemaWrongKeyError(message, e.format(data) if e else None)
+                # Surface any custom error from the key schema(s) that rejected
+                # the wrong key(s), so an explicit `error=` is not silently lost.
+                custom_errors = [
+                    key_errors[k]
+                    for k in sorted(wrong_keys, key=repr)
+                    if k in key_errors
+                ]
+                errors: Union[List, str, None] = (
+                    [e.format(data) if e else None] + custom_errors
+                    if custom_errors
+                    else (e.format(data) if e else None)
+                )
+                raise SchemaWrongKeyError(message, errors)
 
             # Apply default-having optionals that haven't been used:
             defaults = (

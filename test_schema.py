@@ -446,6 +446,37 @@ def test_dict_key_error():
         assert e.code == "k2 should be int"
 
 
+def test_wrong_key_reports_key_schema_error():
+    # A custom `error` on a key schema must not be lost when a data key fails to
+    # match it and is therefore reported as a wrong key (issue #345).
+    re_name = re.compile(r"^[A-Z][A-Za-z0-9]+$")
+    schema = Schema({Regex(re_name, error="Invalid profile name"): dict})
+    try:
+        schema.validate({"Foo": {}, "bar": {}})
+    except SchemaWrongKeyError as e:
+        assert e.code == "Invalid profile name"
+    else:
+        raise AssertionError("SchemaWrongKeyError not raised")
+
+    # Without a custom error the default wrong-key message is still used.
+    try:
+        Schema({Regex(re_name): dict}).validate({"Foo": {}, "bar": {}})
+    except SchemaWrongKeyError as e:
+        assert e.code == "Wrong key 'bar' in {'Foo': {}, 'bar': {}}"
+    else:
+        raise AssertionError("SchemaWrongKeyError not raised")
+
+    # The custom error is also surfaced for And-based key schemas.
+    try:
+        Schema({And(str, str.isupper, error="must be upper"): int}).validate(
+            {"FOO": 1, "bar": 2}
+        )
+    except SchemaWrongKeyError as e:
+        assert e.code == "must be upper"
+    else:
+        raise AssertionError("SchemaWrongKeyError not raised")
+
+
 def test_complex():
     s = Schema(
         {
