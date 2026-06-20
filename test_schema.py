@@ -869,6 +869,19 @@ def test_optional_callable_default_ignore_inherited_schema_validate_kwargs():
     assert d["k"] == 1 and d["d"]["k"] == 42 and d["d"]["l"][0]["l"] == [3, 4, 5]
 
 
+def test_optional_callable_default_builtin_c_callables():
+    # ``inspect.signature`` raises for some C-implemented built-ins (e.g.
+    # ``dict`` and ``int``), which previously made them unusable as
+    # ``Optional`` defaults. See https://github.com/keleshev/schema/issues/272
+    assert Schema({Optional("k", default=dict): dict}).validate({}) == {"k": {}}
+    assert Schema({Optional("k", default=int): int}).validate({}) == {"k": 0}
+    assert Schema({Optional("k", default=list): list}).validate({}) == {"k": []}
+    # validate() keyword arguments are still forwarded to callables that
+    # expose an introspectable signature accepting them.
+    s = Schema({Optional("k", default=lambda **kw: kw["increment"]): int})
+    assert s.validate({}, increment=5) == {"k": 5}
+
+
 def test_inheritance_optional():
     def convert(data, increment):
         if isinstance(data, int):
