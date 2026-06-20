@@ -419,6 +419,17 @@ def test_dict_optional_defaults():
         Optional(And(str, Use(int)), default=7)
 
 
+def test_dict_optional_default_preserves_key_type():
+    # A non-string key must keep its type when the default fills it in, just
+    # as it does when the key is present in the data.
+    for key in (5, None, 1.5):
+        schema = Schema({Optional(key, default="x"): str})
+        assert schema.validate({}) == {key: "x"}
+        # present and absent must agree on the output key type
+        present = {key: "p"}
+        assert schema.validate(present) == present
+
+
 def test_dict_subtypes():
     d = defaultdict(int, key=1)
     v = Schema({"key": 1}).validate(d)
