@@ -905,7 +905,15 @@ class Optional(Schema):
                     f'"{self._schema!r}" is too complex.'
                 )
             self.default = default
-            self.key = str(self._schema)
+            # Preserve the original key object so the default fills the output
+            # under the same key (and key type) that a present key would use.
+            # Stringifying here made an absent optional produce ``str(key)``
+            # (e.g. ``"5"``) while a present key kept its real type (``5``).
+            self.key = (
+                self._schema.schema
+                if isinstance(self._schema, Literal)
+                else self._schema
+            )
 
     def __hash__(self) -> int:
         return hash(self._schema)
