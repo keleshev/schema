@@ -471,7 +471,17 @@ class Schema(object):
                     for skey in sorted_skeys:
                         svalue = s[skey]
                         try:
-                            nkey = Schema(skey, error=e).validate(key, **kwargs)
+                            # For tuple/list schema keys, use exact comparison
+                            # to avoid cross-matching via Or semantics when
+                            # elements overlap (issue #312).
+                            if type(skey) in (tuple, list):
+                                if skey != key:
+                                    raise SchemaError(
+                                        "%r does not match %r" % (skey, key), None
+                                    )
+                                nkey = key
+                            else:
+                                nkey = Schema(skey, error=e).validate(key, **kwargs)
                         except SchemaError as x:
                             # If the rejecting key schema carries a custom error,
                             # remember it in case this data key is reported as wrong.
