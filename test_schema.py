@@ -419,6 +419,17 @@ def test_dict_optional_defaults():
         Optional(And(str, Use(int)), default=7)
 
 
+def test_dict_optional_mutable_default_not_shared():
+    # A mutable default (e.g. [] or {}) must not be shared across validate()
+    # calls: mutating one result must not leak into later ones. See GH-352.
+    s = Schema({Optional("items", default=[]): list})
+    a = s.validate({})
+    a["items"].append(1)
+    b = s.validate({})
+    assert b["items"] == []
+    assert a["items"] is not b["items"]
+
+
 def test_dict_subtypes():
     d = defaultdict(int, key=1)
     v = Schema({"key": 1}).validate(d)
