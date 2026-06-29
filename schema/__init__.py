@@ -701,7 +701,16 @@ class Schema(object):
                 if schema.name and not title:
                     return_schema["title"] = schema.name
 
-                if flavor == TYPE:
+                if isinstance(s, Schema):
+                    # A nested Schema instance (e.g. Const, or Schema(Schema(...)))
+                    # carries its own constraints; expand it recursively instead of
+                    # dropping it to an empty (match-anything) schema.
+                    return_schema.update(
+                        _json_schema(
+                            s, is_main_schema=False, allow_reference=allow_reference
+                        )
+                    )
+                elif flavor == TYPE:
                     # Handle type
                     return_schema["type"] = _get_type_name(s)
                 elif flavor == ITERABLE:

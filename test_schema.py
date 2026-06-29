@@ -1009,6 +1009,38 @@ def test_json_schema_nested_schema():
     }
 
 
+def test_json_schema_const_and_nested_schema():
+    # Regression: a Const (or any Schema nested directly inside another Schema)
+    # wrapping a literal/type was dropped to an empty {} schema, which accepts
+    # anything and contradicts what Schema.validate() enforces. The generated
+    # JSON schema must preserve the constraint.
+    assert Schema(Const("fixed")).json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "const": "fixed",
+    }
+    assert Schema(Const(int)).json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "type": "integer",
+    }
+    # A Schema nested directly inside another Schema must expand, not vanish.
+    assert Schema(Schema(int)).json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "type": "integer",
+    }
+    # Const used as a dict value keeps its const in the property schema.
+    assert Schema({"role": Const("admin")}).json_schema("my-id") == {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "my-id",
+        "type": "object",
+        "properties": {"role": {"const": "admin"}},
+        "required": ["role"],
+        "additionalProperties": False,
+    }
+
+
 def test_json_schema_optional_key():
     s = Schema({Optional("test"): str})
     assert s.json_schema("my-id") == {
