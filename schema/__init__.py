@@ -2,6 +2,7 @@
 obtained from config-files, forms, external services or command-line
 parsing, converted from JSON/YAML (or something else) to Python data-types."""
 
+import copy
 import inspect
 import re
 from typing import (
@@ -551,11 +552,16 @@ class Schema(object):
                 - coverage
             )
             for default in defaults:
-                new[default.key] = (
+                value = (
                     _invoke_with_optional_kwargs(default.default, **kwargs)
                     if callable(default.default)
                     else default.default
                 )
+                # Copy mutable defaults to prevent state leaking between
+                # validate() calls (the classic shared-mutable-default issue).
+                if isinstance(value, (list, dict, set)):
+                    value = copy.copy(value)
+                new[default.key] = value
 
             return new
         if flavor == TYPE:
