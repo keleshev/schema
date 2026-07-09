@@ -270,7 +270,16 @@ class Regex:
         e = self._error
 
         try:
-            if self._pattern.search(data):
+            # In non-MULTILINE mode, ``$`` also matches just before a single
+            # trailing newline, so e.g. ``^a$`` spuriously matches ``"a\n"``.
+            # When the data ends with a newline, re-check with an extra newline
+            # appended so that quirk cannot fire; if the match vanishes it was a
+            # phantom and validation must fail. ``newline`` mirrors the data type
+            # so byte patterns keep working.
+            newline = "\n" if isinstance(data, str) else b"\n"
+            if self._pattern.search(data) and not (
+                data.endswith(newline) and not self._pattern.search(data + newline)
+            ):
                 return data
             else:
                 error_message = (
