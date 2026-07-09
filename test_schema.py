@@ -178,6 +178,23 @@ def test_regex():
     with SE:
         Regex(r"^[a-z]+$").validate("letters + spaces") == "letters + spaces"
 
+    # A trailing newline must not sneak past an end-anchored pattern: in
+    # non-MULTILINE mode Python's ``$`` also matches just before a single
+    # trailing newline, so ``^a$`` used to spuriously accept ``"a\n"``.
+    assert Regex(r"^a$").validate("a") == "a"
+    with SE:
+        Regex(r"^a$").validate("a\n")
+    with SE:
+        Regex(r"^a$").validate("a\n\n")
+    with SE:
+        Regex(r"^a$").validate("\na")
+    with SE:
+        Regex(r"^[a-z]+$").validate("letters\n")
+    # Unanchored patterns keep their substring-matching behaviour, so a value
+    # with a trailing newline is still accepted.
+    assert Regex(r"foo").validate("foo\n") == "foo\n"
+    assert Regex(r"^foo").validate("foo\n") == "foo\n"
+
     # Validate dict key
     assert Schema({Regex(r"^foo"): str}).validate({"fookey": "value"}) == {
         "fookey": "value"
