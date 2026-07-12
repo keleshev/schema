@@ -246,7 +246,7 @@ class Regex:
     ) -> None:
         self._pattern_str: str = pattern_str
         flags_list = [
-            Regex.NAMES[i] for i, f in enumerate(f"{flags:09b}") if f != "0"
+            Regex.NAMES[i] for i, f in enumerate(f"{int(flags):09b}") if f != "0"
         ]  # Name for each bit
 
         self._flags_names: str = ", flags=" + "|".join(flags_list) if flags_list else ""

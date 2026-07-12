@@ -215,6 +215,19 @@ def test_regex():
         Regex(None).validate("bar")
 
 
+def test_regex_flags():
+    # Passing an actual re flag (a re.RegexFlag enum member, not a plain int)
+    # must not crash while building the human-readable repr, and the flag must
+    # still be applied. On CPython <= 3.10 and PyPy, formatting a RegexFlag with
+    # the "b" format code raised ValueError before the flag was compiled.
+    single = Regex(r"foo", flags=re.IGNORECASE)
+    assert single.validate("FOObar") == "FOObar"
+    assert "re.IGNORECASE" in repr(single)
+
+    multi = Regex(r"^foo", flags=re.IGNORECASE | re.MULTILINE)
+    assert multi.validate("bar\nFOO") == "bar\nFOO"
+
+
 def test_validate_list():
     assert Schema([1, 0]).validate([1, 0, 1, 1]) == [1, 0, 1, 1]
     assert Schema([1, 0]).validate([]) == []
