@@ -381,6 +381,37 @@ def test_or_explicit_ignore_extra_keys_overrides_parent():
         schema.validate({"a": "x", "extra": 1})
 
 
+def test_or_ignore_extra_keys_inherited_as_dict_value():
+    # Same inheritance mechanism also applies when Or/And is a dict value,
+    # not just the top-level schema.
+    schema = Schema({"a": Or({"b": str}, None)}, ignore_extra_keys=True)
+    assert schema.validate({"a": {"b": "x", "extra": 1}}) == {"a": {"b": "x"}}
+
+
+def test_ignore_extra_keys_inheritance_is_reentrant_safe():
+    # A self-referential/recursive schema (the same And instance nested
+    # inside its own definition, as in the README's EventSchema example)
+    # must not leak an outer call's inherited ignore_extra_keys onto an
+    # inner occurrence that set its own explicit value.
+    node = And({"value": str})
+    node._args = (
+        {"value": str, Optional("children"): [Schema(node, ignore_extra_keys=False)]},
+    )
+    outer = Schema(node, ignore_extra_keys=True)
+
+    # Top-level extra key is ignored (inherited True); nested data is clean.
+    assert outer.validate({"value": "a", "extra": 1, "children": [{"value": "b"}]}) == {
+        "value": "a",
+        "children": [{"value": "b"}],
+    }
+
+    # A nested extra key must still be rejected: the inner occurrence's
+    # explicit ignore_extra_keys=False must not be clobbered by the
+    # still-in-flight outer call's inherited True.
+    with raises(SchemaError):
+        outer.validate({"value": "a", "children": [{"value": "b", "extra": 1}]})
+
+
 def test_dict_forbidden_keys():
     with raises(SchemaForbiddenKeyError):
         Schema({Forbidden("b"): object}).validate({"b": "bye"})
