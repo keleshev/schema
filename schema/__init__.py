@@ -133,12 +133,14 @@ class And(Generic[TSchema]):
         self,
         *args: Any,
         error: Union[str, None] = None,
-        ignore_extra_keys: bool = False,
+        ignore_extra_keys: Union[bool, None] = None,
         schema: Union[Type[TSchema], None] = None,
     ) -> None:
         self._args: Tuple[Union[TSchema, Callable[..., Any]], ...] = args
         self._error: Union[str, None] = error
-        self._ignore_extra_keys: bool = ignore_extra_keys
+        # None means "not explicitly set" so an enclosing Schema's
+        # ignore_extra_keys can be inherited (see Schema.validate).
+        self._ignore_extra_keys: Union[bool, None] = ignore_extra_keys
         self._schema_class: Type[TSchema] = schema if schema is not None else Schema
 
     def __repr__(self) -> str:
@@ -167,7 +169,7 @@ class And(Generic[TSchema]):
     def _build_schema(self, arg: Any) -> TSchema:
         # Assume self._schema_class(arg, ...) returns an instance of TSchema
         return self._schema_class(
-            arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys
+            arg, error=self._error, ignore_extra_keys=bool(self._ignore_extra_keys)
         )
 
 
@@ -566,6 +568,16 @@ class Schema(object):
                 message = self._prepend_schema_name(message)
                 raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
         if flavor == VALIDATOR:
+            # And/Or default to "unset" (None) for ignore_extra_keys so they
+            # can inherit it from the enclosing Schema when not given
+            # explicitly. Restore afterwards to avoid leaking state onto a
+            # schema object that may be reused elsewhere with a different
+            # setting.
+            inherits_ignore_extra_keys = (
+                isinstance(s, And) and s._ignore_extra_keys is None
+            )
+            if inherits_ignore_extra_keys:
+                s._ignore_extra_keys = i
             try:
                 return s.validate(data, **kwargs)
             except SchemaError as x:
@@ -576,6 +588,9 @@ class Schema(object):
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
                 raise SchemaError(message, e.format(data) if e else None)
+            finally:
+                if inherits_ignore_extra_keys:
+                    s._ignore_extra_keys = None
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:

@@ -356,6 +356,31 @@ def test_ignore_extra_keys_validation_and_return_keys():
     }
 
 
+def test_or_inherits_ignore_extra_keys_from_parent_schema():
+    # https://github.com/keleshev/schema/issues/285
+    schema = Schema(Or({"a": str}, None), ignore_extra_keys=True)
+    assert schema.validate({"a": "x", "extra": 1}) == {"a": "x"}
+
+
+def test_and_inherits_ignore_extra_keys_from_parent_schema():
+    schema = Schema(And({"a": str}), ignore_extra_keys=True)
+    assert schema.validate({"a": "x", "extra": 1}) == {"a": "x"}
+
+
+def test_or_default_still_rejects_extra_keys():
+    schema = Schema(Or({"a": str}, None))
+    with raises(SchemaError):
+        schema.validate({"a": "x", "extra": 1})
+
+
+def test_or_explicit_ignore_extra_keys_overrides_parent():
+    schema = Schema(
+        Or({"a": str}, None, ignore_extra_keys=False), ignore_extra_keys=True
+    )
+    with raises(SchemaError):
+        schema.validate({"a": "x", "extra": 1})
+
+
 def test_dict_forbidden_keys():
     with raises(SchemaForbiddenKeyError):
         Schema({Forbidden("b"): object}).validate({"b": "bye"})
