@@ -124,6 +124,20 @@ class SchemaUnexpectedTypeError(SchemaError):
 TSchema = TypeVar("TSchema", bound="Schema")
 
 
+#: Internal kwarg key used to thread an enclosing Schema's ignore_extra_keys
+#: into a nested And/Or that didn't set its own (see Schema.validate and
+#: And._resolve_ignore_extra_keys). Call-scoped rather than stored on the
+#: instance, so it's safe under reentrant/recursive schemas and concurrent
+#: validate() calls sharing the same And/Or object. And.validate and
+#: Or.validate both pop it via _resolve_ignore_extra_keys before kwargs
+#: reach anything outside our own dispatch (e.g. Optional default
+#: factories via _invoke_with_optional_kwargs), so it doesn't leak to
+#: user-supplied callables -- a subclass that overrides validate() without
+#: going through _resolve_ignore_extra_keys (or calling super()) would not
+#: get this protection.
+_IGNORE_EXTRA_KEYS_CONTEXT_KWARG = "__schema_ignore_extra_keys_context__"
+
+
 class And(Generic[TSchema]):
     """
     Utility function to combine validation directives in AND Boolean fashion.
@@ -133,12 +147,14 @@ class And(Generic[TSchema]):
         self,
         *args: Any,
         error: Union[str, None] = None,
-        ignore_extra_keys: bool = False,
+        ignore_extra_keys: Union[bool, None] = None,
         schema: Union[Type[TSchema], None] = None,
     ) -> None:
         self._args: Tuple[Union[TSchema, Callable[..., Any]], ...] = args
         self._error: Union[str, None] = error
-        self._ignore_extra_keys: bool = ignore_extra_keys
+        # None means "not explicitly set" so an enclosing Schema's
+        # ignore_extra_keys can be inherited (see Schema.validate).
+        self._ignore_extra_keys: Union[bool, None] = ignore_extra_keys
         self._schema_class: Type[TSchema] = schema if schema is not None else Schema
 
     def __repr__(self) -> str:
@@ -149,6 +165,17 @@ class And(Generic[TSchema]):
         """The provided parameters"""
         return self._args
 
+    def _resolve_ignore_extra_keys(self, kwargs: Dict[str, Any]) -> bool:
+        """Determine ignore_extra_keys for this validate() call: an
+        explicit setting on this And/Or always wins; otherwise inherit the
+        value passed by an enclosing Schema via kwargs. Either way, the
+        context kwarg is removed from `kwargs` so it never propagates to
+        user-supplied callables further down the call chain."""
+        inherited = kwargs.pop(_IGNORE_EXTRA_KEYS_CONTEXT_KWARG, False)
+        if self._ignore_extra_keys is not None:
+            return self._ignore_extra_keys
+        return bool(inherited)
+
     def validate(self, data: Any, **kwargs: Any) -> Any:
         """
         Validate data using defined sub schema/expressions ensuring all
@@ -156,18 +183,19 @@ class And(Generic[TSchema]):
         :param data: Data to be validated with sub defined schemas.
         :return: Returns validated data.
         """
+        ignore_extra_keys = self._resolve_ignore_extra_keys(kwargs)
         # Annotate sub_schema with the type returned by _build_schema
-        for sub_schema in self._build_schemas():  # type: TSchema
+        for sub_schema in self._build_schemas(ignore_extra_keys):  # type: TSchema
             data = sub_schema.validate(data, **kwargs)
         return data
 
-    def _build_schemas(self) -> List[TSchema]:
-        return [self._build_schema(s) for s in self._args]
+    def _build_schemas(self, ignore_extra_keys: bool) -> List[TSchema]:
+        return [self._build_schema(s, ignore_extra_keys) for s in self._args]
 
-    def _build_schema(self, arg: Any) -> TSchema:
+    def _build_schema(self, arg: Any, ignore_extra_keys: bool) -> TSchema:
         # Assume self._schema_class(arg, ...) returns an instance of TSchema
         return self._schema_class(
-            arg, error=self._error, ignore_extra_keys=self._ignore_extra_keys
+            arg, error=self._error, ignore_extra_keys=ignore_extra_keys
         )
 
 
@@ -205,9 +233,10 @@ class Or(And[TSchema]):
         :param data: data to be validated by provided schema.
         :return: return validated data if not validation
         """
+        ignore_extra_keys = self._resolve_ignore_extra_keys(kwargs)
         autos: List[str] = []
         errors: List[Union[str, None]] = []
-        for sub_schema in self._build_schemas():
+        for sub_schema in self._build_schemas(ignore_extra_keys):
             try:
                 validation: Any = sub_schema.validate(data, **kwargs)
                 self.match_count += 1
@@ -566,8 +595,19 @@ class Schema(object):
                 message = self._prepend_schema_name(message)
                 raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
         if flavor == VALIDATOR:
+            # And/Or default to "unset" (None) for ignore_extra_keys so they
+            # can inherit it from the enclosing Schema when not given
+            # explicitly. The inherited value is threaded through this one
+            # call via a kwarg rather than stored on the (possibly shared)
+            # And/Or instance, so it can't leak across reentrant/recursive
+            # validate() calls or concurrent use of the same schema object.
+            # Whether it's actually used (vs. an explicit setting on `s`
+            # winning) is decided solely by And._resolve_ignore_extra_keys.
+            call_kwargs: Dict[str, Any] = kwargs
+            if isinstance(s, And):
+                call_kwargs = {**kwargs, _IGNORE_EXTRA_KEYS_CONTEXT_KWARG: i}
             try:
-                return s.validate(data, **kwargs)
+                return s.validate(data, **call_kwargs)
             except SchemaError as x:
                 raise SchemaError(
                     [None] + x.autos, [e.format(data) if e else None] + x.errors
