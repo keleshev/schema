@@ -386,6 +386,20 @@ def test_dict_hook():
     assert function_mock.call_count == 2
 
 
+def test_dict_hook_alone():
+    # A Hook with no matching plain/Optional key for the same name used to
+    # raise SchemaWrongKeyError, since the key it consumed never made it
+    # into the validated output and nothing accounted for that on the
+    # wrong-key check. See GH-294.
+    seen = []
+    hook = Hook("my_key", handler=lambda k, d, e: seen.append(k))
+    result = Schema({hook: str, "another_key": str}).validate(
+        {"my_key": "x", "another_key": "y"}
+    )
+    assert result == {"another_key": "y"}
+    assert seen == ["my_key"]
+
+
 def test_dict_optional_keys():
     with SE:
         Schema({"a": 1, "b": 2}).validate({"a": 1})

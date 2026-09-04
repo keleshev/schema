@@ -453,6 +453,7 @@ class Schema(object):
             data = Schema(dict, error=e).validate(data, **kwargs)
             new: Dict = type(data)()  # new - is a dict of the validated values
             coverage: Set = set()  # matched schema keys
+            hook_keys: Set = set()  # data keys consumed by a Hook, not carried into new
             # for each key and value find a schema entry matching them, if any
             sorted_skeys = sorted(s, key=self._dict_key_priority)
             for skey in sorted_skeys:
@@ -494,6 +495,7 @@ class Schema(object):
                                 except SchemaError:
                                     continue
                                 skey.handler(nkey, data, e)
+                                hook_keys.add(key)
                             else:
                                 try:
                                     nvalue = Schema(
@@ -522,8 +524,9 @@ class Schema(object):
                 )
                 message = self._prepend_schema_name(message)
                 raise SchemaMissingKeyError(message, e.format(data) if e else None)
-            if not self._ignore_extra_keys and (len(new) != len(data)):
-                wrong_keys = set(data.keys()) - set(new.keys())
+            accounted_keys = set(new.keys()) | hook_keys
+            if not self._ignore_extra_keys and (len(accounted_keys) != len(data)):
+                wrong_keys = set(data.keys()) - accounted_keys
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
                 message = "Wrong key%s %s in %r" % (
                     _plural_s(wrong_keys),
