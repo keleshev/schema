@@ -1407,7 +1407,17 @@ def test_json_schema_root_not_dict(input_schema, expected_keyword, expected_valu
 
 @mark.parametrize(
     "input_schema, expected_keyword, expected_value",
-    [([1, 2, 3], "enum", [1, 2, 3]), ([1], "const", 1), ([str], "type", "string")],
+    [
+        ([1, 2, 3], "enum", [1, 2, 3]),
+        ([1], "const", 1),
+        ([str], "type", "string"),
+        ((1,), "const", 1),
+        ((str,), "type", "string"),
+        ({1}, "const", 1),
+        ({str}, "type", "string"),
+        (frozenset({1}), "const", 1),
+        (frozenset({str}), "type", "string"),
+    ],
 )
 def test_json_schema_array(input_schema, expected_keyword, expected_value):
     json_schema = Schema(input_schema).json_schema("my-id")
