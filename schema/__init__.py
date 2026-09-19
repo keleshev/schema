@@ -710,7 +710,7 @@ class Schema(object):
                     return_schema["type"] = "array"
                     if len(s) == 1:
                         return_schema["items"] = _json_schema(
-                            _to_schema(s[0], i), is_main_schema=False
+                            _to_schema(next(iter(s)), i), is_main_schema=False
                         )
                     elif len(s) > 1:
                         return_schema["items"] = _json_schema(
