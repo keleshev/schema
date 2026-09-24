@@ -2100,3 +2100,58 @@ def test_tuple_key_error_message_does_not_crash():
     with raises(SchemaError) as exc_info:
         Schema({("a", "b"): int}).validate({("a", "b"): "not-an-int"})
     assert "Key '('a', 'b')' error:" in exc_info.value.code
+
+
+class _ExpensiveRepr:
+    """Stands in for data whose repr is costly or has side effects: lazily
+    evaluated collections, generator-backed readers, DB cursors."""
+
+    def __init__(self):
+        self.repr_calls = 0
+
+    def __repr__(self):
+        self.repr_calls += 1
+        return "<expensive>"
+
+
+def test_successful_validation_does_not_repr_data():
+    # Or/And swallow a SchemaError for every alternative that does not match.
+    # Building those messages eagerly repr()s the data once per losing
+    # alternative, per element -- on a validation that ultimately succeeds.
+    data = _ExpensiveRepr()
+
+    assert Schema(Or(dict, _ExpensiveRepr)).is_valid(data)
+    assert data.repr_calls == 0
+
+    assert Schema(Or(int, str, dict, _ExpensiveRepr)).is_valid(data)
+    assert data.repr_calls == 0
+
+    items = [_ExpensiveRepr() for _ in range(4)]
+    assert Schema([dict, _ExpensiveRepr]).is_valid(items)
+    assert [i.repr_calls for i in items] == [0, 0, 0, 0]
+
+
+def test_failed_validation_still_reports_the_data():
+    # Deferring must not change what a reader eventually sees.
+    data = _ExpensiveRepr()
+    try:
+        Schema(int).validate(data)
+    except SchemaUnexpectedTypeError as e:
+        assert str(e) == "<expensive> should be instance of 'int'"
+        assert e.args[0] == "<expensive> should be instance of 'int'"
+        assert e.code == "<expensive> should be instance of 'int'"
+        assert e.args[0].startswith("<expensive>")
+    else:
+        raise AssertionError("expected SchemaUnexpectedTypeError")
+
+
+def test_deferred_message_is_only_built_once():
+    data = _ExpensiveRepr()
+    try:
+        Schema(int).validate(data)
+    except SchemaUnexpectedTypeError as e:
+        for _ in range(5):
+            str(e)
+            e.code
+            len(e.args[0])
+    assert data.repr_calls == 1

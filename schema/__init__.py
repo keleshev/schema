@@ -54,17 +54,110 @@ __all__ = [
 ]
 
 
+_UNSET: Any = object()
+
+
+class _DeferredMessage:
+    """A str-like whose text is only built the first time it is read.
+
+    ``Or`` and ``And`` routinely swallow ``SchemaError``: every alternative
+    that does not match raises one, and the winning alternative discards it.
+    Formatting those messages eagerly means a validation that *succeeds* still
+    pays ``repr(data)`` once per losing alternative, per element. That is free
+    for a dict or an int, but not for data whose ``repr`` is expensive or has
+    side effects -- lazily evaluated collections, generator-backed readers, DB
+    cursors, very large structures. Deferring keeps the happy path free while
+    leaving the message byte-identical for anyone who reads it.
+
+    Intentionally not a ``str`` subclass: ``str`` is immutable and would have
+    to be built at construction time, which is the cost being avoided.
+    """
+
+    __slots__ = ("_build", "_text")
+
+    def __init__(self, build: Callable[[], str]) -> None:
+        self._build = build
+        self._text: Any = _UNSET
+
+    def _force(self) -> str:
+        if self._text is _UNSET:
+            self._text = self._build()
+        return cast(str, self._text)
+
+    def __str__(self) -> str:
+        return self._force()
+
+    def __repr__(self) -> str:
+        return repr(self._force())
+
+    def __eq__(self, other: Any) -> bool:
+        return self._force() == other
+
+    def __ne__(self, other: Any) -> bool:
+        return self._force() != other
+
+    def __hash__(self) -> int:
+        return hash(self._force())
+
+    def __len__(self) -> int:
+        return len(self._force())
+
+    def __contains__(self, item: Any) -> bool:
+        return item in self._force()
+
+    def __getitem__(self, item: Any) -> str:
+        return self._force()[item]
+
+    def __add__(self, other: Any) -> str:
+        return self._force() + other
+
+    def __radd__(self, other: Any) -> str:
+        return other + self._force()
+
+    def __getattr__(self, name: str) -> Any:
+        # Delegates str methods (startswith, format, split, ...) on demand.
+        # Private/dunder names must not delegate: copy and pickle probe for
+        # __setstate__/__deepcopy__ on a half-built instance, and our own
+        # slots are looked up through here before __init__ assigns them,
+        # which would recurse through _force().
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return getattr(self._force(), name)
+
+
+def _defer(fmt: str, *args: Any) -> _DeferredMessage:
+    """Build a ``fmt % args`` message lazily; see _DeferredMessage for why."""
+    return _DeferredMessage(lambda: fmt % args)
+
+
+def _defer_error(e: Any, data: Any) -> Any:
+    """A user-supplied error message, formatted lazily.
+
+    ``e.format(data)`` interpolates ``str(data)``, so it carries the same cost
+    as the auto-generated messages on paths Or/And discard.
+    """
+    return _DeferredMessage(lambda: e.format(data)) if e else None
+
+
+# A message is either a plain str or one whose formatting has been deferred;
+# _DeferredMessage is str-like, so consumers cannot tell them apart.
+_Message = Union[str, _DeferredMessage]
+
+
 class SchemaError(Exception):
     """Error during Schema validation."""
 
     def __init__(
         self,
-        autos: Union[Sequence[Union[str, None]], None],
+        autos: Union[Sequence[Union[_Message, None]], None],
         errors: Union[List, str, None] = None,
     ):
         self.autos = autos if isinstance(autos, List) else [autos]
         self.errors = errors if isinstance(errors, List) else [errors]
-        Exception.__init__(self, self.code)
+        # `code` joins autos/errors, which would force any deferred message.
+        # Hand Exception a deferred proxy instead, so `args[0]` and `str(self)`
+        # still yield exactly the same text -- but only if someone looks.
+        Exception.__init__(self, _DeferredMessage(lambda: self.code))
 
     @property
     def code(self) -> str:
@@ -83,7 +176,8 @@ class SchemaError(Exception):
         data_set = uniq(self.autos)
         error_list = uniq(self.errors)
 
-        return "\n".join(error_list if error_list else data_set)
+        # str() forces any deferred message; str.join needs real str instances.
+        return "\n".join(str(x) for x in (error_list if error_list else data_set))
 
 
 class SchemaWrongKeyError(SchemaError):
@@ -205,8 +299,8 @@ class Or(And[TSchema]):
         :param data: data to be validated by provided schema.
         :return: return validated data if not validation
         """
-        autos: List[str] = []
-        errors: List[Union[str, None]] = []
+        autos: List[_Message] = []
+        errors: List[Union[_Message, None]] = []
         for sub_schema in self._build_schemas():
             try:
                 validation: Any = sub_schema.validate(data, **kwargs)
@@ -217,10 +311,8 @@ class Or(And[TSchema]):
             except SchemaError as _x:
                 autos += _x.autos
                 errors += _x.errors
-        raise SchemaError(
-            ["%r did not validate %r" % (self, data)] + autos,
-            [self._error.format(data) if self._error else None] + errors,
-        )
+        head: List[_Message] = [_defer("%r did not validate %r", self, data)]
+        raise SchemaError(head + autos, [_defer_error(self._error, data)] + errors)
 
 
 class Regex:
@@ -425,13 +517,17 @@ class Schema(object):
         else:
             return True
 
-    def _prepend_schema_name(self, message: str) -> str:
+    def _prepend_schema_name(self, message: Any) -> Any:
         """
         If a custom schema name has been defined, prepends it to the error
         message that gets raised when a schema error occurs.
+
+        Stays lazy if `message` is a _DeferredMessage: formatting here would
+        force it, and this runs on every failed alternative inside Or/And.
         """
         if self._name:
-            message = "{0!r} {1!s}".format(self._name, message)
+            name = self._name
+            return _DeferredMessage(lambda: "{0!r} {1!s}".format(name, message))
         return message
 
     def validate(self, data: Any, **kwargs: Dict[str, Any]) -> Any:
@@ -562,42 +658,38 @@ class Schema(object):
             if isinstance(data, s) and not (isinstance(data, bool) and s == int):
                 return data
             else:
-                message = "%r should be instance of %r" % (data, s.__name__)
+                message = _defer("%r should be instance of %r", data, s.__name__)
                 message = self._prepend_schema_name(message)
-                raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
+                raise SchemaUnexpectedTypeError(message, _defer_error(e, data))
         if flavor == VALIDATOR:
             try:
                 return s.validate(data, **kwargs)
             except SchemaError as x:
-                raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
-                )
+                raise SchemaError([None] + x.autos, [_defer_error(e, data)] + x.errors)
             except BaseException as x:
-                message = "%r.validate(%r) raised %r" % (s, data, x)
+                message = _defer("%r.validate(%r) raised %r", s, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e.format(data) if e else None)
+                raise SchemaError(message, _defer_error(e, data))
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
                 if s(data):
                     return data
             except SchemaError as x:
-                raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
-                )
+                raise SchemaError([None] + x.autos, [_defer_error(e, data)] + x.errors)
             except BaseException as x:
-                message = "%s(%r) raised %r" % (f, data, x)
+                message = _defer("%s(%r) raised %r", f, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e.format(data) if e else None)
-            message = "%s(%r) should evaluate to True" % (f, data)
+                raise SchemaError(message, _defer_error(e, data))
+            message = _defer("%s(%r) should evaluate to True", f, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e.format(data) if e else None)
+            raise SchemaError(message, _defer_error(e, data))
         if s == data:
             return data
         else:
-            message = "%r does not match %r" % (s, data)
+            message = _defer("%r does not match %r", s, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e.format(data) if e else None)
+            raise SchemaError(message, _defer_error(e, data))
 
     def json_schema(
         self, schema_id: str, use_refs: bool = False, **kwargs: Any
