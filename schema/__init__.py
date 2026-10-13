@@ -320,7 +320,7 @@ class Use:
                 [None] + x.autos,
                 [self._error.format(data) if self._error else None] + x.errors,
             )
-        except BaseException as x:
+        except Exception as x:
             f = _callable_str(self._callable)
             raise SchemaError(
                 "%s(%r) raised %r" % (f, data, x),
@@ -572,7 +572,7 @@ class Schema(object):
                 raise SchemaError(
                     [None] + x.autos, [e.format(data) if e else None] + x.errors
                 )
-            except BaseException as x:
+            except Exception as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
                 raise SchemaError(message, e.format(data) if e else None)
@@ -585,7 +585,7 @@ class Schema(object):
                 raise SchemaError(
                     [None] + x.autos, [e.format(data) if e else None] + x.errors
                 )
-            except BaseException as x:
+            except Exception as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
                 raise SchemaError(message, e.format(data) if e else None)

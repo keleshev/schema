@@ -3,6 +3,12 @@
 
 ## Unreleased
 
+### Fixes
+
+* Allow control-flow exceptions such as `KeyboardInterrupt`, `SystemExit`, and
+  `GeneratorExit` to propagate from validation callables instead of wrapping
+  them in `SchemaError`. Ordinary exceptions remain wrapped. (#156)
+
 
 ## v0.7.8 (2025-10-11)
 
