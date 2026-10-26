@@ -1671,8 +1671,8 @@ def test_json_schema_ref_in_list():
             },
         },
         "anyOf": [
-            {"$ref": "#/definitions/Inner test"},
-            {"$ref": "#/definitions/Inner test2"},
+            {"$ref": "#/definitions/Inner%20test"},
+            {"$ref": "#/definitions/Inner%20test2"},
         ],
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1861,6 +1861,25 @@ def test_json_schema_definitions():
             }
         },
     }
+
+
+@mark.parametrize(
+    "name, reference",
+    [
+        ("path/to_node", "path~1to_node"),
+        ("node~name", "node~0name"),
+        ("path/~node", "path~1~0node"),
+        ("node%2Fvalue", "node%252Fvalue"),
+        ("node#value", "node%23value"),
+        ("node name", "node%20name"),
+        ("café", "caf%C3%A9"),
+    ],
+)
+def test_json_schema_definition_names_escape_json_pointer(name, reference):
+    sub_schema = Schema({"value": int}, name=name, as_reference=True)
+    exported = Schema({"item": sub_schema}).json_schema("https://example.com")
+    assert exported["properties"]["item"]["$ref"] == "#/definitions/" + reference
+    assert name in exported["definitions"]
 
 
 def test_json_schema_definitions_and_literals():

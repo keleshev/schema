@@ -22,6 +22,7 @@ from typing import (
     Union,
     cast,
 )
+from urllib.parse import quote
 
 # Use TYPE_CHECKING to determine the correct type hint but avoid runtime import errors
 if TYPE_CHECKING:
@@ -696,7 +697,12 @@ class Schema(object):
                         schema, is_main_schema=False, allow_reference=False
                     )
 
-                return_schema["$ref"] = "#/definitions/" + cast(str, schema.name)
+                reference_name = (
+                    cast(str, schema.name).replace("~", "~0").replace("/", "~1")
+                )
+                return_schema["$ref"] = "#/definitions/" + quote(
+                    reference_name, safe=""
+                )
             else:
                 if schema.name and not title:
                     return_schema["title"] = schema.name
