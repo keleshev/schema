@@ -1863,6 +1863,32 @@ def test_json_schema_definitions():
     }
 
 
+@mark.parametrize("values", [(1, 2), (True, False), (None, 1), (1,)])
+def test_json_schema_literal_enum_preserves_value_types(values):
+    schema = Schema(Or(*(Literal(value) for value in values)))
+    exported = schema.json_schema("https://example.com")
+    if len(values) == 1:
+        assert exported["const"] == values[0]
+        assert [type(exported["const"])] == [type(values[0])]
+    else:
+        assert exported["enum"] == list(values)
+        assert [type(value) for value in exported["enum"]] == [
+            type(value) for value in values
+        ]
+
+
+def test_json_schema_literal_enum_serializes_non_json_values():
+    from enum import Enum
+
+    class Choice(Enum):
+        FIRST = "first"
+        SECOND = "second"
+
+    schema = Schema(Or(Literal(Choice.FIRST), Literal(Choice.SECOND)))
+    exported = schema.json_schema("https://example.com")
+    assert json.loads(json.dumps(exported))["enum"] == ["Choice.FIRST", "Choice.SECOND"]
+
+
 def test_json_schema_definitions_and_literals():
     sub_schema = Schema(
         {Literal("sub_key1", description="Sub key 1"): int},
