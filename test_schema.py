@@ -1671,8 +1671,8 @@ def test_json_schema_ref_in_list():
             },
         },
         "anyOf": [
-            {"$ref": "#/definitions/Inner test"},
-            {"$ref": "#/definitions/Inner test2"},
+            {"$ref": "#/definitions/Inner%20test"},
+            {"$ref": "#/definitions/Inner%20test2"},
         ],
         "$id": "my-id",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -2100,3 +2100,22 @@ def test_tuple_key_error_message_does_not_crash():
     with raises(SchemaError) as exc_info:
         Schema({("a", "b"): int}).validate({("a", "b"): "not-an-int"})
     assert "Key '('a', 'b')' error:" in exc_info.value.code
+
+
+@mark.parametrize(
+    "name, reference",
+    [
+        ("plain", "#/definitions/plain"),
+        ("api/item", "#/definitions/api~1item"),
+        ("a~b", "#/definitions/a~0b"),
+        ("a~1/b", "#/definitions/a~01~1b"),
+        ("item name", "#/definitions/item%20name"),
+        ("a#%b", "#/definitions/a%23%25b"),
+        ("caf\u00e9", "#/definitions/caf%C3%A9"),
+    ],
+)
+def test_json_schema_definition_reference_escaping(name, reference):
+    item = Schema({"value": int}, name=name, as_reference=True)
+    result = Schema({"item": item}).json_schema("https://example.com/schema")
+    assert result["properties"]["item"]["$ref"] == reference
+    assert result["definitions"][name]["properties"] == {"value": {"type": "integer"}}
