@@ -708,7 +708,9 @@ class Schema(object):
                     # Handle arrays or dict schema
 
                     return_schema["type"] = "array"
-                    if len(s) == 1:
+                    if len(s) == 0:
+                        return_schema["maxItems"] = 0
+                    elif len(s) == 1:
                         return_schema["items"] = _json_schema(
                             _to_schema(s[0], i), is_main_schema=False
                         )

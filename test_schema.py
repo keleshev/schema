@@ -1863,6 +1863,16 @@ def test_json_schema_definitions():
     }
 
 
+@mark.parametrize("container", [list, tuple, set, frozenset])
+def test_json_schema_empty_container_disallows_items(container):
+    schema = Schema(container())
+    assert schema.is_valid(container())
+    assert not schema.is_valid(container([1]))
+    exported = schema.json_schema("https://example.com")
+    assert exported["type"] == "array"
+    assert exported["maxItems"] == 0
+
+
 def test_json_schema_definitions_and_literals():
     sub_schema = Schema(
         {Literal("sub_key1", description="Sub key 1"): int},
