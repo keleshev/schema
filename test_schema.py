@@ -1301,6 +1301,17 @@ def test_json_schema_object_or_array_of_object():
     }
 
 
+@mark.parametrize("and_schema", [And(), And(lambda value: True), And(Use(int))])
+def test_json_schema_and_without_representable_conditions(and_schema):
+    assert Schema(and_schema).json_schema("my-id") == {
+        "$id": "my-id",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+    }
+    assert Schema({"value": and_schema}).json_schema("my-id")["properties"] == {
+        "value": {}
+    }
+
+
 def test_json_schema_and_simple():
     s = Schema({"test1": And(str, "test2")})
     assert s.json_schema("my-id") == {

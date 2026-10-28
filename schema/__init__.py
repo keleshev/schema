@@ -762,7 +762,7 @@ class Schema(object):
                     if len(all_of_values) == 1:
                         # Only one representable condition remains, do not put under allOf
                         return_schema.update(all_of_values[0])
-                    else:
+                    elif all_of_values:
                         return_schema["allOf"] = all_of_values
                 elif flavor == COMPARABLE:
                     if s is None:
