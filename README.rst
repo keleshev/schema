@@ -610,7 +610,6 @@ Just define your schema normally and call ``.json_schema()`` on it. The output i
     ...     "test": str,
     ...     "nested": {Optional("other"): str},
     ... })
-    >>> json_schema = json.dumps(s.json_schema("https://example.com/my-schema.json"))
 
     # json_schema
     {
