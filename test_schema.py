@@ -2100,3 +2100,21 @@ def test_tuple_key_error_message_does_not_crash():
     with raises(SchemaError) as exc_info:
         Schema({("a", "b"): int}).validate({("a", "b"): "not-an-int"})
     assert "Key '('a', 'b')' error:" in exc_info.value.code
+
+
+def test_error_message_with_literal_braces_does_not_crash():
+    # A custom error message may contain literal braces that are not valid
+    # str.format fields; it must be used verbatim, not crash is_valid/validate.
+    s = Schema(int, error="must be one of {red, green}")
+    assert s.is_valid("x") is False
+
+    with raises(SchemaError) as exc_info:
+        s.validate("x")
+    assert exc_info.value.code == "must be one of {red, green}"
+
+
+def test_error_message_empty_brace_still_substitutes_data():
+    # The documented "{}" substitution of the validated data still works.
+    with raises(SchemaError) as exc_info:
+        Schema(int, error="got {}").validate("x")
+    assert exc_info.value.code == "got x"
