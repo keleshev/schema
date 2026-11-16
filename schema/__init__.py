@@ -54,6 +54,17 @@ __all__ = [
 ]
 
 
+def _format_error(error, data):
+    if not error:
+        return None
+    try:
+        return error.format(data)
+    except (IndexError, KeyError, ValueError):
+        # A custom error message may contain literal braces (e.g. "{a, b}")
+        # that are not valid str.format fields; use it verbatim in that case.
+        return error
+
+
 class SchemaError(Exception):
     """Error during Schema validation."""
 
@@ -219,7 +230,7 @@ class Or(And[TSchema]):
                 errors += _x.errors
         raise SchemaError(
             ["%r did not validate %r" % (self, data)] + autos,
-            [self._error.format(data) if self._error else None] + errors,
+            [_format_error(self._error, data)] + errors,
         )
 
 
@@ -274,14 +285,14 @@ class Regex:
                 return data
             else:
                 error_message = (
-                    e.format(data)
+                    _format_error(e, data)
                     if e
                     else f"{data!r} does not match {self._pattern_str!r}"
                 )
                 raise SchemaError(error_message)
         except TypeError:
             error_message = (
-                e.format(data) if e else f"{data!r} is not string nor buffer"
+                _format_error(e, data) if e else f"{data!r} is not string nor buffer"
             )
             raise SchemaError(error_message)
 
@@ -318,13 +329,13 @@ class Use:
         except SchemaError as x:
             raise SchemaError(
                 [None] + x.autos,
-                [self._error.format(data) if self._error else None] + x.errors,
+                [_format_error(self._error, data)] + x.errors,
             )
         except BaseException as x:
             f = _callable_str(self._callable)
             raise SchemaError(
                 "%s(%r) raised %r" % (f, data, x),
-                self._error.format(data) if self._error else None,
+                _format_error(self._error, data),
             )
 
 
@@ -504,7 +515,7 @@ class Schema(object):
                                     message = self._prepend_schema_name(k)
                                     raise SchemaError(
                                         [message] + x.autos,
-                                        [e.format(data) if e else None] + x.errors,
+                                        [_format_error(e, data)] + x.errors,
                                     )
                                 else:
                                     new[nkey] = nvalue
@@ -521,7 +532,7 @@ class Schema(object):
                     s_missing_keys,
                 )
                 message = self._prepend_schema_name(message)
-                raise SchemaMissingKeyError(message, e.format(data) if e else None)
+                raise SchemaMissingKeyError(message, _format_error(e, data))
             if not self._ignore_extra_keys and (len(new) != len(data)):
                 wrong_keys = set(data.keys()) - set(new.keys())
                 s_wrong_keys = ", ".join(repr(k) for k in sorted(wrong_keys, key=repr))
@@ -539,9 +550,9 @@ class Schema(object):
                     if k in key_errors
                 ]
                 errors: Union[List, str, None] = (
-                    [e.format(data) if e else None] + custom_errors
+                    [_format_error(e, data)] + custom_errors
                     if custom_errors
-                    else (e.format(data) if e else None)
+                    else (_format_error(e, data))
                 )
                 raise SchemaWrongKeyError(message, errors)
 
@@ -564,18 +575,18 @@ class Schema(object):
             else:
                 message = "%r should be instance of %r" % (data, s.__name__)
                 message = self._prepend_schema_name(message)
-                raise SchemaUnexpectedTypeError(message, e.format(data) if e else None)
+                raise SchemaUnexpectedTypeError(message, _format_error(e, data))
         if flavor == VALIDATOR:
             try:
                 return s.validate(data, **kwargs)
             except SchemaError as x:
                 raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
+                    [None] + x.autos, [_format_error(e, data)] + x.errors
                 )
             except BaseException as x:
                 message = "%r.validate(%r) raised %r" % (s, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e.format(data) if e else None)
+                raise SchemaError(message, _format_error(e, data))
         if flavor == CALLABLE:
             f = _callable_str(s)
             try:
@@ -583,21 +594,21 @@ class Schema(object):
                     return data
             except SchemaError as x:
                 raise SchemaError(
-                    [None] + x.autos, [e.format(data) if e else None] + x.errors
+                    [None] + x.autos, [_format_error(e, data)] + x.errors
                 )
             except BaseException as x:
                 message = "%s(%r) raised %r" % (f, data, x)
                 message = self._prepend_schema_name(message)
-                raise SchemaError(message, e.format(data) if e else None)
+                raise SchemaError(message, _format_error(e, data))
             message = "%s(%r) should evaluate to True" % (f, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e.format(data) if e else None)
+            raise SchemaError(message, _format_error(e, data))
         if s == data:
             return data
         else:
             message = "%r does not match %r" % (s, data)
             message = self._prepend_schema_name(message)
-            raise SchemaError(message, e.format(data) if e else None)
+            raise SchemaError(message, _format_error(e, data))
 
     def json_schema(
         self, schema_id: str, use_refs: bool = False, **kwargs: Any
