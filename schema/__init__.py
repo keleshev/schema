@@ -494,6 +494,7 @@ class Schema(object):
                                 except SchemaError:
                                     continue
                                 skey.handler(nkey, data, e)
+                                new[nkey] = nvalue
                             else:
                                 try:
                                     nvalue = Schema(
