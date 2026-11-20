@@ -386,6 +386,33 @@ def test_dict_hook():
     assert function_mock.call_count == 2
 
 
+def test_dict_hook_without_another_key_schema():
+    handler = Mock()
+    data = {"b": "bye"}
+    assert Schema({Hook("b", handler=handler): str}).validate(data) == data
+    handler.assert_called_once_with("b", data, None)
+
+
+def test_dict_hook_preserves_validated_value():
+    assert Schema({Hook("b"): Use(int)}).validate({"b": "12"}) == {"b": 12}
+
+
+def test_dict_hook_still_validates_other_matching_schema():
+    handler = Mock()
+    schema = Schema({Hook("b", handler=handler): str, "b": Use(int)})
+    assert schema.validate({"b": "12"}) == {"b": 12}
+    with raises(SchemaError):
+        schema.validate({"b": "not an integer"})
+
+
+def test_dict_hook_still_calls_other_matching_hooks():
+    first, second = Mock(), Mock()
+    schema = Schema({Hook("b", handler=first): str, Hook("b", handler=second): str})
+    assert schema.validate({"b": "bye"}) == {"b": "bye"}
+    first.assert_called_once()
+    second.assert_called_once()
+
+
 def test_dict_optional_keys():
     with SE:
         Schema({"a": 1, "b": 2}).validate({"a": 1})
