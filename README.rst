@@ -357,6 +357,101 @@ so, use the `Or` class as a key:
     ...
     schema.SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
+Relationships between dictionary fields
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A validator used as a dictionary value sees that value, not its siblings.
+To compare fields, wrap the dictionary schema in ``And`` and put the
+relationship check after it. The check then receives the validated dictionary,
+including any conversions performed by ``Use``:
+
+.. code:: python
+
+    from schema import Schema, And, Or, Optional, Use
+
+    paired_lists = Schema(And(
+        {"names": [str], "scores": [int]},
+        lambda data: len(data["names"]) == len(data["scores"]),
+    ))
+    assert paired_lists.is_valid({"names": ["Ada"], "scores": [10]})
+    assert not paired_lists.is_valid({"names": ["Ada"], "scores": []})
+    assert Schema([paired_lists]).is_valid([
+        {"names": ["Ada"], "scores": [10]},
+        {"names": [], "scores": []},
+    ])
+
+    total = Schema(And(
+        {"a": int, "b": int},
+        lambda data: data["a"] + data["b"] > 20,
+    ))
+    assert total.is_valid({"a": 10, "b": 11})
+    assert not total.is_valid({"a": 10, "b": 5})
+
+When a field selects which other fields are required, use ``Or`` around
+complete dictionary schemas. Each branch describes one valid shape:
+
+.. code:: python
+
+    tagged = Schema(Or(
+        {"name": "x", "x_val": int},
+        {"name": "y", "y_val": int},
+    ))
+    assert tagged.is_valid({"name": "x", "x_val": 1})
+    assert tagged.is_valid({"name": "y", "y_val": 1})
+    assert not tagged.is_valid({"name": "x", "y_val": 1})
+    assert not tagged.is_valid({"name": "y", "x_val": 1})
+
+A key can be required in one branch and optional in another. Here, enabling
+access requires both options; disabling it permits them to be omitted:
+
+.. code:: python
+
+    access = Schema(Or(
+        {"access": True, "option1": str, "option2": str},
+        {"access": False, Optional("option1"): str, Optional("option2"): str},
+    ))
+    assert access.is_valid({"access": True, "option1": "a", "option2": "b"})
+    assert not access.is_valid({"access": True, "option1": "a"})
+    assert access.is_valid({"access": False})
+    assert access.is_valid({"access": False, "option1": "a"})
+
+To require two optional keys together, compare their presence. Put this check
+before value conversion if the relationship should be checked first:
+
+.. code:: python
+
+    library = Schema(And(
+        dict,
+        lambda data: ("lib_file" in data) == ("offset" in data),
+        {
+            Optional("lib_file"): str,
+            Optional("offset"): And(str, Use(lambda value: int(value, 16))),
+        },
+    ))
+    assert library.validate({}) == {}
+    assert library.validate({"lib_file": "lib.so", "offset": "0xFFF"}) == {
+        "lib_file": "lib.so", "offset": 4095,
+    }
+    assert not library.is_valid({"lib_file": "lib.so"})
+    assert not library.is_valid({"offset": "0xFFF"})
+    assert not library.is_valid({"lib_file": "lib.so", "offset": "invalid"})
+
+Presence is different from having a non-``None`` value. If an argument parser
+uses ``None`` for omitted options, remove those entries before validation:
+
+.. code:: python
+
+    raw_options = {"lib_file": None, "offset": None}
+    options = {
+        key: value for key, value in raw_options.items()
+        if key not in ("lib_file", "offset") or value is not None
+    }
+    assert library.validate(options) == {}
+
+These patterns do not require a validator to capture values from a particular
+input in a closure. Keep operations with side effects, such as opening the
+validated file, after validation has succeeded.
+
 Hooks
 ~~~~~~~~~~
 You can define hooks which are functions that are executed whenever a valid key:value is found.
