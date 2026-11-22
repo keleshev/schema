@@ -432,6 +432,47 @@ If you would like any extra keys returned, use ``object: object`` as one of the 
 Otherwise, extra keys will raise a ``SchemaError``.
 
 
+Filtering dictionary values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``ignore_extra_keys`` only handles unmatched keys. It does not skip values
+that fail validation, and there is no ``ignore_extra_values`` option. When
+discarding invalid values is intentional, use an explicit ``Use`` step:
+
+.. code:: python
+
+    >>> from schema import And, Optional, Schema, Use
+    >>> value_schema = Schema(int)
+    >>> def keep_valid_values(data):
+    ...     return {key: value for key, value in data.items()
+    ...             if value_schema.is_valid(value)}
+    >>> filtered = Schema(And(
+    ...     dict,
+    ...     Use(keep_valid_values),
+    ...     {Optional(str): int},
+    ... ))
+    >>> original = {'some_str': 2, 'a': 'some_str'}
+    >>> filtered.validate(original)
+    {'some_str': 2}
+    >>> original == {'some_str': 2, 'a': 'some_str'}
+    True
+    >>> filtered.validate({'a': 'some_str'})
+    {}
+    >>> filtered.validate({})
+    {}
+    >>> filtered.is_valid({1: 2})  # retained keys must still be strings
+    False
+    >>> filtered.is_valid([])  # reject non-dictionaries before filtering
+    False
+
+The function returns a new dictionary and does not mutate the input. The
+``Optional(str)`` key allows an empty result when every value is rejected.
+The final schema still validates retained entries. ``is_valid`` checks a
+value but discards any transformed result; this recipe keeps original values
+and is intended for validation without conversion. Use ordinary validation
+when invalid values should raise errors instead of being discarded.
+
+
 Customized Validation
 ~~~~~~~~~~~~~~~~~~~~~~~
 
