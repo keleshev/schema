@@ -357,6 +357,55 @@ so, use the `Or` class as a key:
     ...
     schema.SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
+Exclusive keys with different value schemas
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A dictionary entry is validated by one matching key rule; overlapping key
+rules do not apply multiple value validators to the same entry. For example,
+combining ``Or("request", "requests", only_one=True)`` with
+``Optional("requests")`` does not enforce both rules.
+
+To require exactly one of these keys with a different value schema for each,
+use ``Or`` around two complete dictionaries. Each branch requires its own key
+and rejects the other as an extra key:
+
+.. code:: python
+
+    from schema import Optional, Or, Schema, SchemaError, Use
+
+    request_schema = Schema(Or(
+        {"request": dict},
+        {"requests": {Optional(Use(int)): dict}},
+    ))
+
+    assert request_schema.validate({"request": {"name": "one"}}) == {
+        "request": {"name": "one"}
+    }
+    assert request_schema.validate({"requests": {"1": {}}}) == {
+        "requests": {1: {}}
+    }
+    assert request_schema.validate({"requests": {}}) == {"requests": {}}
+
+    for invalid in (
+        {},
+        {"request": {}, "requests": {1: {}}},
+        {"requests": {"not a number": {}}},
+        {"requests": {1: "not a dictionary"}},
+        {"request": "not a dictionary"},
+        {"request": {}, "extra": True},
+    ):
+        try:
+            request_schema.validate(invalid)
+        except SchemaError:
+            pass
+        else:
+            raise AssertionError("Unexpectedly accepted {!r}".format(invalid))
+
+The inner ``Optional`` allows an empty collection of requests while the outer
+``requests`` key remains required in its branch.
+Keep extra-key rejection enabled for this recipe. If both alternatives share
+other allowed fields, include those fields in both dictionary branches.
+
 Hooks
 ~~~~~~~~~~
 You can define hooks which are functions that are executed whenever a valid key:value is found.
