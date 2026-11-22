@@ -480,6 +480,47 @@ won't affect any recursive invoke of the ``self.__class__.validate`` for the
 child schemas (e.g., the call to ``Schema("capacity").validate("capacity")``).
 
 
+Recursive data structures
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To validate a tree whose children have the same shape as their parent, create
+the schema before filling its dictionary. This gives the child list a reference
+to an already defined schema:
+
+.. code:: python
+
+    from schema import Schema
+
+    person_fields = {}
+    person = Schema(person_fields, name="person")
+    person_fields.update({
+        "first_name": str,
+        "last_name": str,
+        "age": int,
+        "children": [person],
+    })
+
+    family = {
+        "first_name": "Ada", "last_name": "Lovelace", "age": 36,
+        "children": [{
+            "first_name": "Anne", "last_name": "Lovelace", "age": 17,
+            "children": [],
+        }],
+    }
+    assert person.validate(family) == family
+    assert not person.is_valid({
+        "first_name": "Ada", "last_name": "Lovelace", "age": 36,
+        "children": [{
+            "first_name": "Anne", "last_name": "Lovelace", "age": "seventeen",
+            "children": [],
+        }],
+    })
+
+The empty child list is the terminating case. This recipe validates finite,
+tree-shaped input; a cycle in the input is not a terminating tree and can reach
+Python's recursion limit. Finish constructing the schema before validating
+data, and do not mutate its definition while it is being used.
+
 User-friendly error reporting
 -------------------------------------------------------------------------------
 
