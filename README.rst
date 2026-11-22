@@ -309,6 +309,38 @@ default can also be a callable:
     >>> Schema({Optional('data', default=dict): {}}).validate({}) == {'data': {}}
     True
 
+For a missing nested section, ``default={}`` inserts an empty dictionary without
+applying that section's own defaults. Use a factory that validates an empty
+section to populate nested defaults. The factory also creates a fresh result
+for each call, so mutating one configuration does not change later defaults:
+
+.. code:: python
+
+    >>> from schema import Schema, Optional
+    >>> section = Schema({
+    ...     Optional('method', default='A'): str,
+    ...     Optional('time', default=10): int,
+    ... })
+    >>> config = Schema({
+    ...     Optional('something', default=lambda: section.validate({})): section,
+    ... })
+    >>> expected = {'something': {'method': 'A', 'time': 10}}
+    >>> config.validate({}) == expected
+    True
+    >>> config.validate({'something': {}}) == expected
+    True
+    >>> config.validate(expected) == expected
+    True
+    >>> config.validate({'something': {'time': 20}})['something']['time']
+    20
+    >>> first = config.validate({})
+    >>> first['something']['method'] = 'changed'
+    >>> config.validate({}) == expected
+    True
+
+Defaults returned by a factory still bypass the outer value validator. The
+explicit ``section.validate({})`` call performs the nested validation here.
+
 Also, a caveat: If you specify types, **schema** won't validate the empty dict:
 
 .. code:: python
