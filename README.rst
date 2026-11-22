@@ -197,6 +197,89 @@ Sometimes you need to transform and validate part of data, but keep original dat
 
 Now you can write your own validation-aware classes and data types.
 
+Validating converted values and additional types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``And`` passes each validator's result to the next validator. After converting
+a single value to a list with ``Use``, apply a *list schema* to validate each
+element. For example, accept one IP address or a list of IP addresses while
+always returning a list of strings:
+
+.. code:: python
+
+    from ipaddress import ip_address
+    from schema import Schema, And, Or, Use, Const
+
+    def valid_ip(value):
+        try:
+            ip_address(value)
+        except ValueError:
+            return False
+        return True
+
+    nameservers = Schema({
+        "nameservers": And(
+            Or(str, list),
+            Use(lambda value: [value] if isinstance(value, str) else value),
+            [And(str, valid_ip)],
+        ),
+    })
+    assert nameservers.validate({"nameservers": "192.168.0.1"}) == {
+        "nameservers": ["192.168.0.1"],
+    }
+    assert nameservers.validate({"nameservers": ["192.168.0.1", "::1"]}) == {
+        "nameservers": ["192.168.0.1", "::1"],
+    }
+    assert not nameservers.is_valid({"nameservers": ["not-an-address"]})
+    assert not nameservers.is_valid({"nameservers": [123]})
+    assert not nameservers.is_valid({"nameservers": None})
+
+A class used as a schema checks its type; it does not convert the input.
+For example, ``Decimal`` values can be validated directly, but they are not
+instances of ``float``. Use ``Or`` when both types are allowed, or an explicit
+``Use`` conversion when the input is a decimal string:
+
+.. code:: python
+
+    from decimal import Decimal
+
+    amount = Decimal("37.0")
+    assert Schema(Decimal).validate(amount) is amount
+    assert not Schema(float).is_valid(amount)
+    assert Schema(Or(float, Decimal)).validate(amount) is amount
+    assert Schema(And(str, Use(Decimal))).validate("37.0") == amount
+
+Similarly, a string containing a timestamp is not a ``datetime`` instance.
+Choose the accepted string format and parse it with ``Use``. This Python 3
+example accepts UTC timestamps of the form ``YYYY-MM-DDTHH:MM:SSZ`` and returns
+timezone-aware objects:
+
+.. code:: python
+
+    from datetime import datetime, timezone
+
+    def utc_datetime(value):
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc,
+        )
+
+    timestamp = And(str, Use(utc_datetime))
+    dates = Schema({"startDate": timestamp, "endDate": timestamp})
+    result = dates.validate({
+        "startDate": "2016-04-20T01:07:16Z",
+        "endDate": "2020-11-12T04:20:04Z",
+    })
+    assert result["startDate"] == datetime(2016, 4, 20, 1, 7, 16, tzinfo=timezone.utc)
+    assert result["endDate"].tzinfo is timezone.utc
+    assert not Schema(timestamp).is_valid("2020-02-30T04:20:04Z")
+    assert Schema(Const(timestamp)).validate("2020-11-12T04:20:04Z") == (
+        "2020-11-12T04:20:04Z"
+    )
+
+The ``Const`` wrapper in the last example validates through the conversion but
+returns the original string. This avoids recursively guessing which strings
+elsewhere in a document should be treated as dates.
+
 Lists, similar containers
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
