@@ -1062,3 +1062,55 @@ It produces a JSON schema that is more difficult to read by humans.
         "$id": "https://example.com/my-schema.json",
         "$schema": "http://json-schema.org/draft-07/schema#"
     }
+
+Validating Enum Values
+----------------------
+
+For a fixed set of literal values, use ``Or`` in the value position of
+a dictionary schema:
+
+.. code:: python
+
+    >>> from schema import And, Schema, SchemaError, Use, Or
+    >>> choice = Schema({"mode": Or("read", "write")})
+    >>> choice.validate({"mode": "read"})
+    {'mode': 'read'}
+    >>> choice.is_valid({"mode": "delete"})
+    False
+
+For a Python ``Enum``, wrap its constructor in ``Use`` to validate raw
+values and convert them to enum members. Passing the enum class directly
+to ``Schema`` instead checks that the input is already a member of that
+type.
+
+.. code:: python
+
+    >>> from enum import Enum
+    >>> class Mode(Enum):
+    ...     READ = "read"
+    ...     WRITE = "write"
+    ...
+    >>> parsed = Schema({"mode": Use(Mode)})
+    >>> parsed.validate({"mode": "read"})["mode"] is Mode.READ
+    True
+    >>> parsed.validate({"mode": Mode.WRITE})["mode"] is Mode.WRITE
+    True
+    >>> parsed.is_valid({"mode": "delete"})
+    False
+    >>> Schema(Mode).is_valid("read")
+    False
+
+If the output must retain the underlying value (for example, for JSON
+serialization), transform the validated member back to ``.value``:
+
+.. code:: python
+
+    >>> raw = Schema({"mode": And(Use(Mode), Use(lambda member: member.value))})
+    >>> raw.validate({"mode": "write"})
+    {'mode': 'write'}
+    >>> raw.is_valid({"mode": "delete"})
+    False
+
+``Use`` wraps a failed enum conversion as ``SchemaError``; ``is_valid``
+returns ``False`` for that case. These examples use enum values, not
+member names such as ``"READ"``.
