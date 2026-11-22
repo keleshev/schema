@@ -216,6 +216,45 @@ against all schemas listed inside that container and aggregate all errors:
     'not int or float here' should be instance of 'int'
     'not int or float here' should be instance of 'float'
 
+Container schemas describe the allowed elements, not the number of elements.
+For example, ``Schema([int])`` accepts an empty list. Combine the element schema
+with a predicate using ``And`` to require a nonempty list:
+
+.. code:: python
+
+    >>> from schema import And, Schema
+    >>> nonempty = Schema(And([int], len))
+    >>> nonempty.validate([1, 2])
+    [1, 2]
+    >>> nonempty.is_valid([])
+    False
+    >>> nonempty.is_valid(["not an integer"])
+    False
+
+``And`` first validates the elements, then applies ``len`` to the resulting
+list. A zero length is false, so the empty list is rejected. This combination
+also works inside dictionary values or other container schemas.
+
+For a list of rows, each containing exactly four floats, put both constraints
+on the inner list:
+
+.. code:: python
+
+    >>> rows = Schema([And([float], lambda row: len(row) == 4)])
+    >>> rows.validate([[1.0, 2.0, 3.0, 4.0]])
+    [[1.0, 2.0, 3.0, 4.0]]
+    >>> rows.is_valid([[1.0, 2.0, 3.0]])
+    False
+    >>> rows.is_valid([[1.0, 2.0, 3.0, "4.0"]])
+    False
+    >>> rows.is_valid([[]])
+    False
+    >>> rows.is_valid([])
+    True
+
+The outer list can still be empty. Apply ``And(..., len)`` to that list schema
+as well if at least one row is required.
+
 Dictionaries
 ~~~~~~~~~~~~
 
