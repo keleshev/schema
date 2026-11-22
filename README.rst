@@ -357,6 +357,42 @@ so, use the `Or` class as a key:
     ...
     schema.SchemaOnlyOneAllowedError: There are multiple keys present from the Or('key1', 'key2') condition
 
+Requiring at least one of several keys
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When alternative keys have different value types, keep separate ``Optional``
+entries and check their presence after validating the dictionary. Other keys
+can remain required:
+
+.. code:: python
+
+    from schema import And, Optional, Schema
+
+    record = Schema(And(
+        {
+            "a": str,
+            "b": int,
+            Optional("c"): str,
+            Optional("d"): int,
+        },
+        lambda data: "c" in data or "d" in data,
+    ))
+    assert record.is_valid({"a": "name", "b": 1, "c": ""})
+    assert record.is_valid({"a": "name", "b": 1, "d": 0})
+    assert record.is_valid({"a": "name", "b": 1, "c": "text", "d": 2})
+    assert not record.is_valid({"a": "name", "b": 1})
+    assert not record.is_valid({"a": "name", "b": 1, "d": "wrong type"})
+    assert not record.is_valid({"c": "text"})
+
+Test membership, not ``bool(data)``: required keys already make the dictionary
+nonempty. Testing ``data.get("c") or data.get("d")`` would also incorrectly
+reject present values such as an empty string or zero. Both alternative keys
+may be supplied; this differs from ``Or(..., only_one=True)``.
+
+The predicate sees the validated dictionary, including defaults and key
+transformations. Leave defaults off these ``Optional`` keys when their presence
+must reflect what the caller supplied.
+
 Hooks
 ~~~~~~~~~~
 You can define hooks which are functions that are executed whenever a valid key:value is found.
