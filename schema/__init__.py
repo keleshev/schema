@@ -447,6 +447,18 @@ class Schema(object):
         if flavor == ITERABLE:
             data = Schema(type(s), error=e).validate(data, **kwargs)
             o: Or = Or(*s, error=e, schema=Schema, ignore_extra_keys=i)
+            if (
+                type(self) is __class__
+                and isinstance(s, list)
+                and len(s) == 1
+                and type(s[0]) is type
+            ):
+                # Exact instances need no conversion. Keep the general path for
+                # subclasses, mismatches and custom instance-checking behavior.
+                item_type = s[0]
+                return type(data)(
+                    d if type(d) is item_type else o.validate(d, **kwargs) for d in data
+                )
             return type(data)(o.validate(d, **kwargs) for d in data)
         if flavor == DICT:
             exitstack = ExitStack()
